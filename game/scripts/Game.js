@@ -250,14 +250,14 @@ class Game {
      * Spawn enemies throughout the level
      */
     spawnEnemies() {
-        // Spawn variety of enemies with the custom sprite sheet
+        // Spawn only ground slimes since other types aren't showing up properly
         const enemySpawns = [
             { x: 250, y: 450, type: 'GroundSlime' },
-            { x: 600, y: 450, type: 'PoisonSlime' },
-            { x: 1000, y: 450, type: 'MagicArrowSlime' },
+            { x: 600, y: 450, type: 'GroundSlime' },
+            { x: 1000, y: 450, type: 'GroundSlime' },
             { x: 1400, y: 450, type: 'GroundSlime' },
-            { x: 1800, y: 450, type: 'PoisonSlime' },
-            { x: 2200, y: 450, type: 'MagicArrowSlime' }
+            { x: 1800, y: 450, type: 'GroundSlime' },
+            { x: 2200, y: 450, type: 'GroundSlime' }
         ];
         
         enemySpawns.forEach((spawn, index) => {
@@ -267,12 +267,6 @@ class Game {
                 switch (spawn.type) {
                     case 'GroundSlime':
                         enemy = new GroundSlime(spawn.x, spawn.y);
-                        break;
-                    case 'PoisonSlime':
-                        enemy = new PoisonSlime(spawn.x, spawn.y);
-                        break;
-                    case 'MagicArrowSlime':
-                        enemy = new MagicArrowSlime(spawn.x, spawn.y);
                         break;
                     default:
                         return;
@@ -292,42 +286,6 @@ class Game {
      * Spawn items throughout the level
      */
     spawnItems() {
-        // Coin trails and scattered coins
-        const coinSpawns = [
-            { x: 250, y: 450, count: 5, trail: true },
-            { x: 350, y: 350, count: 1 },
-            { x: 550, y: 270, count: 3, trail: true },
-            { x: 800, y: 300, count: 1, value: 3 },
-            { x: 1050, y: 330, count: 4, trail: true },
-            { x: 1400, y: 250, count: 1, value: 5 },
-            { x: 1650, y: 370, count: 6, trail: true },
-            { x: 1950, y: 300, count: 2, value: 3 },
-            { x: 2150, y: 230, count: 5, trail: true },
-            { x: 2550, y: 350, count: 1, value: 10 }
-        ];
-        
-        coinSpawns.forEach(spawn => {
-            if (spawn.trail && spawn.count > 1) {
-                // Create coin trail
-                for (let i = 0; i < spawn.count; i++) {
-                    const coin = new Coin(
-                        spawn.x + i * 30,
-                        spawn.y - i * 10,
-                        spawn.value || 1
-                    );
-                    coin.game = this;
-                    this.items.push(coin);
-                }
-            } else {
-                // Single coin or scattered group
-                const coins = Coin.createScattered(spawn.x, spawn.y, spawn.count, spawn.value || 1);
-                coins.forEach(coin => {
-                    coin.game = this;
-                    this.items.push(coin);
-                });
-            }
-        });
-        
         // Health potions
         const healthSpawns = [
             { x: 700, y: 300, type: 'minor' },

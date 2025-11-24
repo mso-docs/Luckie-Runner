@@ -297,22 +297,19 @@ class Player extends Entity {
 
     /**
      * Throw a rock projectile
-     * @param {Object} mousePos - Mouse position {x, y}
+     * @param {Object} mousePos - Mouse position (unused in new system)
      */
     throwRock(mousePos) {
-        // Calculate throw direction
+        // Throw straight in the direction player is facing
         const playerCenter = this.getCenter();
-        const direction = {
-            x: mousePos.x - playerCenter.x,
-            y: mousePos.y - playerCenter.y
-        };
         
-        // Normalize and set throw speed
-        const magnitude = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
-        const throwSpeed = 10;
+        // Throw straight horizontally (no arc)
+        const throwSpeed = 15;
+        
+        // Create velocity vector - straight horizontal
         const velocity = {
-            x: (direction.x / magnitude) * throwSpeed,
-            y: (direction.y / magnitude) * throwSpeed
+            x: this.facing * throwSpeed, // Straight left or right
+            y: 0 // No vertical component - completely straight
         };
         
         // Create rock projectile

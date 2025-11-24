@@ -47,8 +47,8 @@ class MagicArrowSlime extends Enemy {
         // Set fallback color (bright cyan for magic slime)
         this.fallbackColor = '#00ffff';
         
-        // Load custom sprite sheet (same as other slimes)
-        this.loadSprite('art/sprites/custom-green-slime.png');
+        // Don't load sprite - use fallback color to appear cyan
+        // this.loadSprite('art/sprites/custom-green-slime.png');
         
         // Current movement direction for animation
         this.currentDirection = 'idle';

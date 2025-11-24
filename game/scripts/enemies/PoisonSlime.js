@@ -30,8 +30,8 @@ class PoisonSlime extends Enemy {
         // Set fallback color (bright purple for poison slime)
         this.fallbackColor = '#aa00ff';
         
-        // Load custom sprite sheet (same as ground slime but with different colors)
-        this.loadSprite('art/sprites/custom-green-slime.png');
+        // Don't load sprite - use fallback color to appear purple
+        // this.loadSprite('art/sprites/custom-green-slime.png');
         
         // Current movement direction for animation
         this.currentDirection = 'idle';

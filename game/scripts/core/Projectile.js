@@ -81,13 +81,10 @@ class Projectile extends Entity {
         }
 
         // Check collision with solid environment
-        if (this.game.level) {
-            const platforms = this.game.level.platforms || [];
-            const walls = this.game.level.walls || [];
-            
-            platforms.concat(walls).forEach(obstacle => {
-                if (obstacle.solid && CollisionDetection.entityCollision(this, obstacle)) {
-                    this.hitObstacle(obstacle);
+        if (this.game.platforms) {
+            this.game.platforms.forEach(platform => {
+                if (platform.solid && CollisionDetection.rectangleCollision(this, platform)) {
+                    this.hitObstacle(platform);
                 }
             });
         }
@@ -217,9 +214,12 @@ class Rock extends Projectile {
     constructor(x, y, velocity) {
         super(x, y, 8, 8, velocity, 15);
         
-        // Rocks use gravity
-        this.gravity = 0.3;
-        this.lifeTime = 2000;
+        // Rock specific properties for straight travel
+        this.gravity = 0.015; // 90% less gravity - very minimal drop
+        this.startX = x; // Track starting position for distance calculation
+        this.startY = y;
+        this.maxDistance = 400; // Minimum 5 tiles (64px each = 320px, rounded to 400px)
+        this.lifeTime = 4000; // Enough time to travel the distance
         
         // Set fallback color (brown for rocks)
         this.fallbackColor = '#8B4513';
@@ -228,20 +228,34 @@ class Rock extends Projectile {
         this.ownerType = 'player';
     }
 
+    onUpdate(deltaTime) {
+        super.onUpdate(deltaTime);
+        
+        // Check if rock has traveled minimum distance (5 tiles)
+        const distanceTraveled = Math.sqrt(
+            Math.pow(this.x - this.startX, 2) + 
+            Math.pow(this.y - this.startY, 2)
+        );
+        
+        if (distanceTraveled >= this.maxDistance) {
+            this.active = false; // Disappear after 400px (5+ tiles)
+        }
+    }
+
     onHitTarget(target) {
-        // Add knockback to target
+        // Rock disappears on collision with enemy
+        this.active = false;
+        
+        // Add small knockback to target
         if (target.velocity) {
-            const knockbackForce = 2;
+            const knockbackForce = 1.5;
             target.velocity.x += this.direction.x * knockbackForce;
         }
     }
 
     onHitObstacle(obstacle) {
-        // Rocks can bounce off obstacles
-        if (this.age > 100) { // Prevent immediate bouncing
-            this.velocity.x *= -0.5;
-            this.velocity.y *= -0.3;
-        }
+        // Rock disappears on collision with any obstacle
+        this.active = false;
     }
 }
 
