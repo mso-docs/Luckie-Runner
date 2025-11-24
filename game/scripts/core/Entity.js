@@ -213,8 +213,11 @@ class Entity {
                     -this.width / 2, -this.height / 2, this.width, this.height
                 );
             }
+        } else if (this.fallbackColor) {
+            // Draw fallback color rectangle for entities without sprites
+            ctx.fillStyle = this.fallbackColor;
+            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
         }
-        // No fallback rendering - sprites only
 
         ctx.restore();
     }
