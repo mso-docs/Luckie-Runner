@@ -8,10 +8,10 @@ class PoisonSlime extends Enemy {
         
         // Poison slime specific properties
         this.type = 'poison_slime';
-        this.health = 40;
-        this.maxHealth = 40;
-        this.patrolSpeed = 0.6;
-        this.chaseSpeed = 2.0;
+        this.health = 30;
+        this.maxHealth = 30;
+        this.patrolSpeed = 0.4;
+        this.chaseSpeed = 1.2;
         this.attackDamage = 12;
         this.attackRange = 35;
         this.detectionRange = 140;
@@ -27,11 +27,15 @@ class PoisonSlime extends Enemy {
         this.setupAnimations();
         this.playAnimation('idle');
         
-        // Set fallback color (purple for poison slime)
-        this.fallbackColor = '#8844ff';
+        // Set fallback color (bright purple for poison slime)
+        this.fallbackColor = '#aa00ff';
         
-        // Load sprite
-        this.loadSprite('art/sprites/poison-slme.png'); // Note: typo in original file name
+        // Load custom sprite sheet (same as ground slime but with different colors)
+        this.loadSprite('art/sprites/custom-green-slime.png');
+        
+        // Current movement direction for animation
+        this.currentDirection = 'idle';
+        this.lastDirection = 'idle';
         
         // Set collision bounds
         this.collisionOffset = { x: 2, y: 4 };
@@ -43,62 +47,74 @@ class PoisonSlime extends Enemy {
     }
 
     /**
-     * Set up animations for poison slime
+     * Set up animations for poison slime using 4x4 sprite sheet
+     * Row 1 (y=0): Move Right animation
+     * Row 2 (y=32): Idle animation  
+     * Row 3 (y=64): Move Up animation
+     * Row 4 (y=96): Move Left animation
      */
     setupAnimations() {
-        const frameWidth = 26;
-        const frameHeight = 22;
+        const frameWidth = 32;
+        const frameHeight = 32;
         
-        // Idle animation - bubbling effect
+        // Idle animation - Row 2
         this.addAnimation('idle', [
+            { x: 0, y: 32, width: frameWidth, height: frameHeight },
+            { x: 32, y: 32, width: frameWidth, height: frameHeight },
+            { x: 64, y: 32, width: frameWidth, height: frameHeight },
+            { x: 96, y: 32, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Move Left animation - Row 4
+        this.addAnimation('move_left', [
+            { x: 0, y: 96, width: frameWidth, height: frameHeight },
+            { x: 32, y: 96, width: frameWidth, height: frameHeight },
+            { x: 64, y: 96, width: frameWidth, height: frameHeight },
+            { x: 96, y: 96, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Move Right animation - Row 1
+        this.addAnimation('move_right', [
             { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: 26, y: 0, width: frameWidth, height: frameHeight },
-            { x: 52, y: 0, width: frameWidth, height: frameHeight },
-            { x: 78, y: 0, width: frameWidth, height: frameHeight }
+            { x: 32, y: 0, width: frameWidth, height: frameHeight },
+            { x: 64, y: 0, width: frameWidth, height: frameHeight },
+            { x: 96, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Walk animation - poison dripping
-        this.addAnimation('walk', [
-            { x: 0, y: 22, width: frameWidth, height: frameHeight },
-            { x: 26, y: 22, width: frameWidth, height: frameHeight },
-            { x: 52, y: 22, width: frameWidth, height: frameHeight },
-            { x: 78, y: 22, width: frameWidth, height: frameHeight }
+        // Move Up animation - Row 3
+        this.addAnimation('move_up', [
+            { x: 0, y: 64, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight },
+            { x: 64, y: 64, width: frameWidth, height: frameHeight },
+            { x: 96, y: 64, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Run animation - more aggressive poison effect
-        this.addAnimation('run', [
-            { x: 0, y: 44, width: frameWidth, height: frameHeight },
-            { x: 26, y: 44, width: frameWidth, height: frameHeight },
-            { x: 52, y: 44, width: frameWidth, height: frameHeight },
-            { x: 78, y: 44, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        // Attack animation - poison spray
+        // Attack uses move_up animation
         this.addAnimation('attack', [
-            { x: 0, y: 66, width: frameWidth, height: frameHeight },
-            { x: 26, y: 66, width: frameWidth, height: frameHeight },
-            { x: 52, y: 66, width: frameWidth, height: frameHeight },
-            { x: 78, y: 66, width: frameWidth, height: frameHeight }
+            { x: 0, y: 64, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight },
+            { x: 64, y: 64, width: frameWidth, height: frameHeight }
         ], false);
         
         // Hurt animation
         this.addAnimation('hurt', [
-            { x: 0, y: 88, width: frameWidth, height: frameHeight },
-            { x: 26, y: 88, width: frameWidth, height: frameHeight }
+            { x: 96, y: 64, width: frameWidth, height: frameHeight },
+            { x: 32, y: 32, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Death animation - poison dissolves
+        // Death animation
         this.addAnimation('death', [
-            { x: 52, y: 88, width: frameWidth, height: frameHeight },
-            { x: 78, y: 88, width: frameWidth, height: frameHeight },
-            { x: 104, y: 88, width: frameWidth, height: frameHeight },
-            { x: 130, y: 88, width: frameWidth, height: frameHeight }
+            { x: 96, y: 32, width: frameWidth, height: frameHeight },
+            { x: 64, y: 32, width: frameWidth, height: frameHeight },
+            { x: 32, y: 32, width: frameWidth, height: frameHeight },
+            { x: 0, y: 32, width: frameWidth, height: frameHeight }
         ], false);
 
         // Set animation speeds
         this.animations.idle.speed = 400;
-        this.animations.walk.speed = 250;
-        this.animations.run.speed = 150;
+        this.animations.move_left.speed = 250;
+        this.animations.move_right.speed = 250;
+        this.animations.move_up.speed = 250;
         this.animations.attack.speed = 120;
         this.animations.hurt.speed = 200;
         this.animations.death.speed = 300;
@@ -111,11 +127,38 @@ class PoisonSlime extends Enemy {
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
         
+        // Update directional animation based on movement
+        this.updateDirectionalAnimation();
+        
         // Create poison puddles while chasing
         this.updatePoisonPuddles(deltaTime);
         
         // Clean up expired puddles
         this.cleanupPuddles();
+    }
+    
+    /**
+     * Update animation based on movement direction
+     */
+    updateDirectionalAnimation() {
+        let newDirection = 'idle';
+        
+        // Determine direction based on velocity
+        if (Math.abs(this.velocity.x) > 0.3) {
+            newDirection = this.velocity.x > 0 ? 'move_right' : 'move_left';
+        } else if (this.velocity.y < -1) {
+            newDirection = 'move_up';
+        }
+        
+        // Only change animation if direction changed and not in special states
+        if (newDirection !== this.currentDirection && 
+            this.currentAnimation !== 'attack' && 
+            this.currentAnimation !== 'hurt' && 
+            this.currentAnimation !== 'death') {
+            
+            this.currentDirection = newDirection;
+            this.playAnimation(newDirection);
+        }
     }
 
     /**
@@ -425,17 +468,8 @@ class PoisonPuddle extends Entity {
         );
         ctx.fill();
         
-        // Add bubbling effect
-        if (this.pulseTimer % 500 < 50) { // Brief bubbles
-            ctx.fillStyle = '#A040A0';
-            for (let i = 0; i < 3; i++) {
-                const bubbleX = screenX + Math.random() * this.width;
-                const bubbleY = screenY + Math.random() * this.height;
-                ctx.beginPath();
-                ctx.arc(bubbleX, bubbleY, 1, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+        // Add bubbling effect (disabled)
+        return;
         
         ctx.restore();
     }

@@ -4,14 +4,16 @@
  */
 class GroundSlime extends Enemy {
     constructor(x, y) {
-        super(x, y, 24, 20);
+        // ground-slime.png is 234x32 with 4 frames in 1 row
+        // Frame size: 234/4 = 58.5 (round to 58) width, 32 height
+        super(x, y, 58, 32);
         
         // Ground slime specific properties
         this.type = 'ground_slime';
-        this.health = 30;
-        this.maxHealth = 30;
-        this.patrolSpeed = 0.8;
-        this.chaseSpeed = 2.5;
+        this.health = 25;
+        this.maxHealth = 25;
+        this.patrolSpeed = 0.5;
+        this.chaseSpeed = 1.5;
         this.attackDamage = 15;
         this.attackRange = 30;
         this.detectionRange = 120;
@@ -24,74 +26,84 @@ class GroundSlime extends Enemy {
         this.setupAnimations();
         this.playAnimation('idle');
         
-        // Set fallback color (green slime)
-        this.fallbackColor = '#44ff44';
+        // Load new ground slime sprite
+        this.loadSprite('art/sprites/ground-slime.png');
         
-        // Load sprite
-        this.loadSprite('art/sprites/green-slime.png');
+        // Current movement direction for animation
+        this.currentDirection = 'idle';
+        this.lastDirection = 'idle';
         
         // Set collision bounds (smaller than sprite for better gameplay)
-        this.collisionOffset = { x: 2, y: 4 };
-        this.collisionWidth = 20;
-        this.collisionHeight = 16;
+        this.collisionOffset = { x: 8, y: 6 }; // Adjusted for 32px height sprite
+        this.collisionWidth = 42;
+        this.collisionHeight = 20;
     }
 
     /**
-     * Set up animations for ground slime
+     * Set up animations for ground slime using single row sprite (234x32)
+     * 4 frames in 1 row (58px wide each, 32px tall)
+     * Frames 0-3: Idle/movement animation
      */
     setupAnimations() {
-        const frameWidth = 24;
-        const frameHeight = 20;
+        const frameWidth = 58;
+        const frameHeight = 32;
         
-        // Idle animation - gentle bounce
+        // Idle animation - 4 frames in single row
         this.addAnimation('idle', [
             { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: 24, y: 0, width: frameWidth, height: frameHeight },
-            { x: 48, y: 0, width: frameWidth, height: frameHeight },
-            { x: 24, y: 0, width: frameWidth, height: frameHeight }
+            { x: 58, y: 0, width: frameWidth, height: frameHeight },
+            { x: 116, y: 0, width: frameWidth, height: frameHeight },
+            { x: 174, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Walk animation - slime stretch and compress
-        this.addAnimation('walk', [
-            { x: 0, y: 20, width: frameWidth, height: frameHeight },
-            { x: 24, y: 20, width: frameWidth, height: frameHeight },
-            { x: 48, y: 20, width: frameWidth, height: frameHeight },
-            { x: 72, y: 20, width: frameWidth, height: frameHeight }
+        // Movement animations - use same 4 frames
+        this.addAnimation('move_left', [
+            { x: 0, y: 0, width: frameWidth, height: frameHeight },
+            { x: 58, y: 0, width: frameWidth, height: frameHeight },
+            { x: 116, y: 0, width: frameWidth, height: frameHeight },
+            { x: 174, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Run animation - faster movement
-        this.addAnimation('run', [
-            { x: 0, y: 40, width: frameWidth, height: frameHeight },
-            { x: 24, y: 40, width: frameWidth, height: frameHeight },
-            { x: 48, y: 40, width: frameWidth, height: frameHeight },
-            { x: 72, y: 40, width: frameWidth, height: frameHeight }
+        // Move Right animation - same frames, will be flipped in rendering
+        this.addAnimation('move_right', [
+            { x: 0, y: 0, width: frameWidth, height: frameHeight },
+            { x: 58, y: 0, width: frameWidth, height: frameHeight },
+            { x: 116, y: 0, width: frameWidth, height: frameHeight },
+            { x: 174, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Attack animation - slime extends forward
+        // Attack animation - use frames 2-4 for variety
         this.addAnimation('attack', [
-            { x: 0, y: 60, width: frameWidth, height: frameHeight },
-            { x: 24, y: 60, width: frameWidth, height: frameHeight },
-            { x: 48, y: 60, width: frameWidth, height: frameHeight }
+            { x: 58, y: 0, width: frameWidth, height: frameHeight },
+            { x: 116, y: 0, width: frameWidth, height: frameHeight },
+            { x: 174, y: 0, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Hurt animation
+        // Move up uses same frames as idle
+        this.addAnimation('move_up', [
+            { x: 0, y: 0, width: frameWidth, height: frameHeight },
+            { x: 58, y: 0, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Hurt animation - quick flash between frames
         this.addAnimation('hurt', [
-            { x: 72, y: 60, width: frameWidth, height: frameHeight },
-            { x: 96, y: 60, width: frameWidth, height: frameHeight }
+            { x: 96, y: 96, width: frameWidth, height: frameHeight },
+            { x: 64, y: 0, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Death animation - slime melts
+        // Death animation - fade through idle frames
         this.addAnimation('death', [
-            { x: 0, y: 80, width: frameWidth, height: frameHeight },
-            { x: 24, y: 80, width: frameWidth, height: frameHeight },
-            { x: 48, y: 80, width: frameWidth, height: frameHeight },
-            { x: 72, y: 80, width: frameWidth, height: frameHeight }
+            { x: 96, y: 0, width: frameWidth, height: frameHeight },
+            { x: 64, y: 0, width: frameWidth, height: frameHeight },
+            { x: 32, y: 0, width: frameWidth, height: frameHeight },
+            { x: 0, y: 0, width: frameWidth, height: frameHeight }
         ], false);
 
         // Set animation speeds
         this.animations.idle.speed = 300;
-        this.animations.walk.speed = 200;
-        this.animations.run.speed = 120;
+        this.animations.move_left.speed = 200;
+        this.animations.move_right.speed = 200;
+        this.animations.move_up.speed = 200;
         this.animations.attack.speed = 100;
         this.animations.hurt.speed = 150;
         this.animations.death.speed = 200;
@@ -104,9 +116,36 @@ class GroundSlime extends Enemy {
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
         
+        // Update directional animation based on movement
+        this.updateDirectionalAnimation();
+        
         // Add slight bouncing effect when moving
         if (this.onGround && Math.abs(this.velocity.x) > 0.5) {
             this.addBounciness();
+        }
+    }
+    
+    /**
+     * Update animation based on movement direction
+     */
+    updateDirectionalAnimation() {
+        let newDirection = 'idle';
+        
+        // Determine direction based on velocity
+        if (Math.abs(this.velocity.x) > 0.3) {
+            newDirection = this.velocity.x > 0 ? 'move_right' : 'move_left';
+        } else if (this.velocity.y < -1) {
+            newDirection = 'move_up';
+        }
+        
+        // Only change animation if direction changed and not in special states
+        if (newDirection !== this.currentDirection && 
+            this.currentAnimation !== 'attack' && 
+            this.currentAnimation !== 'hurt' && 
+            this.currentAnimation !== 'death') {
+            
+            this.currentDirection = newDirection;
+            this.playAnimation(newDirection);
         }
     }
 
@@ -203,10 +242,10 @@ class GroundSlime extends Enemy {
      */
     handleDrops() {
         // Ground slimes have higher coin drop rate
-        this.dropChance = 0.8;
+        this.dropChance = 0.85;
         this.dropTable = [
-            { item: 'coin', chance: 0.9, amount: 1 },
-            { item: 'health', chance: 0.1, amount: 5 }
+            { item: 'coin', chance: 0.95, amount: Math.floor(Math.random() * 3) + 1 }, // 1-3 coins
+            { item: 'health', chance: 0.05, amount: 10 } // 5% chance for health potion
         ];
         
         super.handleDrops();

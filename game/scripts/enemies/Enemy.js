@@ -40,8 +40,8 @@ class Enemy extends Entity {
         this.target = null;
         this.lastSeenTargetX = 0;
         
-        // Set default enemy fallback color
-        this.fallbackColor = '#ff4444';
+        // Set default enemy fallback color (bright red)
+        this.fallbackColor = '#ff0000';
         this.searchTime = 0;
         this.maxSearchTime = 3000; // 3 seconds
         
@@ -51,10 +51,11 @@ class Enemy extends Entity {
         this.canSeeTarget = false;
         
         // Drop properties (what enemy drops when defeated)
-        this.dropChance = 0.7; // 70% chance to drop something
+        this.dropChance = 0.8; // 80% chance to drop something
         this.dropTable = [
-            { item: 'coin', chance: 0.8, amount: 1 },
-            { item: 'health', chance: 0.2, amount: 10 }
+            { item: 'coin', chance: 0.75, amount: Math.floor(Math.random() * 2) + 1 }, // 1-2 coins, 75% chance
+            { item: 'health', chance: 0.08, amount: 15 }, // 8% chance for health potion (15 HP)
+            { item: 'rocks', chance: 0.17, amount: Math.floor(Math.random() * 3) + 2 } // 2-4 rocks, 17% chance
         ];
     }
 
@@ -205,12 +206,7 @@ class Enemy extends Entity {
         // Move in patrol direction
         this.velocity.x = this.patrolDirection * this.patrolSpeed;
         
-        // Play patrol animation
-        if (Math.abs(this.velocity.x) > 0.1) {
-            this.playAnimation('walk');
-        } else {
-            this.playAnimation('idle');
-        }
+        // Animation is handled by individual enemy classes with directional logic
     }
 
     /**
@@ -242,8 +238,7 @@ class Enemy extends Entity {
         
         this.velocity.x = direction * this.chaseSpeed;
         
-        // Play chase animation
-        this.playAnimation('run');
+        // Animation is handled by individual enemy classes with directional logic
     }
 
     /**
@@ -365,7 +360,7 @@ class Enemy extends Entity {
         
         // Award score to player
         if (this.game.player) {
-            this.game.player.score += 50;
+            this.game.player.score += 100;
             this.game.player.updateUI();
         }
     }
@@ -410,6 +405,9 @@ class Enemy extends Entity {
                 break;
             case 'health':
                 droppedItem = new HealthPotion(dropX - 8, dropY - 8);
+                break;
+            case 'rocks':
+                droppedItem = new RockItem(dropX - 6, dropY - 6, amount);
                 break;
             default:
                 return;

@@ -8,10 +8,10 @@ class MagicArrowSlime extends Enemy {
         
         // Magic arrow slime specific properties
         this.type = 'magic_arrow_slime';
-        this.health = 35;
-        this.maxHealth = 35;
-        this.patrolSpeed = 1.0;
-        this.chaseSpeed = 1.5; // Slower than melee enemies
+        this.health = 30;
+        this.maxHealth = 30;
+        this.patrolSpeed = 0.6;
+        this.chaseSpeed = 1.0; // Slower than melee enemies
         this.attackDamage = 18;
         this.attackRange = 200; // Long range
         this.detectionRange = 180;
@@ -44,11 +44,15 @@ class MagicArrowSlime extends Enemy {
         this.setupAnimations();
         this.playAnimation('idle');
         
-        // Set fallback color (crystal blue for magic slime)
-        this.fallbackColor = '#44aaff';
+        // Set fallback color (bright cyan for magic slime)
+        this.fallbackColor = '#00ffff';
         
-        // Load sprite - using crystal slime as base
-        this.loadSprite('art/sprites/crystal-slime.png');
+        // Load custom sprite sheet (same as other slimes)
+        this.loadSprite('art/sprites/custom-green-slime.png');
+        
+        // Current movement direction for animation
+        this.currentDirection = 'idle';
+        this.lastDirection = 'idle';
         
         // Set collision bounds
         this.collisionOffset = { x: 2, y: 4 };
@@ -57,68 +61,81 @@ class MagicArrowSlime extends Enemy {
     }
 
     /**
-     * Set up animations for magic arrow slime
+     * Set up animations for magic arrow slime using 4x4 sprite sheet
+     * Row 1 (y=0): Move Up animation
+     * Row 2 (y=32): Move Right animation
+     * Row 3 (y=64): Idle animation
+     * Row 4 (y=96): Move Left animation  
      */
     setupAnimations() {
-        const frameWidth = 28;
-        const frameHeight = 24;
+        const frameWidth = 32;
+        const frameHeight = 32;
         
-        // Idle animation - magical glow pulsing
+        // Idle animation - Row 3
         this.addAnimation('idle', [
+            { x: 0, y: 64, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight },
+            { x: 64, y: 64, width: frameWidth, height: frameHeight },
+            { x: 96, y: 64, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Move Left animation - Row 4
+        this.addAnimation('move_left', [
+            { x: 0, y: 96, width: frameWidth, height: frameHeight },
+            { x: 32, y: 96, width: frameWidth, height: frameHeight },
+            { x: 64, y: 96, width: frameWidth, height: frameHeight },
+            { x: 96, y: 96, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Move Right animation - Row 2
+        this.addAnimation('move_right', [
+            { x: 0, y: 32, width: frameWidth, height: frameHeight },
+            { x: 32, y: 32, width: frameWidth, height: frameHeight },
+            { x: 64, y: 32, width: frameWidth, height: frameHeight },
+            { x: 96, y: 32, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Move Up animation - Row 1
+        this.addAnimation('move_up', [
             { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: 28, y: 0, width: frameWidth, height: frameHeight },
-            { x: 56, y: 0, width: frameWidth, height: frameHeight },
-            { x: 84, y: 0, width: frameWidth, height: frameHeight }
+            { x: 32, y: 0, width: frameWidth, height: frameHeight },
+            { x: 64, y: 0, width: frameWidth, height: frameHeight },
+            { x: 96, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Walk animation - magical shimmer
-        this.addAnimation('walk', [
-            { x: 0, y: 24, width: frameWidth, height: frameHeight },
-            { x: 28, y: 24, width: frameWidth, height: frameHeight },
-            { x: 56, y: 24, width: frameWidth, height: frameHeight },
-            { x: 84, y: 24, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        // Run animation - intense magic aura
-        this.addAnimation('run', [
-            { x: 0, y: 48, width: frameWidth, height: frameHeight },
-            { x: 28, y: 48, width: frameWidth, height: frameHeight },
-            { x: 56, y: 48, width: frameWidth, height: frameHeight },
-            { x: 84, y: 48, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        // Charge attack animation - gathering magic
+        // Charge attack animation - using move_up
         this.addAnimation('charge', [
-            { x: 0, y: 72, width: frameWidth, height: frameHeight },
-            { x: 28, y: 72, width: frameWidth, height: frameHeight },
-            { x: 56, y: 72, width: frameWidth, height: frameHeight }
+            { x: 0, y: 0, width: frameWidth, height: frameHeight },
+            { x: 32, y: 0, width: frameWidth, height: frameHeight },
+            { x: 64, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Attack animation - releasing magic arrow
+        // Attack animation
         this.addAnimation('attack', [
-            { x: 84, y: 72, width: frameWidth, height: frameHeight },
-            { x: 112, y: 72, width: frameWidth, height: frameHeight },
-            { x: 140, y: 72, width: frameWidth, height: frameHeight }
+            { x: 96, y: 0, width: frameWidth, height: frameHeight },
+            { x: 64, y: 32, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight }
         ], false);
         
         // Hurt animation
         this.addAnimation('hurt', [
-            { x: 0, y: 96, width: frameWidth, height: frameHeight },
-            { x: 28, y: 96, width: frameWidth, height: frameHeight }
+            { x: 96, y: 96, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Death animation - magic dispersing
+        // Death animation
         this.addAnimation('death', [
-            { x: 56, y: 96, width: frameWidth, height: frameHeight },
-            { x: 84, y: 96, width: frameWidth, height: frameHeight },
-            { x: 112, y: 96, width: frameWidth, height: frameHeight },
-            { x: 140, y: 96, width: frameWidth, height: frameHeight }
+            { x: 96, y: 64, width: frameWidth, height: frameHeight },
+            { x: 64, y: 64, width: frameWidth, height: frameHeight },
+            { x: 32, y: 64, width: frameWidth, height: frameHeight },
+            { x: 0, y: 64, width: frameWidth, height: frameHeight }
         ], false);
 
         // Set animation speeds
         this.animations.idle.speed = 500;
-        this.animations.walk.speed = 300;
-        this.animations.run.speed = 200;
+        this.animations.move_left.speed = 300;
+        this.animations.move_right.speed = 300;
+        this.animations.move_up.speed = 300;
         this.animations.charge.speed = 150;
         this.animations.attack.speed = 100;
         this.animations.hurt.speed = 200;
@@ -132,6 +149,9 @@ class MagicArrowSlime extends Enemy {
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
         
+        // Update directional animation based on movement
+        this.updateDirectionalAnimation();
+        
         // Regenerate magic power
         this.regenerateMagic(deltaTime);
         
@@ -140,6 +160,31 @@ class MagicArrowSlime extends Enemy {
         
         // Update kiting behavior
         this.updateKiting(deltaTime);
+    }
+    
+    /**
+     * Update animation based on movement direction
+     */
+    updateDirectionalAnimation() {
+        let newDirection = 'idle';
+        
+        // Determine direction based on velocity
+        if (Math.abs(this.velocity.x) > 0.3) {
+            newDirection = this.velocity.x > 0 ? 'move_right' : 'move_left';
+        } else if (this.velocity.y < -1) {
+            newDirection = 'move_up';
+        }
+        
+        // Only change animation if direction changed and not in special states
+        if (newDirection !== this.currentDirection && 
+            this.currentAnimation !== 'attack' && 
+            this.currentAnimation !== 'charge' && 
+            this.currentAnimation !== 'hurt' && 
+            this.currentAnimation !== 'death') {
+            
+            this.currentDirection = newDirection;
+            this.playAnimation(newDirection);
+        }
     }
 
     /**
@@ -399,77 +444,33 @@ class MagicArrowSlime extends Enemy {
     }
 
     /**
-     * Render magic slime with magical aura
+     * Render magic slime with magical aura (disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     render(ctx, camera = { x: 0, y: 0 }) {
-        // Draw magical aura
-        this.drawMagicalAura(ctx, camera);
-        
-        // Draw main sprite
+        // Draw main sprite only
         super.render(ctx, camera);
-        
-        // Draw magic power indicator if in combat
-        if (this.target && this.game.debug) {
-            this.drawMagicPowerBar(ctx, camera);
-        }
     }
 
     /**
-     * Draw magical aura around slime
+     * Draw magical aura around slime (disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     drawMagicalAura(ctx, camera) {
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        
-        // Only draw aura if has significant magic power
-        if (this.magicPower < 20) return;
-        
-        ctx.save();
-        
-        // Pulsing glow effect
-        const pulseTime = Date.now() % 2000;
-        const pulseAlpha = 0.3 + Math.sin(pulseTime / 2000 * Math.PI * 2) * 0.1;
-        
-        ctx.globalAlpha = pulseAlpha;
-        ctx.fillStyle = '#00FFFF'; // Cyan magical aura
-        
-        // Draw glow
-        const auraSize = 6 + Math.sin(pulseTime / 1000 * Math.PI * 2) * 2;
-        ctx.beginPath();
-        ctx.arc(
-            screenX + this.width / 2,
-            screenY + this.height / 2,
-            auraSize,
-            0, Math.PI * 2
-        );
-        ctx.fill();
-        
-        ctx.restore();
+        // Disabled to prevent rectangles
+        return;
     }
 
     /**
-     * Draw magic power bar (for debugging)
+     * Draw magic power bar (disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     drawMagicPowerBar(ctx, camera) {
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y - 10;
-        const barWidth = this.width;
-        const barHeight = 4;
-        
-        // Background
-        ctx.fillStyle = '#333';
-        ctx.fillRect(screenX, screenY, barWidth, barHeight);
-        
-        // Magic power
-        const powerPercent = this.magicPower / this.maxMagicPower;
-        ctx.fillStyle = '#00FFFF';
-        ctx.fillRect(screenX, screenY, barWidth * powerPercent, barHeight);
+        // Disabled to prevent rectangles
+        return;
     }
 
     /**

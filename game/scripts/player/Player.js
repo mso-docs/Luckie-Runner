@@ -4,13 +4,14 @@
  */
 class Player extends Entity {
     constructor(x, y) {
-        super(x, y, 32, 32);
+        // New sprite: 181x132 total, 2 rows × 4 frames, 45x66px per frame
+        super(x, y, 45, 66);
         
         // Player-specific physics
-        this.runAcceleration = 0.8;
-        this.maxRunSpeed = 8;
-        this.maxDashSpeed = 12;
-        this.jumpPower = 12;
+        this.runAcceleration = 0.4;
+        this.maxRunSpeed = 4;
+        this.maxDashSpeed = 6;
+        this.jumpPower = 10;
         this.airControl = 0.3;
         this.groundFriction = 0.85;
         this.airFriction = 0.98;
@@ -43,69 +44,84 @@ class Player extends Entity {
         
         // Animation setup
         this.setupAnimations();
-        this.playAnimation('idle');
-        
-        // Set fallback color (blue for player)
-        this.fallbackColor = '#4488ff';
+        this.playAnimation('idle_right');
         
         // Load sprite with error handling
-        this.loadSprite('art/sprites/luckiersprites.png');
+        this.loadSprite('art/sprites/luckie-sprite.png');
     }
 
     /**
      * Set up animation frames for the player sprite
+     * New sprite: 181x132px total, 2 rows × 4 frames, 45x66px each
+     * Top row (y=0): Right movement frames
+     * Bottom row (y=66): Left movement frames
      */
     setupAnimations() {
-        // Assuming the sprite sheet has 32x32 frames
-        const frameWidth = 32;
-        const frameHeight = 32;
+        const frameWidth = 45;
+        const frameHeight = 66;
         
-        // Idle animation (frames 0-3)
-        this.addAnimation('idle', [
+        // Right movement animations (top row)
+        this.addAnimation('idle_right', [
+            { x: 0, y: 0, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        this.addAnimation('run_right', [
             { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: 32, y: 0, width: frameWidth, height: frameHeight },
-            { x: 64, y: 0, width: frameWidth, height: frameHeight },
-            { x: 96, y: 0, width: frameWidth, height: frameHeight }
+            { x: 45, y: 0, width: frameWidth, height: frameHeight },
+            { x: 90, y: 0, width: frameWidth, height: frameHeight },
+            { x: 135, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Running animation (frames 4-7)
-        this.addAnimation('run', [
-            { x: 0, y: 32, width: frameWidth, height: frameHeight },
-            { x: 32, y: 32, width: frameWidth, height: frameHeight },
-            { x: 64, y: 32, width: frameWidth, height: frameHeight },
-            { x: 96, y: 32, width: frameWidth, height: frameHeight }
+        // Left movement animations (bottom row)
+        this.addAnimation('idle_left', [
+            { x: 0, y: 66, width: frameWidth, height: frameHeight }
         ], true);
         
-        // Jumping animation (frames 8-9)
-        this.addAnimation('jump', [
-            { x: 0, y: 64, width: frameWidth, height: frameHeight },
-            { x: 32, y: 64, width: frameWidth, height: frameHeight }
+        this.addAnimation('run_left', [
+            { x: 0, y: 66, width: frameWidth, height: frameHeight },
+            { x: 45, y: 66, width: frameWidth, height: frameHeight },
+            { x: 90, y: 66, width: frameWidth, height: frameHeight },
+            { x: 135, y: 66, width: frameWidth, height: frameHeight }
+        ], true);
+        
+        // Jumping animations (use first frame of each direction)
+        this.addAnimation('jump_right', [
+            { x: 45, y: 0, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Hurt animation (frames 10-11)
-        this.addAnimation('hurt', [
-            { x: 64, y: 64, width: frameWidth, height: frameHeight },
-            { x: 96, y: 64, width: frameWidth, height: frameHeight }
+        this.addAnimation('jump_left', [
+            { x: 45, y: 66, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Attack animation (frames 12-13)
-        this.addAnimation('attack', [
-            { x: 0, y: 96, width: frameWidth, height: frameHeight },
-            { x: 32, y: 96, width: frameWidth, height: frameHeight }
+        // Attack animations (use frame 3 of each direction)
+        this.addAnimation('attack_right', [
+            { x: 90, y: 0, width: frameWidth, height: frameHeight }
         ], false);
         
-        // Dash animation (frame 14)
-        this.addAnimation('dash', [
-            { x: 64, y: 96, width: frameWidth, height: frameHeight }
+        this.addAnimation('attack_left', [
+            { x: 90, y: 66, width: frameWidth, height: frameHeight }
+        ], false);
+        
+        // Dash animations (use frame 4 of each direction)
+        this.addAnimation('dash_right', [
+            { x: 135, y: 0, width: frameWidth, height: frameHeight }
+        ], false);
+        
+        this.addAnimation('dash_left', [
+            { x: 135, y: 66, width: frameWidth, height: frameHeight }
         ], false);
 
         // Adjust animation speeds
-        this.animations.idle.speed = 200;
-        this.animations.run.speed = 100;
-        this.animations.jump.speed = 150;
-        this.animations.hurt.speed = 100;
-        this.animations.attack.speed = 80;
-        this.animations.dash.speed = 50;
+        this.animations.idle_right.speed = 200;
+        this.animations.idle_left.speed = 200;
+        this.animations.run_right.speed = 100;
+        this.animations.run_left.speed = 100;
+        this.animations.jump_right.speed = 150;
+        this.animations.jump_left.speed = 150;
+        this.animations.attack_right.speed = 80;
+        this.animations.attack_left.speed = 80;
+        this.animations.dash_right.speed = 50;
+        this.animations.dash_left.speed = 50;
     }
 
     /**
@@ -311,8 +327,12 @@ class Player extends Entity {
         this.rocks--;
         this.attackCooldown = this.attackCooldownTime;
         
+        // Update UI to show rock count
+        this.updateUI();
+        
         // Play attack animation and sound
-        this.playAnimation('attack');
+        const animDirection = this.facing > 0 ? 'right' : 'left';
+        this.playAnimation(`attack_${animDirection}`);
         if (this.game.audioManager) {
             this.game.audioManager.playSound('attack', 0.6);
         }
@@ -323,22 +343,24 @@ class Player extends Entity {
      */
     updateAnimationState() {
         // Don't change animation if playing a non-looping one
-        if (this.currentAnimation === 'hurt' || this.currentAnimation === 'attack') {
+        if (this.currentAnimation === 'attack_left' || this.currentAnimation === 'attack_right') {
             return;
         }
         
+        const direction = this.facing > 0 ? 'right' : 'left';
+        
         if (this.isDashing) {
-            this.playAnimation('dash');
+            this.playAnimation(`dash_${direction}`);
         } else if (!this.onGround) {
-            this.playAnimation('jump');
+            this.playAnimation(`jump_${direction}`);
         } else if (this.isRunning) {
-            this.playAnimation('run');
+            this.playAnimation(`run_${direction}`);
         } else {
-            this.playAnimation('idle');
+            this.playAnimation(`idle_${direction}`);
         }
         
-        // Flip sprite based on facing direction
-        this.flipX = this.facing < 0;
+        // No longer need flipX since we have directional sprites
+        this.flipX = false;
     }
 
     /**
@@ -363,8 +385,8 @@ class Player extends Entity {
         const targetX = this.x - this.game.canvas.width / 2 + this.width / 2;
         const targetY = this.y - this.game.canvas.height / 2 + this.height / 2;
         
-        // Smooth camera following
-        const lerpSpeed = 0.1;
+        // Smooth camera following with better responsiveness
+        const lerpSpeed = 0.12;
         this.game.camera.x += (targetX - this.game.camera.x) * lerpSpeed;
         this.game.camera.y += (targetY - this.game.camera.y) * lerpSpeed;
     }
@@ -438,9 +460,11 @@ class Player extends Entity {
     updateUI() {
         const scoreElement = document.getElementById('score');
         const coinsElement = document.getElementById('coins');
+        const rocksElement = document.getElementById('rocks');
         
         if (scoreElement) scoreElement.textContent = this.score;
         if (coinsElement) coinsElement.textContent = this.coins;
+        if (rocksElement) rocksElement.textContent = this.rocks;
     }
 
     /**
