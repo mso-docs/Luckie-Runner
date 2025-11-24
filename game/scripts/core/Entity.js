@@ -27,7 +27,6 @@ class Entity {
         // Rendering properties
         this.sprite = null;
         this.spriteLoaded = false;
-        this.fallbackColor = '#ff6b6b';
         this.visible = true;
         this.alpha = 1.0;
         this.rotation = 0;
@@ -64,7 +63,6 @@ class Entity {
             this.spriteLoaded = true;
         };
         this.sprite.onerror = () => {
-            console.warn('Failed to load sprite:', imagePath);
             this.spriteLoaded = false;
             this.sprite = null;
         };
@@ -215,42 +213,13 @@ class Entity {
                     -this.width / 2, -this.height / 2, this.width, this.height
                 );
             }
-        } else {
-            // Fallback: Draw colored rectangle
-            ctx.fillStyle = this.fallbackColor || '#ff6b6b';
-            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
-            
-            // Add border
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
         }
+        // No fallback rendering - sprites only
 
         ctx.restore();
-
-        // Debug: Draw collision bounds
-        if (this.game && this.game.debug) {
-            this.drawCollisionBounds(ctx, camera);
-        }
     }
 
-    /**
-     * Draw collision bounds for debugging
-     * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} camera - Camera object
-     */
-    drawCollisionBounds(ctx, camera) {
-        ctx.save();
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(
-            this.x + this.collisionOffset.x - camera.x,
-            this.y + this.collisionOffset.y - camera.y,
-            this.collisionWidth,
-            this.collisionHeight
-        );
-        ctx.restore();
-    }
+
 
     /**
      * Take damage

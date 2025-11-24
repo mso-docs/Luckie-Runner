@@ -278,40 +278,21 @@ class Item extends Entity {
     render(ctx, camera = { x: 0, y: 0 }) {
         if (!this.visible || this.collected) return;
         
-        // Draw glow effect behind item
-        this.renderGlow(ctx, camera);
-        
-        // Draw main item sprite
+        // Draw main item sprite only (no glow)
         super.render(ctx, camera);
         
-        // Draw additional effects
-        this.renderEffects(ctx, camera);
+        // Draw additional effects (disabled for now)
+        // this.renderEffects(ctx, camera);
     }
 
     /**
-     * Render glow effect around item
+     * Render glow effect around item (disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     renderGlow(ctx, camera) {
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = this.getGlowColor();
-        
-        // Draw pulsing glow
-        ctx.beginPath();
-        ctx.arc(
-            screenX + this.width / 2,
-            screenY + this.height / 2,
-            this.width / 2 + this.glowSize,
-            0, Math.PI * 2
-        );
-        ctx.fill();
-        
-        ctx.restore();
+        // Glow disabled to prevent rectangles
+        return;
     }
 
     /**
@@ -362,4 +343,58 @@ class Item extends Entity {
     onItemUpdate(deltaTime) {}
     onCollected(collector) {}
     onExpired() {}
+}
+
+/**
+ * RockItem - Collectible rocks for throwing
+ */
+class RockItem extends Item {
+    constructor(x, y, rockCount = 5) {
+        super(x, y, 12, 12);
+        
+        this.type = 'rocks';
+        this.value = rockCount;
+        this.collectSound = 'rock_pickup';
+        this.collectMessage = `+${rockCount} Rocks`;
+        this.collectScore = 5;
+        
+        // Visual properties
+        this.fallbackColor = '#8B4513'; // Brown color for rocks
+        this.bobHeight = 2;
+        this.bobSpeed = 1.5;
+        
+        // Load rock sprite (if available)
+        this.loadSprite('art/items/rocks.png');
+    }
+
+    onCollected(collector) {
+        if (collector.addRocks) {
+            collector.addRocks(this.value);
+        }
+        return true;
+    }
+
+    /**
+     * Create a scattered group of rock items
+     * @param {number} x - Center X position
+     * @param {number} y - Center Y position  
+     * @param {number} count - Number of rock piles
+     * @param {number} rocksPerPile - Rocks per pile
+     * @returns {Array} Array of RockItem instances
+     */
+    static createScattered(x, y, count = 1, rocksPerPile = 3) {
+        const items = [];
+        const spreadRadius = 30;
+        
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const distance = Math.random() * spreadRadius;
+            const itemX = x + Math.cos(angle) * distance;
+            const itemY = y + Math.sin(angle) * distance;
+            
+            items.push(new RockItem(itemX, itemY, rocksPerPile));
+        }
+        
+        return items;
+    }
 }

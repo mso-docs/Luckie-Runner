@@ -17,6 +17,7 @@
             </div>
             <div id="scoreDisplay">Score: <span id="score">0</span></div>
             <div id="coinDisplay">Coins: <span id="coins">0</span></div>
+            <div id="rockDisplay">Rocks: <span id="rocks">10</span></div>
         </div>
 
         <!-- Start Menu -->
@@ -94,6 +95,22 @@
     <script>
         // Initialize the game when page loads
         window.addEventListener('load', () => {
+            // Test if enemy classes exist
+            console.log('🧪 Testing enemy class availability...');
+            console.log('GroundSlime class exists:', typeof GroundSlime !== 'undefined');
+            console.log('PoisonSlime class exists:', typeof PoisonSlime !== 'undefined');
+            console.log('MagicArrowSlime class exists:', typeof MagicArrowSlime !== 'undefined');
+            console.log('Enemy base class exists:', typeof Enemy !== 'undefined');
+            console.log('Entity base class exists:', typeof Entity !== 'undefined');
+            
+            // Test creating a simple enemy
+            try {
+                const testSlime = new GroundSlime(100, 100);
+                console.log('✅ Successfully created test GroundSlime:', testSlime);
+            } catch (error) {
+                console.error('❌ Failed to create test GroundSlime:', error);
+            }
+            
             const game = new Game('gameCanvas');
             window.game = game; // For debugging
         });

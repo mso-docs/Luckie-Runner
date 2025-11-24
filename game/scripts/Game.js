@@ -11,7 +11,7 @@ class Game {
         
         // Game state
         this.state = 'menu'; // 'menu', 'playing', 'paused', 'gameOver'
-        this.debug = false;
+        this.debug = false; // Debug mode disabled
         this.running = false;
         
         // Core systems
@@ -67,6 +67,9 @@ class Game {
      * Initialize all game systems
      */
     init() {
+        // Test sprite loading first
+        this.testSpriteLoading();
+        
         // Initialize audio
         this.audioManager.initializeGameSounds();
         
@@ -80,6 +83,23 @@ class Game {
         this.showMenu('startMenu');
         
         console.log('🎮 Luckie Runner initialized!');
+    }
+    
+    /**
+     * Test sprite loading to verify paths work
+     */
+    testSpriteLoading() {
+        console.log('🧪 Testing sprite loading...');
+        
+        const testSprite = new Image();
+        testSprite.onload = () => {
+            console.log('✅ Test sprite loaded successfully! custom-green-slime.png is accessible');
+            console.log(`📐 Sprite dimensions: ${testSprite.naturalWidth}x${testSprite.naturalHeight}px`);
+        };
+        testSprite.onerror = () => {
+            console.error('❌ Test sprite failed to load! custom-green-slime.png path issue');
+        };
+        testSprite.src = 'art/sprites/custom-green-slime.png';
     }
 
     /**
@@ -230,37 +250,40 @@ class Game {
      * Spawn enemies throughout the level
      */
     spawnEnemies() {
+        // Spawn variety of enemies with the custom sprite sheet
         const enemySpawns = [
-            { x: 400, y: 350, type: 'GroundSlime' },
-            { x: 600, y: 270, type: 'GroundSlime' },
-            { x: 850, y: 400, type: 'GroundSlime' },
-            { x: 1000, y: 520, type: 'PoisonSlime' },
-            { x: 1250, y: 250, type: 'MagicArrowSlime' },
-            { x: 1500, y: 370, type: 'GroundSlime' },
-            { x: 1700, y: 520, type: 'PoisonSlime' },
-            { x: 2000, y: 300, type: 'MagicArrowSlime' },
-            { x: 2200, y: 230, type: 'GroundSlime' },
-            { x: 2400, y: 520, type: 'PoisonSlime' },
-            { x: 2700, y: 350, type: 'MagicArrowSlime' }
+            { x: 250, y: 450, type: 'GroundSlime' },
+            { x: 600, y: 450, type: 'PoisonSlime' },
+            { x: 1000, y: 450, type: 'MagicArrowSlime' },
+            { x: 1400, y: 450, type: 'GroundSlime' },
+            { x: 1800, y: 450, type: 'PoisonSlime' },
+            { x: 2200, y: 450, type: 'MagicArrowSlime' }
         ];
         
-        enemySpawns.forEach(spawn => {
+        enemySpawns.forEach((spawn, index) => {
             let enemy;
-            switch (spawn.type) {
-                case 'GroundSlime':
-                    enemy = new GroundSlime(spawn.x, spawn.y);
-                    break;
-                case 'PoisonSlime':
-                    enemy = new PoisonSlime(spawn.x, spawn.y);
-                    break;
-                case 'MagicArrowSlime':
-                    enemy = new MagicArrowSlime(spawn.x, spawn.y);
-                    break;
-            }
             
-            if (enemy) {
-                enemy.game = this;
-                this.enemies.push(enemy);
+            try {
+                switch (spawn.type) {
+                    case 'GroundSlime':
+                        enemy = new GroundSlime(spawn.x, spawn.y);
+                        break;
+                    case 'PoisonSlime':
+                        enemy = new PoisonSlime(spawn.x, spawn.y);
+                        break;
+                    case 'MagicArrowSlime':
+                        enemy = new MagicArrowSlime(spawn.x, spawn.y);
+                        break;
+                    default:
+                        return;
+                }
+                
+                if (enemy) {
+                    enemy.game = this;
+                    this.enemies.push(enemy);
+                }
+            } catch (error) {
+                // Silently handle errors
             }
         });
     }
@@ -332,41 +355,44 @@ class Game {
                 this.items.push(potion);
             }
         });
+        
+        // Rock items for ammo
+        const rockSpawns = [
+            { x: 450, y: 450, count: 1, rocksPerPile: 5 },
+            { x: 900, y: 400, count: 1, rocksPerPile: 8 },
+            { x: 1300, y: 450, count: 2, rocksPerPile: 4 },
+            { x: 1750, y: 420, count: 1, rocksPerPile: 6 },
+            { x: 2000, y: 450, count: 1, rocksPerPile: 10 }
+        ];
+        
+        rockSpawns.forEach(spawn => {
+            const rocks = RockItem.createScattered(spawn.x, spawn.y, spawn.count, spawn.rocksPerPile);
+            rocks.forEach(rock => {
+                rock.game = this;
+                this.items.push(rock);
+            });
+        });
     }
 
     /**
-     * Create parallax background layers
+     * Create background layers with parallax scrolling
      */
     createBackground() {
-        this.backgroundLayers = [
-            // Far mountains (slowest)
-            {
-                image: 'art/bg/laguna.png',
-                speed: 0.2,
-                y: 0,
-                repeat: true
-            },
-            // Mid forest/hills
-            {
-                image: 'art/bg/panning bg.png',
-                speed: 0.5,
-                y: 100,
-                repeat: true
-            },
-            // Foreground grass
-            {
-                image: 'art/bg/foreground-dea.png',
-                speed: 0.8,
-                y: 450,
-                repeat: true
-            }
-        ];
+        this.backgroundLayers = [];
         
-        // Load background images
-        this.backgroundLayers.forEach(layer => {
-            layer.img = new Image();
-            layer.img.src = layer.image;
-        });
+        // Main parallax scrolling background that moves with player
+        this.infiniteBackground = new Background('art/bg/laguna.png', 0.8, 0, false);
+        
+        // Optional additional parallax layers (disabled for now to focus on main background)
+        // Uncomment these if you want additional parallax layers
+        /*
+        this.backgroundLayers = [
+            // Far mountains (slowest parallax)
+            new Background('art/bg/background.png', 0.3, 0, false),
+            // Mid forest/hills
+            new Background('art/bg/panning bg.png', 0.5, 100, false)
+        ];
+        */
     }
 
     /**
@@ -398,8 +424,6 @@ class Game {
         if (this.audioManager) {
             this.audioManager.playMusic('game', 0.5);
         }
-        
-        console.log('🚀 Game started!');
     }
 
     /**
@@ -439,6 +463,18 @@ class Game {
             this.checkPlayerCollisions();
         }
         
+        // Update background (only when camera moves with player)
+        if (this.infiniteBackground) {
+            this.infiniteBackground.update(this.camera.x, deltaTime);
+        }
+        
+        // Update parallax layers
+        this.backgroundLayers.forEach(layer => {
+            if (layer instanceof Background) {
+                layer.update(this.camera.x, deltaTime);
+            }
+        });
+        
         // Update enemies
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.active) {
@@ -473,6 +509,7 @@ class Game {
         this.projectiles = this.projectiles.filter(projectile => {
             if (projectile.active) {
                 projectile.update(deltaTime);
+                this.updateProjectilePhysics(projectile);
                 return true;
             }
             return false;
@@ -500,14 +537,12 @@ class Game {
     updateCamera() {
         if (!this.player) return;
         
-        // Calculate target position with look-ahead
-        this.cameraTarget.x = this.player.x - this.canvas.width / 2 + 
-                             this.player.velocity.x * this.cameraLead.x / 10;
-        this.cameraTarget.y = this.player.y - this.canvas.height / 2 + 
-                             this.player.velocity.y * this.cameraLead.y / 10;
+        // Calculate target position with reduced look-ahead for better visibility
+        this.cameraTarget.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
+        this.cameraTarget.y = this.player.y - this.canvas.height / 2 + this.player.height / 2;
         
-        // Smooth camera movement
-        const lerpSpeed = 0.1;
+        // Smooth camera movement with faster response
+        const lerpSpeed = 0.15;
         this.camera.x += (this.cameraTarget.x - this.camera.x) * lerpSpeed;
         this.camera.y += (this.cameraTarget.y - this.camera.y) * lerpSpeed;
         
@@ -656,6 +691,23 @@ class Game {
     }
 
     /**
+     * Update projectile physics and collisions
+     * @param {Projectile} projectile - Projectile to update
+     */
+    updateProjectilePhysics(projectile) {
+        // Check collision with platforms
+        this.platforms.forEach(platform => {
+            if (CollisionDetection.rectangleCollision(
+                CollisionDetection.getCollisionBounds(projectile),
+                platform
+            )) {
+                // Projectile hit platform
+                projectile.hitObstacle(platform);
+            }
+        });
+    }
+
+    /**
      * Update game statistics
      * @param {number} deltaTime - Time since last frame
      */
@@ -719,31 +771,21 @@ class Game {
         if (this.player) {
             this.player.render(this.ctx, this.camera);
         }
-        
-        // Render debug information
-        if (this.debug) {
-            this.renderDebugInfo();
-        }
     }
 
     /**
-     * Render parallax background
+     * Render infinite scrolling background and optional parallax layers
      */
     renderBackground() {
+        // Render main infinite scrolling background
+        if (this.infiniteBackground) {
+            this.infiniteBackground.render(this.ctx, this.camera);
+        }
+        
+        // Render optional parallax layers
         this.backgroundLayers.forEach(layer => {
-            if (!layer.img || !layer.img.complete) return;
-            
-            // Calculate parallax offset
-            const offsetX = this.camera.x * layer.speed;
-            const x = -offsetX % layer.img.width;
-            
-            // Draw background, repeating as needed
-            for (let i = -1; i < Math.ceil(this.canvas.width / layer.img.width) + 1; i++) {
-                this.ctx.drawImage(
-                    layer.img,
-                    x + i * layer.img.width,
-                    layer.y - this.camera.y
-                );
+            if (layer instanceof Background) {
+                layer.render(this.ctx, this.camera);
             }
         });
     }
@@ -771,36 +813,7 @@ class Game {
         });
     }
 
-    /**
-     * Render debug information
-     */
-    renderDebugInfo() {
-        this.ctx.save();
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(10, 10, 300, 150);
-        
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '12px monospace';
-        
-        const debugInfo = [
-            `FPS: ${Math.round(1000 / this.deltaTime)}`,
-            `Player: ${Math.round(this.player?.x || 0)}, ${Math.round(this.player?.y || 0)}`,
-            `Camera: ${Math.round(this.camera.x)}, ${Math.round(this.camera.y)}`,
-            `Enemies: ${this.enemies.length}`,
-            `Items: ${this.items.length}`,
-            `Projectiles: ${this.projectiles.length}`,
-            `Health: ${this.player?.health || 0}/${this.player?.maxHealth || 100}`,
-            `Coins: ${this.player?.coins || 0}`,
-            `Score: ${this.player?.score || 0}`,
-            `Time: ${Math.round(this.stats.timeElapsed / 1000)}s`
-        ];
-        
-        debugInfo.forEach((info, index) => {
-            this.ctx.fillText(info, 20, 30 + index * 14);
-        });
-        
-        this.ctx.restore();
-    }
+
 
     /**
      * Pause the game
@@ -814,8 +827,6 @@ class Game {
         if (this.audioManager) {
             // Pause or lower music volume
         }
-        
-        console.log('⏸️ Game paused');
     }
 
     /**
@@ -830,8 +841,6 @@ class Game {
         if (this.audioManager) {
             // Resume or restore music volume
         }
-        
-        console.log('▶️ Game resumed');
     }
 
     /**
@@ -850,8 +859,6 @@ class Game {
             this.audioManager.stopAllMusic();
             this.audioManager.playSound('game_over', 0.8);
         }
-        
-        console.log('💀 Game Over');
     }
 
     /**
@@ -875,8 +882,6 @@ class Game {
             this.audioManager.stopAllMusic();
             this.audioManager.playSound('victory', 0.8);
         }
-        
-        console.log('🏆 Victory!');
     }
 
     /**
@@ -920,8 +925,6 @@ class Game {
         this.camera = { x: 0, y: 0 };
         
         this.showMenu('startMenu');
-        
-        console.log('🏠 Returned to main menu');
     }
 
     /**

@@ -29,8 +29,28 @@ class Coin extends Item {
         // Set fallback color (gold for coins)
         this.fallbackColor = '#FFD700';
         
-        // Load sprite
-        this.loadSprite('art/items/coin.png');
+        // Load appropriate sprite based on value
+        this.loadCoinSprite();
+    }
+
+    /**
+     * Load appropriate coin sprite based on value
+     */
+    loadCoinSprite() {
+        let spritePath;
+        
+        if (this.value >= 5) {
+            // Use gold coin sprite for high value
+            spritePath = 'art/items/coin_gold.png';
+        } else if (this.value >= 3) {
+            // Use silver coin sprite for medium value
+            spritePath = 'art/items/coin_silver.png';
+        } else {
+            // Use animated coin sprite for basic coins
+            spritePath = 'art/items/coin_animated.png';
+        }
+        
+        this.loadSprite(spritePath);
     }
 
     /**
@@ -66,19 +86,20 @@ class Coin extends Item {
         const frameWidth = this.width;
         const frameHeight = this.height;
         
-        // Spinning animation - coin rotating
+        // Spinning animation - coin rotating (8 frames)
         this.addAnimation('spin', [
-            { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth * 2, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth * 3, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth * 4, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth * 3, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth * 2, y: 0, width: frameWidth, height: frameHeight },
-            { x: frameWidth, y: 0, width: frameWidth, height: frameHeight }
+            { x: 0 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 1 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 2 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 3 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 4 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 5 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 6 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
+            { x: 7 * frameWidth, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
-        this.animations.spin.speed = 100;
+        // Set animation speed - slower for better visibility
+        this.animations.spin.speed = 120;
     }
 
     /**
@@ -119,44 +140,23 @@ class Coin extends Item {
     }
 
     /**
-     * Render coin with sparkle effects
+     * Render coin with sparkle effects (disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     renderEffects(ctx, camera) {
-        // Render sparkles around high-value coins
-        if (this.value >= 3 && this.sparkleTimer % this.sparkleInterval < 100) {
-            this.renderSparkles(ctx, camera);
-        }
+        // Effects disabled to prevent rectangles
+        return;
     }
 
     /**
-     * Render sparkle effects around coin
+     * Render sparkle effects around coin (now disabled)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} camera - Camera object
      */
     renderSparkles(ctx, camera) {
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        const centerX = screenX + this.width / 2;
-        const centerY = screenY + this.height / 2;
-        
-        ctx.save();
-        ctx.fillStyle = this.sparkleColor || '#FFFFFF';
-        ctx.globalAlpha = 0.8;
-        
-        // Draw sparkles at random positions around coin
-        for (let i = 0; i < 4; i++) {
-            const angle = (Date.now() / 1000 + i * Math.PI / 2) % (Math.PI * 2);
-            const distance = this.width / 2 + 8;
-            const sparkleX = centerX + Math.cos(angle) * distance;
-            const sparkleY = centerY + Math.sin(angle) * distance;
-            
-            // Draw star-shaped sparkle
-            this.drawStar(ctx, sparkleX, sparkleY, 2, 4);
-        }
-        
-        ctx.restore();
+        // Sparkles disabled to prevent rectangles
+        return;
     }
 
     /**
