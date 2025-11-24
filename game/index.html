@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luckie Runner!</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1200" height="600"></canvas>
+        
+        <!-- Game UI Overlay -->
+        <div id="gameUI">
+            <div id="healthBar">
+                <div id="healthFill"></div>
+            </div>
+            <div id="scoreDisplay">Score: <span id="score">0</span></div>
+            <div id="coinDisplay">Coins: <span id="coins">0</span></div>
+        </div>
+
+        <!-- Start Menu -->
+        <div id="startMenu" class="menu">
+            <h1>Luckie Runner!</h1>
+            <p>Help Luckie Puppy get to Beachside Boba Cafe on time!</p>
+            <button id="startButton">Start Game</button>
+            <button id="instructionsButton">Instructions</button>
+        </div>
+
+        <!-- Instructions Screen -->
+        <div id="instructionsMenu" class="menu hidden">
+            <h2>How to Play</h2>
+            <div class="instructions">
+                <p><strong>Movement:</strong> A/D or Arrow Keys</p>
+                <p><strong>Jump:</strong> W or Space</p>
+                <p><strong>Dash:</strong> Shift + Movement</p>
+                <p><strong>Attack:</strong> Mouse Click (throw rocks)</p>
+                <p><strong>Goal:</strong> Collect coins, avoid enemies, reach the cafe!</p>
+            </div>
+            <button id="backButton">Back</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverMenu" class="menu hidden">
+            <h2>Game Over</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Coins Collected: <span id="finalCoins">0</span></p>
+            <button id="restartButton">Try Again</button>
+            <button id="mainMenuButton">Main Menu</button>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="pauseMenu" class="menu hidden">
+            <h2>Paused</h2>
+            <button id="resumeButton">Resume</button>
+            <button id="pauseMainMenuButton">Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Core Game Scripts -->
+    <script src="scripts/utils/InputManager.js"></script>
+    <script src="scripts/utils/AudioManager.js"></script>
+    <script src="scripts/utils/CollisionDetection.js"></script>
+    
+    <!-- Base Entity Classes -->
+    <script src="scripts/core/Entity.js"></script>
+    <script src="scripts/core/Projectile.js"></script>
+    
+    <!-- Player System -->
+    <script src="scripts/player/Player.js"></script>
+    <script src="scripts/player/PlayerAnimations.js"></script>
+    
+    <!-- Enemy System -->
+    <script src="scripts/enemies/Enemy.js"></script>
+    <script src="scripts/enemies/GroundSlime.js"></script>
+    <script src="scripts/enemies/PoisonSlime.js"></script>
+    <script src="scripts/enemies/MagicArrowSlime.js"></script>
+    
+    <!-- Environment System -->
+    <script src="scripts/environment/Background.js"></script>
+    <script src="scripts/environment/Platform.js"></script>
+    <script src="scripts/environment/Trap.js"></script>
+    <script src="scripts/environment/LevelGenerator.js"></script>
+    
+    <!-- Items and Collectibles -->
+    <script src="scripts/items/Item.js"></script>
+    <script src="scripts/items/Coin.js"></script>
+    <script src="scripts/items/HealthPotion.js"></script>
+    
+    <!-- Game Logic -->
+    <script src="scripts/Game.js"></script>
+    
+    <!-- Initialize Game -->
+    <script>
+        // Initialize the game when page loads
+        window.addEventListener('load', () => {
+            const game = new Game('gameCanvas');
+            window.game = game; // For debugging
+        });
+    </script>
+</body>
+</html>
