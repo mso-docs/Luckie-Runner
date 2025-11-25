@@ -1,40 +1,23 @@
 /**
  * Player - Main character class for Luckie Puppy
- * Implements Sonic-inspired movement with running, jumping, dashing, and rock throwing
+ * Simple, reliable platformer movement
  */
 class Player extends Entity {
     constructor(x, y) {
-        // New sprite: 181x132 total, 2 rows × 4 frames, 45x66px per frame
+        // Tile-based sprite: 45x66 tiles
         super(x, y, 45, 66);
         
-        // Player-specific physics
-        this.runAcceleration = 0.4;
-        this.maxRunSpeed = 4;
-        this.maxDashSpeed = 6;
-        this.jumpPower = 10;
-        this.airControl = 0.3;
-        this.groundFriction = 0.85;
-        this.airFriction = 0.98;
-        this.coyoteTime = 150; // ms after leaving ground where jump is still possible
-        this.jumpBuffer = 100; // ms to buffer jump input before landing
+        // SMOOTH PHYSICS
+        this.moveSpeed = 600; // pixels/second - max speed cap
+        this.acceleration = 2000; // pixels/second² - gradual ramp up
+        this.deceleration = 8000; // pixels/second² - ground stopping (85% faster: 1200 * 6.67 ≈ 8000)
+        this.airDeceleration = 100; // pixels/second² - air resistance (very low)
+        this.jumpStrength = -700; // pixels/second - negative = up (increased to compensate for higher gravity)
+        this.gravity = 1000; // pixels/second² - falling acceleration (increased by 25%)
         
-        // Player state
-        this.facing = 1; // 1 for right, -1 for left
-        this.isRunning = false;
-        this.isDashing = false;
-        this.isJumping = false;
-        this.canDoubleJump = true;
-        this.timeSinceGrounded = 0;
-        this.jumpBufferTime = 0;
-        this.dashCooldown = 0;
-        this.dashDuration = 200; // ms
-        this.dashCooldownTime = 800; // ms
-        
-        // Combat properties
-        this.attackCooldown = 0;
-        this.attackCooldownTime = 300;
-        this.rocks = 10;
-        this.maxRocks = 20;
+        // Simple state
+        this.facing = 1; // 1 = right, -1 = left
+        this.canJump = false; // Can only jump when on ground
         
         // Health and status
         this.maxHealth = 100;
@@ -42,256 +25,121 @@ class Player extends Entity {
         this.coins = 0;
         this.score = 0;
         
-        // Animation setup
-        this.setupAnimations();
-        this.playAnimation('idle_right');
+        // Rock throwing
+        this.maxRocks = 10;
+        this.rocks = 10;
+        this.attackCooldown = 0;
+        this.attackCooldownTime = 500; // 500ms cooldown
         
-        // Load sprite with error handling
-        this.loadSprite('art/sprites/luckie-sprite.png');
+        // Load tile-based sprite sheet (45x66 tiles)
+        // Animates first 2 tiles by default at 200ms per frame
+        this.loadTileSheet('art/sprites/luckie-sprite.png', 45, 66, [0, 1], 200);
     }
 
     /**
-     * Set up animation frames for the player sprite
-     * New sprite: 181x132px total, 2 rows × 4 frames, 45x66px each
-     * Top row (y=0): Right movement frames
-     * Bottom row (y=66): Left movement frames
+     * Set tile animation frames dynamically
+     * @param {Array} frames - Array of tile indices [0, 1, 2, etc]
+     * @param {number} speed - Animation speed in ms per frame
      */
-    setupAnimations() {
-        const frameWidth = 45;
-        const frameHeight = 66;
-        
-        // Right movement animations (top row)
-        this.addAnimation('idle_right', [
-            { x: 0, y: 0, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        this.addAnimation('run_right', [
-            { x: 0, y: 0, width: frameWidth, height: frameHeight },
-            { x: 45, y: 0, width: frameWidth, height: frameHeight },
-            { x: 90, y: 0, width: frameWidth, height: frameHeight },
-            { x: 135, y: 0, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        // Left movement animations (bottom row)
-        this.addAnimation('idle_left', [
-            { x: 0, y: 66, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        this.addAnimation('run_left', [
-            { x: 0, y: 66, width: frameWidth, height: frameHeight },
-            { x: 45, y: 66, width: frameWidth, height: frameHeight },
-            { x: 90, y: 66, width: frameWidth, height: frameHeight },
-            { x: 135, y: 66, width: frameWidth, height: frameHeight }
-        ], true);
-        
-        // Jumping animations (use first frame of each direction)
-        this.addAnimation('jump_right', [
-            { x: 45, y: 0, width: frameWidth, height: frameHeight }
-        ], false);
-        
-        this.addAnimation('jump_left', [
-            { x: 45, y: 66, width: frameWidth, height: frameHeight }
-        ], false);
-        
-        // Attack animations (use frame 3 of each direction)
-        this.addAnimation('attack_right', [
-            { x: 90, y: 0, width: frameWidth, height: frameHeight }
-        ], false);
-        
-        this.addAnimation('attack_left', [
-            { x: 90, y: 66, width: frameWidth, height: frameHeight }
-        ], false);
-        
-        // Dash animations (use frame 4 of each direction)
-        this.addAnimation('dash_right', [
-            { x: 135, y: 0, width: frameWidth, height: frameHeight }
-        ], false);
-        
-        this.addAnimation('dash_left', [
-            { x: 135, y: 66, width: frameWidth, height: frameHeight }
-        ], false);
-
-        // Adjust animation speeds
-        this.animations.idle_right.speed = 200;
-        this.animations.idle_left.speed = 200;
-        this.animations.run_right.speed = 100;
-        this.animations.run_left.speed = 100;
-        this.animations.jump_right.speed = 150;
-        this.animations.jump_left.speed = 150;
-        this.animations.attack_right.speed = 80;
-        this.animations.attack_left.speed = 80;
-        this.animations.dash_right.speed = 50;
-        this.animations.dash_left.speed = 50;
+    setTileAnimation(frames, speed = 200) {
+        this.tileAnimationFrames = frames;
+        this.tileAnimationSpeed = speed;
+        this.tileAnimationIndex = 0;
+        this.tileAnimationTime = 0;
+        this.tileIndex = frames[0];
     }
 
     /**
-     * Handle player input and movement
-     * @param {number} deltaTime - Time since last frame
+     * Smooth movement with momentum
+     * @param {number} deltaTime - Time since last frame in ms
      */
     onUpdate(deltaTime) {
+        const dt = deltaTime / 1000; // Convert to seconds
         const input = this.game.input;
         
-        // Update timers
-        this.updateTimers(deltaTime);
+        // HORIZONTAL MOVEMENT - Smooth acceleration/deceleration
+        const movingLeft = input.isMovingLeft();
+        const movingRight = input.isMovingRight();
         
-        // Handle input
-        this.handleMovementInput(input);
-        this.handleJumpInput(input, deltaTime);
-        this.handleAttackInput(input);
+        if (movingLeft && !movingRight) {
+            // Accelerate left
+            this.velocity.x -= this.acceleration * dt;
+            if (this.velocity.x < -this.moveSpeed) {
+                this.velocity.x = -this.moveSpeed;
+            }
+            this.facing = -1;
+        } else if (movingRight && !movingLeft) {
+            // Accelerate right
+            this.velocity.x += this.acceleration * dt;
+            if (this.velocity.x > this.moveSpeed) {
+                this.velocity.x = this.moveSpeed;
+            }
+            this.facing = 1;
+        } else {
+            // No input - decelerate based on ground/air
+            const decel = this.onGround ? this.deceleration : this.airDeceleration;
+            
+            if (this.velocity.x > 0) {
+                this.velocity.x -= decel * dt;
+                if (this.velocity.x < 0) this.velocity.x = 0;
+            } else if (this.velocity.x < 0) {
+                this.velocity.x += decel * dt;
+                if (this.velocity.x > 0) this.velocity.x = 0;
+            }
+        }
         
-        // Update animations based on state
-        this.updateAnimationState();
+        // JUMPING - Only when on ground
+        if (input.isJumping() && this.onGround) {
+            this.velocity.y = this.jumpStrength;
+            this.onGround = false;
+        }
         
-        // Apply Sonic-style physics
-        this.updateSonicPhysics();
+        // ROCK THROWING - Space or X key
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= deltaTime;
+        }
         
-        // Update camera to follow player
+        if ((input.keys['Space'] || input.keys['KeyX']) && this.rocks > 0 && this.attackCooldown <= 0) {
+            this.throwRock();
+        }
+        
+        // GRAVITY - Always pull down when not on ground
+        if (!this.onGround) {
+            this.velocity.y += this.gravity * dt;
+        } else {
+            // Stop falling when on ground
+            if (this.velocity.y > 0) {
+                this.velocity.y = 0;
+            }
+        }
+        
+        // Update position
+        this.x += this.velocity.x * dt;
+        this.y += this.velocity.y * dt;
+        
+        // Update animations
+        this.updateSimpleAnimation();
+        
+        // Update camera
         this.updateCamera();
     }
 
     /**
-     * Update various timers
-     * @param {number} deltaTime - Time since last frame
+     * Simple animation - switch between idle and running tiles based on movement
      */
-    updateTimers(deltaTime) {
-        // Update grounded time for coyote time
-        if (this.onGround) {
-            this.timeSinceGrounded = 0;
-            this.canDoubleJump = true;
+    updateSimpleAnimation() {
+        // Check if player is moving
+        const isMoving = Math.abs(this.velocity.x) > 10; // Small threshold to ignore tiny movements
+        
+        // Flip sprite when facing left (sprite faces right by default)
+        this.flipX = this.facing === -1; // true when facing left, false when facing right
+        
+        if (isMoving) {
+            // Running - use tile 1
+            this.setTileAnimation([1], 0);
         } else {
-            this.timeSinceGrounded += deltaTime;
-        }
-        
-        // Update jump buffer
-        if (this.jumpBufferTime > 0) {
-            this.jumpBufferTime -= deltaTime;
-        }
-        
-        // Update dash cooldown
-        if (this.dashCooldown > 0) {
-            this.dashCooldown -= deltaTime;
-        }
-        
-        // Update attack cooldown
-        if (this.attackCooldown > 0) {
-            this.attackCooldown -= deltaTime;
-        }
-    }
-
-    /**
-     * Handle horizontal movement input
-     * @param {InputManager} input - Input manager
-     */
-    handleMovementInput(input) {
-        this.isRunning = false;
-        this.isDashing = false;
-        
-        // Check for dash input
-        const wantsToDash = input.isDashing() && this.dashCooldown <= 0;
-        
-        // Horizontal movement
-        if (input.isMovingLeft()) {
-            this.isRunning = true;
-            this.facing = -1;
-            
-            if (wantsToDash) {
-                this.performDash(-1);
-            } else {
-                this.accelerateHorizontally(-this.runAcceleration);
-            }
-        } else if (input.isMovingRight()) {
-            this.isRunning = true;
-            this.facing = 1;
-            
-            if (wantsToDash) {
-                this.performDash(1);
-            } else {
-                this.accelerateHorizontally(this.runAcceleration);
-            }
-        }
-        
-        // Apply appropriate friction
-        this.friction = this.onGround ? this.groundFriction : this.airFriction;
-    }
-
-    /**
-     * Apply horizontal acceleration
-     * @param {number} acceleration - Acceleration amount
-     */
-    accelerateHorizontally(acceleration) {
-        const maxSpeed = this.isDashing ? this.maxDashSpeed : this.maxRunSpeed;
-        const control = this.onGround ? 1 : this.airControl;
-        
-        this.velocity.x += acceleration * control;
-        this.velocity.x = Math.max(-maxSpeed, Math.min(maxSpeed, this.velocity.x));
-    }
-
-    /**
-     * Perform dash move
-     * @param {number} direction - Direction to dash (-1 or 1)
-     */
-    performDash(direction) {
-        this.isDashing = true;
-        this.velocity.x = direction * this.maxDashSpeed;
-        this.dashCooldown = this.dashCooldownTime;
-        
-        // Dash can reset air jumps
-        if (!this.onGround) {
-            this.canDoubleJump = true;
-        }
-        
-        // Play dash sound effect
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('dash', 0.8);
-        }
-    }
-
-    /**
-     * Handle jump input with coyote time and jump buffering
-     * @param {InputManager} input - Input manager
-     * @param {number} deltaTime - Time since last frame
-     */
-    handleJumpInput(input, deltaTime) {
-        if (input.isJumping()) {
-            this.jumpBufferTime = this.jumpBuffer;
-        }
-        
-        // Check if we can jump
-        const canCoyoteJump = this.timeSinceGrounded <= this.coyoteTime;
-        const canJump = this.onGround || canCoyoteJump || this.canDoubleJump;
-        
-        if (this.jumpBufferTime > 0 && canJump) {
-            this.performJump();
-            this.jumpBufferTime = 0;
-            
-            // Use double jump if in air
-            if (!this.onGround && !canCoyoteJump) {
-                this.canDoubleJump = false;
-            }
-        }
-    }
-
-    /**
-     * Perform jump
-     */
-    performJump() {
-        this.velocity.y = -this.jumpPower;
-        this.isJumping = true;
-        this.onGround = false;
-        
-        // Play jump sound effect
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('jump', 0.7);
-        }
-    }
-
-    /**
-     * Handle attack input (rock throwing)
-     * @param {InputManager} input - Input manager
-     */
-    handleAttackInput(input) {
-        if (input.isMouseClicked() && this.attackCooldown <= 0 && this.rocks > 0) {
-            this.throwRock(input.getMousePosition());
+            // Idle - use tile 0
+            this.setTileAnimation([0], 0);
         }
     }
 
@@ -327,51 +175,13 @@ class Player extends Entity {
         // Update UI to show rock count
         this.updateUI();
         
-        // Play attack animation and sound
-        const animDirection = this.facing > 0 ? 'right' : 'left';
-        this.playAnimation(`attack_${animDirection}`);
+        // Play attack sound
         if (this.game.audioManager) {
-            this.game.audioManager.playSound('attack', 0.6);
+            this.game.audioManager.playSound('rock', 0.6);
         }
     }
 
-    /**
-     * Update animation state based on current movement
-     */
-    updateAnimationState() {
-        // Don't change animation if playing a non-looping one
-        if (this.currentAnimation === 'attack_left' || this.currentAnimation === 'attack_right') {
-            return;
-        }
-        
-        const direction = this.facing > 0 ? 'right' : 'left';
-        
-        if (this.isDashing) {
-            this.playAnimation(`dash_${direction}`);
-        } else if (!this.onGround) {
-            this.playAnimation(`jump_${direction}`);
-        } else if (this.isRunning) {
-            this.playAnimation(`run_${direction}`);
-        } else {
-            this.playAnimation(`idle_${direction}`);
-        }
-        
-        // No longer need flipX since we have directional sprites
-        this.flipX = false;
-    }
 
-    /**
-     * Apply Sonic-style physics improvements
-     */
-    updateSonicPhysics() {
-        // Variable jump height based on input
-        if (this.velocity.y < 0 && !this.game.input.isJumping()) {
-            this.velocity.y *= 0.5; // Cut jump short
-        }
-        
-        // Slope physics (if on ramps)
-        // TODO: Implement when slope platforms are added
-    }
 
     /**
      * Update camera to follow player smoothly
@@ -394,8 +204,7 @@ class Player extends Entity {
      * @param {Entity} source - Damage source
      */
     onTakeDamage(amount, source) {
-        // Play hurt animation and sound
-        this.playAnimation('hurt');
+        // Play hurt sound
         if (this.game.audioManager) {
             this.game.audioManager.playSound('hurt', 0.8);
         }
@@ -419,12 +228,9 @@ class Player extends Entity {
      * @param {Entity} source - Death source
      */
     onDeath(source) {
-        // Don't deactivate player immediately
-        this.playAnimation('hurt');
-        
         // Trigger game over
         if (this.game) {
-            this.game.gameOver();
+            this.game.stateManager.gameOver();
         }
     }
 
@@ -434,9 +240,16 @@ class Player extends Entity {
      */
     collectCoin(value = 1) {
         this.coins += value;
+        const oldScore = this.score;
         this.score += value * 10;
         
-        if (this.game.audioManager) {
+        // Check for high score milestones (every 1000 points)
+        const oldMilestone = Math.floor(oldScore / 1000);
+        const newMilestone = Math.floor(this.score / 1000);
+        
+        if (newMilestone > oldMilestone && this.game.audioManager) {
+            this.game.audioManager.playSound('high_score', 0.9);
+        } else if (this.game.audioManager) {
             this.game.audioManager.playSound('coin', 0.7);
         }
         
@@ -449,6 +262,13 @@ class Player extends Entity {
      */
     addRocks(amount) {
         this.rocks = Math.min(this.maxRocks, this.rocks + amount);
+        
+        // Play special pickup sound for rocks
+        if (this.game.audioManager) {
+            this.game.audioManager.playSound('special', 0.7);
+        }
+        
+        this.updateUI();
     }
 
     /**
@@ -482,11 +302,13 @@ class Player extends Entity {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
-        this.rocks = 10;
+        this.rocks = this.maxRocks;
+        this.attackCooldown = 0;
         this.velocity = { x: 0, y: 0 };
         this.facing = 1;
         this.invulnerable = false;
-        this.playAnimation('idle');
+        this.tileAnimationIndex = 0;
+        this.tileAnimationTime = 0;
         this.updateUI();
         this.updateHealthUI();
     }

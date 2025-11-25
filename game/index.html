@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luckie Runner!</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14'>🎮</text></svg>">
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -36,7 +37,8 @@
                 <p><strong>Jump:</strong> W or Space</p>
                 <p><strong>Dash:</strong> Shift + Movement</p>
                 <p><strong>Attack:</strong> Mouse Click (throw rocks)</p>
-                <p><strong>Goal:</strong> Collect coins, avoid enemies, reach the cafe!</p>
+                <p><strong>Goal:</strong> Reach the flag at the end of the level!</p>
+                <p><strong>Tip:</strong> Collect coins and avoid enemies along the way!</p>
             </div>
             <button id="backButton">Back</button>
         </div>
@@ -54,6 +56,31 @@
         <div id="pauseMenu" class="menu hidden">
             <h2>Paused</h2>
             <button id="resumeButton">Resume</button>
+            
+            <!-- Audio Controls -->
+            <div class="audio-controls">
+                <h3>Audio Settings</h3>
+                
+                <div class="volume-control">
+                    <button id="muteButton">🔊 Mute</button>
+                </div>
+                
+                <div class="volume-control">
+                    <label for="masterVolume">Master Volume: <span id="masterVolumeValue">100%</span></label>
+                    <input type="range" id="masterVolume" min="0" max="100" value="100" step="5">
+                </div>
+                
+                <div class="volume-control">
+                    <label for="musicVolume">Music Volume: <span id="musicVolumeValue">60%</span></label>
+                    <input type="range" id="musicVolume" min="0" max="100" value="60" step="5">
+                </div>
+                
+                <div class="volume-control">
+                    <label for="sfxVolume">SFX Volume: <span id="sfxVolumeValue">80%</span></label>
+                    <input type="range" id="sfxVolume" min="0" max="100" value="80" step="5">
+                </div>
+            </div>
+            
             <button id="pauseMainMenuButton">Main Menu</button>
         </div>
     </div>
@@ -66,6 +93,9 @@
     <!-- Base Entity Classes -->
     <script src="scripts/core/Entity.js"></script>
     <script src="scripts/core/Projectile.js"></script>
+    
+    <!-- Manager Classes -->
+    <script src="scripts/core/GameStateManager.js"></script>
     
     <!-- Player System -->
     <script src="scripts/player/Player.js"></script>
@@ -82,11 +112,14 @@
     <script src="scripts/environment/Platform.js"></script>
     <script src="scripts/environment/Trap.js"></script>
     <script src="scripts/environment/LevelGenerator.js"></script>
+    <script src="scripts/environment/PalmTreeManager.js"></script>
+    <script src="scripts/environment/TestRoom.js"></script>
     
     <!-- Items and Collectibles -->
     <script src="scripts/items/Item.js"></script>
     <script src="scripts/items/Coin.js"></script>
     <script src="scripts/items/HealthPotion.js"></script>
+    <script src="scripts/items/Flag.js"></script>
     
     <!-- Game Logic -->
     <script src="scripts/Game.js"></script>
@@ -95,22 +128,6 @@
     <script>
         // Initialize the game when page loads
         window.addEventListener('load', () => {
-            // Test if enemy classes exist
-            console.log('🧪 Testing enemy class availability...');
-            console.log('GroundSlime class exists:', typeof GroundSlime !== 'undefined');
-            console.log('PoisonSlime class exists:', typeof PoisonSlime !== 'undefined');
-            console.log('MagicArrowSlime class exists:', typeof MagicArrowSlime !== 'undefined');
-            console.log('Enemy base class exists:', typeof Enemy !== 'undefined');
-            console.log('Entity base class exists:', typeof Entity !== 'undefined');
-            
-            // Test creating a simple enemy
-            try {
-                const testSlime = new GroundSlime(100, 100);
-                console.log('✅ Successfully created test GroundSlime:', testSlime);
-            } catch (error) {
-                console.error('❌ Failed to create test GroundSlime:', error);
-            }
-            
             const game = new Game('gameCanvas');
             window.game = game; // For debugging
         });

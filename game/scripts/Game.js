@@ -13,10 +13,13 @@ class Game {
         this.state = 'menu'; // 'menu', 'playing', 'paused', 'gameOver'
         this.debug = false; // Debug mode disabled
         this.running = false;
+        this.testMode = true; // Start in test mode for debugging
         
         // Core systems
         this.input = new InputManager();
         this.audioManager = new AudioManager();
+        this.stateManager = new GameStateManager(this);
+        this.palmTreeManager = new PalmTreeManager(this);
         
         // Game entities
         this.player = null;
@@ -25,6 +28,7 @@ class Game {
         this.projectiles = [];
         this.hazards = [];
         this.platforms = [];
+        this.flag = null;
         
         // Camera system
         this.camera = { x: 0, y: 0 };
@@ -47,6 +51,10 @@ class Game {
         this.lastTime = 0;
         this.deltaTime = 0;
         this.gameTime = 0;
+        this.frameCount = 0;
+        this.timeScale = 0.6; // Slow down everything by 40%
+        this.gameTime = 0;
+        
         this.frameCount = 0;
         this.fps = 60;
         this.targetFrameTime = 1000 / this.fps;
@@ -80,24 +88,67 @@ class Game {
         this.createLevel();
         
         // Show start menu
-        this.showMenu('startMenu');
+        this.stateManager.showMenu('startMenu');
         
-        console.log('🎮 Luckie Runner initialized!');
+        // Attempt to play title music (may be blocked by autoplay policy)
+        this.playTitleMusic();
+        
+        // Game initialized
+    }
+    
+
+    
+    /**
+     * Attempt to play title music, handling autoplay policy
+     */
+    playTitleMusic() {
+        if (this.audioManager && this.audioManager.music['title']) {
+            this.audioManager.playMusic('title', 0.6).catch(error => {
+                // Title music blocked by autoplay policy. Will start on user interaction.
+                
+                // Add one-time listener for first user interaction
+                const startMusicOnInteraction = () => {
+                    if (this.stateManager.isInMenu()) {
+                        this.audioManager.playMusic('title', 0.6);
+                    }
+                    document.removeEventListener('click', startMusicOnInteraction);
+                    document.removeEventListener('keydown', startMusicOnInteraction);
+                };
+                
+                document.addEventListener('click', startMusicOnInteraction, { once: true });
+                document.addEventListener('keydown', startMusicOnInteraction, { once: true });
+            });
+        }
+    }
+    
+    /**
+     * Ensure title music is playing (used for menu interactions)
+     */
+    ensureTitleMusicPlaying() {
+        if (this.stateManager.isInMenu() && this.audioManager && !this.audioManager.muted) {
+            // Check if title music is currently playing
+            const titleMusic = this.audioManager.music['title'];
+            if (titleMusic && titleMusic.paused && titleMusic.readyState >= 2) {
+                // Only try to play if the music is paused and ready
+                this.audioManager.playMusic('title', 0.6).catch(() => {
+                    // Audio play failed - silently ignore
+                });
+            }
+        }
     }
     
     /**
      * Test sprite loading to verify paths work
      */
     testSpriteLoading() {
-        console.log('🧪 Testing sprite loading...');
+        // Testing sprite loading
         
         const testSprite = new Image();
         testSprite.onload = () => {
-            console.log('✅ Test sprite loaded successfully! custom-green-slime.png is accessible');
-            console.log(`📐 Sprite dimensions: ${testSprite.naturalWidth}x${testSprite.naturalHeight}px`);
+            // Test sprite loaded successfully
         };
         testSprite.onerror = () => {
-            console.error('❌ Test sprite failed to load! custom-green-slime.png path issue');
+            // Test sprite failed to load
         };
         testSprite.src = 'art/sprites/custom-green-slime.png';
     }
@@ -108,57 +159,74 @@ class Game {
     setupEventListeners() {
         // Start menu
         document.getElementById('startButton').addEventListener('click', () => {
-            this.startGame();
+            this.ensureTitleMusicPlaying();
+            this.stateManager.startGame();
         });
         
         document.getElementById('instructionsButton').addEventListener('click', () => {
-            this.showMenu('instructionsMenu');
+            this.ensureTitleMusicPlaying();
+            this.stateManager.showMenu('instructionsMenu');
         });
         
         // Instructions menu
         document.getElementById('backButton').addEventListener('click', () => {
-            this.showMenu('startMenu');
+            this.ensureTitleMusicPlaying();
+            this.stateManager.showMenu('startMenu');
         });
         
         // Game over menu
         document.getElementById('restartButton').addEventListener('click', () => {
-            this.restartGame();
+            this.stateManager.restartGame();
         });
         
         document.getElementById('mainMenuButton').addEventListener('click', () => {
-            this.returnToMenu();
+            this.stateManager.returnToMenu();
         });
         
         // Pause menu
         document.getElementById('resumeButton').addEventListener('click', () => {
-            this.resumeGame();
+            this.stateManager.resumeGame();
         });
         
         document.getElementById('pauseMainMenuButton').addEventListener('click', () => {
-            this.returnToMenu();
+            this.stateManager.returnToMenu();
+        });
+        
+        // Audio controls
+        document.getElementById('muteButton').addEventListener('click', () => {
+            this.toggleMute();
+        });
+        
+        document.getElementById('masterVolume').addEventListener('input', (e) => {
+            this.setMasterVolume(parseInt(e.target.value));
+        });
+        
+        document.getElementById('musicVolume').addEventListener('input', (e) => {
+            this.setMusicVolume(parseInt(e.target.value));
+        });
+        
+        document.getElementById('sfxVolume').addEventListener('input', (e) => {
+            this.setSfxVolume(parseInt(e.target.value));
         });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            // Let state manager handle state-related shortcuts
+            this.stateManager.handleKeyboardShortcuts(e.key);
+            
+            // Handle other shortcuts
             switch (e.key) {
-                case 'Escape':
-                case 'p':
-                case 'P':
-                    if (this.state === 'playing') {
-                        this.pauseGame();
-                    } else if (this.state === 'paused') {
-                        this.resumeGame();
-                    }
-                    break;
-                case 'r':
-                case 'R':
-                    if (this.state === 'gameOver') {
-                        this.restartGame();
-                    }
-                    break;
                 case 'F1':
                     this.debug = !this.debug;
                     e.preventDefault();
+                    break;
+                case 'F2':
+                    this.toggleTestMode();
+                    e.preventDefault();
+                    break;
+                case 'm':
+                case 'M':
+                    this.toggleMute();
                     break;
             }
         });
@@ -172,18 +240,28 @@ class Game {
         this.enemies = [];
         this.items = [];
         this.hazards = [];
+        this.flag = null;
         
-        // Create ground platforms
-        this.createGroundPlatforms();
+        if (this.testMode) {
+            this.createTestRoom();
+        } else {
+            // Create normal level
+            this.createGroundPlatforms();
+            this.createFloatingPlatforms();
+            this.spawnEnemies();
+            this.spawnItems();
+        }
         
-        // Create floating platforms
-        this.createFloatingPlatforms();
+        // Set level properties
+        this.level = {
+            width: this.canvas.width,
+            height: this.canvas.height,
+            spawnX: this.testMode ? (this.canvas.width / 2) - 22.5 : 100, // Center on platform
+            spawnY: this.testMode ? (this.canvas.height / 2) - 100 : this.canvas.height - 150 // Safely above platform
+        };
         
-        // Spawn enemies
-        this.spawnEnemies();
-        
-        // Spawn items
-        this.spawnItems();
+        // Create level completion flag
+        this.createFlag();
         
         // Create background layers
         this.createBackground();
@@ -274,6 +352,7 @@ class Game {
                 
                 if (enemy) {
                     enemy.game = this;
+                // No need to set gravity - entities use their own default
                     this.enemies.push(enemy);
                 }
             } catch (error) {
@@ -333,36 +412,145 @@ class Game {
     }
 
     /**
+     * Create the level completion flag
+     */
+    createFlag() {
+        // Position the flag near the end of the level, but not at the very edge
+        const flagX = this.level.width - 300;
+        const flagY = this.level.height - 120; // Position above ground
+        
+        this.flag = Flag.create(flagX, flagY);
+        this.flag.game = this;
+        
+        // Flag created at position
+    }
+
+    /**
      * Create background layers with parallax scrolling
      */
     createBackground() {
         this.backgroundLayers = [];
         
-        // Main parallax scrolling background that moves with player
-        this.infiniteBackground = new Background('art/bg/laguna.png', 0.8, 0, false);
+        // Creating Pacific coast background layers
         
-        // Optional additional parallax layers (disabled for now to focus on main background)
-        // Uncomment these if you want additional parallax layers
-        /*
-        this.backgroundLayers = [
-            // Far mountains (slowest parallax)
-            new Background('art/bg/background.png', 0.3, 0, false),
-            // Mid forest/hills
-            new Background('art/bg/panning bg.png', 0.5, 100, false)
-        ];
-        */
+        // Create Pacific coast layered background from back to front
+        const canvasWidth = this.canvas.width;
+        const canvasHeight = this.canvas.height;
+        
+        try {
+            // 1. Sunset sky (furthest back, slowest parallax)
+            const sunsetSky = new ProceduralBackground(
+                canvasWidth, 
+                canvasHeight, 
+                0.1, 
+                0, 
+                BackgroundGenerators.createSunsetSky
+            );
+            this.backgroundLayers.push(sunsetSky);
+            // Sunset sky layer created
+            
+            // 2. Ocean layer (mid-background)
+            const ocean = new ProceduralBackground(
+                canvasWidth * 2, 
+                canvasHeight * 0.4, 
+                0.3, 
+                canvasHeight * 0.6, 
+                BackgroundGenerators.createOcean
+            );
+            this.backgroundLayers.push(ocean);
+            
+            // 3. Hills layer (mid-foreground)
+            const hills = new ProceduralBackground(
+                canvasWidth * 1.5, 
+                canvasHeight * 0.5, 
+                0.5, 
+                canvasHeight * 0.5, 
+                BackgroundGenerators.createHills
+            );
+            this.backgroundLayers.push(hills);
+            // Hills layer created
+            
+            // Initialize SVG-based procedural palm tree system (separate from background layers)
+            this.palmTreeManager.initialize();
+            
+            // All background layers created successfully
+        } catch (error) {
+            // Error creating background layers - using fallback
+            
+            // Fallback to simple gradient background
+            this.createFallbackBackground();
+        }
     }
+    
+    /**
+     * Create a fallback gradient background if procedural generation fails
+     */
+    createFallbackBackground() {
+        // Creating fallback gradient background
+        
+        // Create a simple sunset gradient as fallback
+        const canvas = document.createElement('canvas');
+        canvas.width = this.canvas.width;
+        canvas.height = this.canvas.height;
+        const ctx = canvas.getContext('2d');
+        
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#FFB347');    // Light orange at top
+        gradient.addColorStop(0.3, '#FF7F50');  // Coral
+        gradient.addColorStop(0.6, '#FF6B6B');  // Light pink
+        gradient.addColorStop(0.8, '#DDA0DD');  // Plum
+        gradient.addColorStop(1, '#9370DB');    // Medium purple
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Create a simple background object
+        this.backgroundLayers.push({
+            canvas: canvas,
+            speed: 0.1,
+            x: 0,
+            y: 0,
+            update: function(cameraX, deltaTime) {
+                this.x = -cameraX * this.speed;
+            },
+            render: function(ctx, camera) {
+                const offsetX = this.x % canvas.width;
+                const tilesNeeded = Math.ceil(ctx.canvas.width / canvas.width) + 2;
+                
+                for (let i = -1; i < tilesNeeded; i++) {
+                    const drawX = offsetX + i * canvas.width;
+                    ctx.drawImage(canvas, drawX, this.y - camera.y);
+                }
+            }
+        });
+        
+        // Fallback background created
+    }
+    
+
 
     /**
-     * Start the game
+     * Start the game (delegated to state manager)
      */
     startGame() {
-        this.state = 'playing';
-        this.running = true;
+        this.stateManager.startGame();
+    }
+    
+    /**
+     * Initialize game systems (called by state manager)
+     */
+    initializeGameSystems() {
+        // Clear any lingering input states
+        if (this.input) {
+            this.input.mouse.clicked = false;
+            this.input.mouse.pressed = false;
+        }
         
         // Create player
         this.player = new Player(this.level.spawnX, this.level.spawnY);
         this.player.game = this;
+        // Player uses default gravity from Entity class
         
         // Reset game stats
         this.stats = {
@@ -371,17 +559,6 @@ class Game {
             distanceTraveled: 0,
             timeElapsed: 0
         };
-        
-        // Hide all menus
-        this.hideAllMenus();
-        
-        // Start game loop
-        this.gameLoop();
-        
-        // Play game music
-        if (this.audioManager) {
-            this.audioManager.playMusic('game', 0.5);
-        }
     }
 
     /**
@@ -390,14 +567,14 @@ class Game {
     gameLoop(currentTime = 0) {
         if (!this.running) return;
         
-        // Calculate delta time
-        this.deltaTime = currentTime - this.lastTime;
+        // Calculate delta time with scaling
+        this.deltaTime = (currentTime - this.lastTime) * this.timeScale;
         this.lastTime = currentTime;
         this.gameTime += this.deltaTime;
         this.frameCount++;
         
         // Update game state
-        if (this.state === 'playing') {
+        if (this.stateManager.isPlaying()) {
             this.update(this.deltaTime);
             this.render();
         }
@@ -421,17 +598,15 @@ class Game {
             this.checkPlayerCollisions();
         }
         
-        // Update background (only when camera moves with player)
-        if (this.infiniteBackground) {
-            this.infiniteBackground.update(this.camera.x, deltaTime);
-        }
-        
-        // Update parallax layers
+        // Update all background layers
         this.backgroundLayers.forEach(layer => {
-            if (layer instanceof Background) {
+            if (layer instanceof Background || layer instanceof ProceduralBackground) {
                 layer.update(this.camera.x, deltaTime);
             }
         });
+        
+        // Update procedural palm trees
+        this.palmTreeManager.update(this.camera.x, this.canvas.width);
         
         // Update enemies
         this.enemies = this.enemies.filter(enemy => {
@@ -482,6 +657,17 @@ class Game {
             return false;
         });
         
+        // Update flag
+        if (this.flag) {
+            this.flag.update(deltaTime);
+            
+            // Check flag collision with player (disabled in test mode)
+            if (!this.testMode && this.player && this.flag.checkCollision(this.player)) {
+                // Player collided with flag
+                this.flag.collect(this.player);
+            }
+        }
+        
         // Update statistics
         this.updateGameStats(deltaTime);
         
@@ -495,18 +681,23 @@ class Game {
     updateCamera() {
         if (!this.player) return;
         
-        // Calculate target position with reduced look-ahead for better visibility
-        this.cameraTarget.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
-        this.cameraTarget.y = this.player.y - this.canvas.height / 2 + this.player.height / 2;
-        
-        // Smooth camera movement with faster response
-        const lerpSpeed = 0.15;
-        this.camera.x += (this.cameraTarget.x - this.camera.x) * lerpSpeed;
-        this.camera.y += (this.cameraTarget.y - this.camera.y) * lerpSpeed;
-        
-        // Keep camera in bounds
-        this.camera.x = Math.max(0, Math.min(this.level.width - this.canvas.width, this.camera.x));
-        this.camera.y = Math.max(0, Math.min(this.level.height - this.canvas.height, this.camera.y));
+        if (this.testMode) {
+            // Test mode: Follow X axis only, keep player centered horizontally
+            this.camera.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
+            this.camera.y = 0;
+        } else {
+            // Normal mode: Smooth camera with level bounds
+            this.cameraTarget.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
+            this.cameraTarget.y = this.player.y - this.canvas.height / 2 + this.player.height / 2;
+            
+            const lerpSpeed = 0.15;
+            this.camera.x += (this.cameraTarget.x - this.camera.x) * lerpSpeed;
+            this.camera.y += (this.cameraTarget.y - this.camera.y) * lerpSpeed;
+            
+            // Keep camera in bounds
+            this.camera.x = Math.max(0, Math.min(this.level.width - this.canvas.width, this.camera.x));
+            this.camera.y = Math.max(0, Math.min(this.level.height - this.canvas.height, this.camera.y));
+        }
     }
 
     /**
@@ -524,25 +715,35 @@ class Game {
             }
         });
         
-        // Enemy collisions
-        this.enemies.forEach(enemy => {
-            if (CollisionDetection.entityCollision(this.player, enemy)) {
-                // Player takes damage from enemy contact
-                this.player.takeDamage(enemy.attackDamage * 0.5, enemy);
-            }
-        });
+        // Enemy collisions (disabled in test mode)
+        if (!this.testMode) {
+            this.enemies.forEach(enemy => {
+                if (CollisionDetection.entityCollision(this.player, enemy)) {
+                    // Player takes damage from enemy contact
+                    this.player.takeDamage(enemy.attackDamage * 0.5, enemy);
+                }
+            });
+        }
         
-        // Hazard collisions
-        this.hazards.forEach(hazard => {
-            if (hazard.checkPlayerCollision) {
-                hazard.checkPlayerCollision();
-            }
-        });
+        // Hazard collisions (disabled in test mode)
+        if (!this.testMode) {
+            this.hazards.forEach(hazard => {
+                if (hazard.checkPlayerCollision) {
+                    hazard.checkPlayerCollision();
+                }
+            });
+        }
         
-        // World boundaries
-        if (this.player.y > this.level.height) {
+        // World boundaries (disabled in test mode)
+        if (!this.testMode && this.player.y > this.level.height + 200) {
             // Player fell off the world
             this.player.takeDamage(this.player.health, null);
+        } else if (this.testMode && this.player.y > this.level.height + 500) {
+            // In test mode, teleport back to spawn instead of dying
+            this.player.x = this.level.spawnX;
+            this.player.y = this.level.spawnY;
+            this.player.velocity.x = 0;
+            this.player.velocity.y = 0;
         }
     }
 
@@ -683,12 +884,7 @@ class Game {
      */
     checkGameOver() {
         if (this.player && this.player.health <= 0) {
-            this.gameOver();
-        }
-        
-        // Victory condition (reached end of level)
-        if (this.player && this.player.x >= this.level.width - 200) {
-            this.victory();
+            this.stateManager.gameOver();
         }
     }
 
@@ -701,6 +897,9 @@ class Game {
         
         // Render background layers (parallax)
         this.renderBackground();
+        
+        // Render canvas-based palm trees just behind platforms
+        this.palmTreeManager.render(this.ctx, this.camera, this.gameTime);
         
         // Render platforms
         this.renderPlatforms();
@@ -729,125 +928,249 @@ class Game {
         if (this.player) {
             this.player.render(this.ctx, this.camera);
         }
+        
+        // Render flag
+        if (this.flag) {
+            this.flag.render(this.ctx, this.camera);
+        }
     }
 
     /**
-     * Render infinite scrolling background and optional parallax layers
+     * Render layered parallax background
      */
     renderBackground() {
-        // Render main infinite scrolling background
-        if (this.infiniteBackground) {
-            this.infiniteBackground.render(this.ctx, this.camera);
+        if (this.testMode) {
+            // Render test room background
+            this.renderTestBackground();
+        } else {
+            // Render all background layers from back to front
+            this.backgroundLayers.forEach(layer => {
+                if (layer instanceof Background || layer instanceof ProceduralBackground) {
+                    layer.render(this.ctx, this.camera);
+                }
+            });
         }
-        
-        // Render optional parallax layers
-        this.backgroundLayers.forEach(layer => {
-            if (layer instanceof Background) {
-                layer.render(this.ctx, this.camera);
+    }
+    
+    /**
+     * Create SVG element for a palm tree
+     */
+    createSVGPalmTree(tree) {
+        try {
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const treeGroup = document.createElementNS(svgNS, 'g');
+            treeGroup.classList.add('palm-tree');
+            
+            // Calculate base position
+            const baseX = tree.x;
+            const baseY = this.canvas.height - 80; // Above ground
+            
+            // Create trunk as a simple rectangle (for now)
+            const trunk = document.createElementNS(svgNS, 'rect');
+            trunk.setAttribute('x', baseX - tree.trunkWidth / 2);
+            trunk.setAttribute('y', baseY - tree.height);
+            trunk.setAttribute('width', tree.trunkWidth);
+            trunk.setAttribute('height', tree.height);
+            trunk.setAttribute('fill', '#8B4513');
+            trunk.setAttribute('stroke', '#654321');
+            trunk.setAttribute('stroke-width', '1');
+            trunk.setAttribute('opacity', tree.opacity || 0.8);
+            
+            // Create a simple crown of fronds
+            for (let i = 0; i < tree.fronds; i++) {
+                const angle = (i / tree.fronds) * Math.PI * 2;
+                const frondLength = tree.height * 0.3;
+                
+                const frond = document.createElementNS(svgNS, 'ellipse');
+                frond.setAttribute('cx', baseX + Math.cos(angle) * frondLength * 0.5);
+                frond.setAttribute('cy', baseY - tree.height + Math.sin(angle) * frondLength * 0.2);
+                frond.setAttribute('rx', frondLength * 0.8);
+                frond.setAttribute('ry', frondLength * 0.3);
+                frond.setAttribute('fill', tree.color || '#228B22');
+                frond.setAttribute('opacity', (tree.opacity || 0.8) * 0.9);
+                frond.setAttribute('transform', `rotate(${angle * 180 / Math.PI} ${baseX + Math.cos(angle) * frondLength * 0.5} ${baseY - tree.height + Math.sin(angle) * frondLength * 0.2})`);
+                
+                treeGroup.appendChild(frond);
             }
-        });
+            
+            treeGroup.appendChild(trunk);
+            
+            // Created SVG tree
+            return treeGroup;
+        } catch (error) {
+            // Error creating SVG palm tree - returning null
+            return null;
+        }
     }
 
+    
+
+    
+
+
     /**
-     * Render platforms
+     * Update SVG palm tree positions with parallax effect
+     */
+    updateSVGPalmTreePositions() {
+        if (!this.proceduralPalmTrees || !this.palmTreeSVG) return;
+        
+        try {
+            const system = this.proceduralPalmTrees;
+            
+            // Simple parallax - move the entire SVG viewBox
+            const parallaxOffset = this.camera.x * system.parallaxSpeed;
+            const viewBoxX = -parallaxOffset;
+            
+            this.palmTreeSVG.setAttribute('viewBox', 
+                `${viewBoxX} 0 ${this.canvas.width} ${this.canvas.height}`);
+            
+            // Optional: Add gentle swaying to individual trees
+            if (this.gameTime) {
+                const time = this.gameTime * 0.001;
+                system.svgElements.forEach((svgTree, treeKey) => {
+                    const tree = system.trees.get(treeKey);
+                    if (tree && svgTree) {
+                        const swayAmount = Math.sin(time * 0.5 + tree.swayPhase) * 2;
+                        svgTree.style.transform = `translateX(${swayAmount}px)`;
+                    }
+                });
+            }
+        } catch (error) {
+            // Error updating palm tree positions - skipping
+        }
+    }
+
+
+
+    /**
+     * Render platforms with stylized graphics
      */
     renderPlatforms() {
         this.platforms.forEach(platform => {
-            const screenX = platform.x - this.camera.x;
-            const screenY = platform.y - this.camera.y;
-            
-            // Only render if on screen
-            if (screenX + platform.width >= 0 && screenX <= this.canvas.width &&
-                screenY + platform.height >= 0 && screenY <= this.canvas.height) {
-                
-                this.ctx.fillStyle = platform.color || '#654321';
-                this.ctx.fillRect(screenX, screenY, platform.width, platform.height);
-                
-                // Add some texture
-                this.ctx.strokeStyle = '#543210';
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(screenX, screenY, platform.width, platform.height);
-            }
+            StylizedPlatform.renderPlatform(this.ctx, platform, this.camera);
         });
     }
-
-
-
+    
     /**
-     * Pause the game
-     */
-    pauseGame() {
-        if (this.state !== 'playing') return;
+     * Render canvas-based palm trees with parallax effect\n     */
+    renderCanvasPalmTrees() {
+        if (!this.proceduralPalmTrees) return;
         
-        this.state = 'paused';
-        this.showMenu('pauseMenu');
+        const system = this.proceduralPalmTrees;
+        const groundLevel = this.canvas.height - 80; // Above ground platforms
         
-        if (this.audioManager) {
-            // Pause or lower music volume
+        // Only render trees that are visible on screen with parallax
+        const parallaxOffset = this.camera.x * system.parallaxSpeed;
+        const leftBound = this.camera.x - 300;
+        const rightBound = this.camera.x + this.canvas.width + 300;
+        
+        let treesRendered = 0;
+        
+        system.trees.forEach((tree, worldX) => {
+            if (tree.x >= leftBound && tree.x <= rightBound) {
+                // Calculate screen position with parallax
+                const screenX = tree.x - parallaxOffset;
+                
+                // Add gentle swaying animation
+                const time = this.gameTime * 0.001; // Convert to seconds
+                const swayOffset = Math.sin(time * 0.4 + tree.swayPhase) * 3;
+                
+                // Only render if actually on screen
+                if (screenX > -200 && screenX < this.canvas.width + 200) {
+                    this.drawCanvasPalmTree(
+                        screenX + swayOffset, 
+                        groundLevel, 
+                        tree.height, 
+                        tree.lean + swayOffset * 0.008, 
+                        tree.fronds, 
+                        tree.trunkWidth, 
+                        tree.color
+                    );
+                    treesRendered++;
+                }
+            }
+        });
+        
+        // Debug: Show tree count occasionally
+        if (this.frameCount % 300 === 0) { // Every 5 seconds at 60fps
+        // Rendered palm trees
         }
     }
-
+    
     /**
-     * Resume the game
+     * Draw a single palm tree on canvas with enhanced visuals
      */
-    resumeGame() {
-        if (this.state !== 'paused') return;
+    drawCanvasPalmTree(x, groundY, height, lean, frondCount, trunkWidth, frondColor) {
+        // Save canvas state
+        this.ctx.save();
         
-        this.state = 'playing';
-        this.hideAllMenus();
+        // Set shadow for depth
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.shadowBlur = 5;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 2;
         
-        if (this.audioManager) {
-            // Resume or restore music volume
+        // Draw trunk with segments
+        this.ctx.fillStyle = '#8B4513'; // Saddle brown
+        const segments = Math.floor(height / 20);
+        
+        for (let i = 0; i < segments; i++) {
+            const segmentHeight = height / segments;
+            const progress = i / segments;
+            const currentX = x + lean * progress * 40;
+            const currentY = groundY - i * segmentHeight;
+            const currentWidth = trunkWidth * (1 - progress * 0.3);
+            
+            // Add slight curve to trunk
+            this.ctx.fillRect(
+                currentX - currentWidth/2, 
+                currentY - segmentHeight, 
+                currentWidth, 
+                segmentHeight
+            );
         }
+        
+        // Remove shadow for fronds
+        this.ctx.shadowColor = 'transparent';
+        
+        // Draw palm fronds
+        this.ctx.strokeStyle = frondColor;
+        this.ctx.lineWidth = 4;
+        this.ctx.lineCap = 'round';
+        
+        const treeTopX = x + lean * 40;
+        const treeTopY = groundY - height;
+        
+        for (let i = 0; i < frondCount; i++) {
+            const angle = (i / frondCount) * Math.PI * 2;
+            const frondLength = height * 0.5;
+            const droop = 0.1 + Math.random() * 0.2;
+            
+            const endX = treeTopX + Math.cos(angle) * frondLength;
+            const endY = treeTopY + Math.sin(angle) * frondLength * droop;
+            
+            // Draw main frond
+            this.ctx.beginPath();
+            this.ctx.moveTo(treeTopX, treeTopY);
+            this.ctx.quadraticCurveTo(
+                treeTopX + Math.cos(angle) * frondLength * 0.7,
+                treeTopY + Math.sin(angle) * frondLength * 0.2,
+                endX,
+                endY
+            );
+            this.ctx.stroke();
+        }
+        
+        // Restore canvas state
+        this.ctx.restore();
     }
 
-    /**
-     * Handle game over
-     */
-    gameOver() {
-        this.state = 'gameOver';
-        
-        // Update final scores in UI
-        document.getElementById('finalScore').textContent = this.player?.score || 0;
-        document.getElementById('finalCoins').textContent = this.player?.coins || 0;
-        
-        this.showMenu('gameOverMenu');
-        
-        if (this.audioManager) {
-            this.audioManager.stopAllMusic();
-            this.audioManager.playSound('game_over', 0.8);
-        }
-    }
+
 
     /**
-     * Handle victory
+     * Reset game entities and state (used by GameStateManager)
      */
-    victory() {
-        this.state = 'victory';
-        
-        // Bonus points for victory
-        if (this.player) {
-            this.player.score += 1000;
-            this.player.updateUI();
-        }
-        
-        // Show victory screen (reuse game over for now)
-        document.getElementById('finalScore').textContent = this.player?.score || 0;
-        document.getElementById('finalCoins').textContent = this.player?.coins || 0;
-        this.showMenu('gameOverMenu');
-        
-        if (this.audioManager) {
-            this.audioManager.stopAllMusic();
-            this.audioManager.playSound('victory', 0.8);
-        }
-    }
-
-    /**
-     * Restart the game
-     */
-    restartGame() {
-        this.hideAllMenus();
-        
+    resetGame() {
         // Reset level
         this.createLevel();
         
@@ -857,53 +1180,185 @@ class Game {
         // Clear entity arrays
         this.projectiles = [];
         this.hazards = [];
+        this.flag = null;
         
-        // Start new game
-        this.startGame();
-    }
-
-    /**
-     * Return to main menu
-     */
-    returnToMenu() {
-        this.state = 'menu';
-        this.running = false;
-        
-        // Stop music
-        if (this.audioManager) {
-            this.audioManager.stopAllMusic();
-        }
-        
-        // Reset everything
+        // Reset player and entities
         this.player = null;
         this.enemies = [];
         this.items = [];
-        this.projectiles = [];
-        this.hazards = [];
-        this.camera = { x: 0, y: 0 };
         
-        this.showMenu('startMenu');
+        // Reset managers
+        this.palmTreeManager.reset();
     }
 
     /**
-     * Show a specific menu
-     * @param {string} menuId - ID of menu to show
+     * Toggle mute state
      */
-    showMenu(menuId) {
-        this.hideAllMenus();
-        const menu = document.getElementById(menuId);
-        if (menu) {
-            menu.classList.remove('hidden');
+    toggleMute() {
+        if (this.audioManager) {
+            const wasMuted = this.audioManager.isMuted();
+            this.audioManager.toggleMute();
+            
+            // Restart appropriate music when unmuting
+            if (wasMuted && !this.audioManager.isMuted()) {
+                if (this.stateManager.isPlaying()) {
+                    this.audioManager.playMusic('level1', 0.6);
+                } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
+                    this.audioManager.playMusic('title', 0.6);
+                }
+            }
+            
+            this.updateAudioUI();
         }
     }
 
     /**
-     * Hide all menus
+     * Set master volume
+     * @param {number} volume - Volume level (0-100)
      */
-    hideAllMenus() {
-        const menus = document.querySelectorAll('.menu');
-        menus.forEach(menu => {
-            menu.classList.add('hidden');
-        });
+    setMasterVolume(volume) {
+        if (this.audioManager) {
+            this.audioManager.setMasterVolume(volume / 100);
+            this.updateAudioUI();
+        }
+    }
+
+    /**
+     * Set music volume
+     * @param {number} volume - Volume level (0-100)
+     */
+    setMusicVolume(volume) {
+        if (this.audioManager) {
+            this.audioManager.setMusicVolume(volume / 100);
+            this.updateAudioUI();
+        }
+    }
+
+    /**
+     * Set SFX volume
+     * @param {number} volume - Volume level (0-100)
+     */
+    setSfxVolume(volume) {
+        if (this.audioManager) {
+            this.audioManager.setSfxVolume(volume / 100);
+            this.updateAudioUI();
+        }
+    }
+
+    /**
+     * Load gravity value from cookie
+     */
+    /**
+     * Show gravity value on screen temporarily
+     */
+    /**
+     * Update audio control UI elements
+     */
+    updateAudioUI() {
+        if (!this.audioManager) return;
+
+        const muteButton = document.getElementById('muteButton');
+        const masterVolumeSlider = document.getElementById('masterVolume');
+        const musicVolumeSlider = document.getElementById('musicVolume');
+        const sfxVolumeSlider = document.getElementById('sfxVolume');
+        const masterVolumeValue = document.getElementById('masterVolumeValue');
+        const musicVolumeValue = document.getElementById('musicVolumeValue');
+        const sfxVolumeValue = document.getElementById('sfxVolumeValue');
+
+        if (muteButton) {
+            muteButton.textContent = this.audioManager.isMuted() ? '🔇 Unmute' : '🔊 Mute';
+        }
+
+        if (masterVolumeSlider) {
+            masterVolumeSlider.value = Math.round(this.audioManager.getMasterVolume() * 100);
+        }
+        if (musicVolumeSlider) {
+            musicVolumeSlider.value = Math.round(this.audioManager.getMusicVolume() * 100);
+        }
+        if (sfxVolumeSlider) {
+            sfxVolumeSlider.value = Math.round(this.audioManager.getSfxVolume() * 100);
+        }
+
+        if (masterVolumeValue) {
+            masterVolumeValue.textContent = Math.round(this.audioManager.getMasterVolume() * 100) + '%';
+        }
+        if (musicVolumeValue) {
+            musicVolumeValue.textContent = Math.round(this.audioManager.getMusicVolume() * 100) + '%';
+        }
+        if (sfxVolumeValue) {
+            sfxVolumeValue.textContent = Math.round(this.audioManager.getSfxVolume() * 100) + '%';
+        }
+    }
+    
+    /**
+     * Create a simple test room for debugging
+     */
+    createTestRoom() {
+        // Create an infinite ground platform
+        const groundHeight = 50;
+        const groundY = this.canvas.height - groundHeight;
+        
+        // Create multiple ground segments for infinite running
+        // Each segment is 2000px wide, create 10 segments = 20000px of ground
+        for (let i = 0; i < 10; i++) {
+            const segmentX = i * 2000;
+            this.platforms.push(new Platform(segmentX, groundY, 2000, groundHeight));
+        }
+        
+        // Left wall only (prevent going backwards past start)
+        const wallWidth = 20;
+        const wallHeight = this.canvas.height;
+        this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
+    }
+    
+    /**
+     * Toggle between test mode and normal game mode
+     */
+    toggleTestMode() {
+        this.testMode = !this.testMode;
+        // Test mode toggled
+        
+        // Restart the level with new mode
+        if (this.state === 'playing') {
+            this.stateManager.startGame();
+        }
+    }
+    
+    /**
+     * Render test room background with grid
+     */
+    renderTestBackground() {
+        // Use palm tree manager's beach scene (includes sky with clouds, ocean, sand)
+        this.palmTreeManager.render(this.ctx, this.camera, this.gameTime);
+        
+        // Optional: Draw subtle reference grid
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.lineWidth = 1;
+        
+        // Vertical lines every 100px (less intrusive)
+        for (let x = 0; x <= this.canvas.width; x += 100) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+        }
+        
+        // Horizontal lines every 100px
+        for (let y = 0; y <= this.canvas.height; y += 100) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+        }
+        
+        // Test room info with better visibility
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(5, 15, 360, 70);
+        
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText('TEST ROOM - Debug Environment', 10, 35);
+        this.ctx.fillText('Press F2 to toggle back to main game', 10, 55);
+        this.ctx.fillText('Grid: 100px squares', 10, 75);
     }
 }

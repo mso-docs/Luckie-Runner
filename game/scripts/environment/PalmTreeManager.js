@@ -1,0 +1,590 @@
+/**
+ * PalmTreeManager - Stylized parallax palm tree background system
+ * Multiple depth layers with different scroll speeds, colors, and spacing
+ */
+class PalmTreeManager {
+    constructor(gameInstance) {
+        this.game = gameInstance;
+        
+        // Parallax layer configuration (back to front) - pixel art beach style
+        this.layers = [
+            {
+                name: 'distant_mountains',
+                scrollSpeed: 0.15,
+                spacing: 800,
+                heightRange: [100, 140],
+                trunkWidth: [4, 6],
+                frondCount: [3, 4],
+                trunkColor: '#4a5c4e',
+                frondColor: '#2a3d2e',
+                groundY: null,
+                trees: []
+            },
+            {
+                name: 'mid_background',
+                scrollSpeed: 0.35,
+                spacing: 500,
+                heightRange: [150, 190],
+                trunkWidth: [7, 9],
+                frondCount: [4, 5],
+                trunkColor: '#6b7a5e',
+                frondColor: '#4a6844',
+                groundY: null,
+                trees: []
+            },
+            {
+                name: 'near_midground',
+                scrollSpeed: 0.6,
+                spacing: 350,
+                heightRange: [200, 260],
+                trunkWidth: [10, 13],
+                frondCount: [5, 6],
+                trunkColor: '#8b6f47',
+                frondColor: '#5a8c4a',
+                groundY: null,
+                trees: []
+            },
+            {
+                name: 'foreground',
+                scrollSpeed: 0.85,
+                spacing: 250,
+                heightRange: [280, 350],
+                trunkWidth: [14, 18],
+                frondCount: [6, 8],
+                trunkColor: '#a87f56',
+                frondColor: '#68a355',
+                groundY: null,
+                trees: []
+            }
+        ];
+        
+        this.lastGeneratedX = 0;
+        this.enabled = true;
+    }
+    
+    /**
+     * Initialize the palm tree system
+     */
+    initialize() {
+        const canvasHeight = this.game.canvas.height;
+        
+        // Set ground levels for each layer - all on sand/beach area (below 70%)
+        // Water ends at 70%, sand starts at 70%
+        this.layers[0].groundY = canvasHeight * 0.72; // Distant - just on beach horizon
+        this.layers[1].groundY = canvasHeight * 0.78; // Mid - on beach
+        this.layers[2].groundY = canvasHeight * 0.88; // Near - on beach
+        this.layers[3].groundY = canvasHeight - 60;   // Foreground - at ground level
+        
+        // Generate initial trees for each layer
+        this.layers.forEach(layer => {
+            layer.trees = [];
+            this.generateLayerTrees(layer, -500, 2000);
+        });
+    }
+    
+    /**
+     * Update palm tree generation and cleanup for all layers
+     */
+    update(cameraX, canvasWidth) {
+        if (!this.enabled) return;
+        
+        this.layers.forEach(layer => {
+            const parallaxX = cameraX * layer.scrollSpeed;
+            const viewportRight = parallaxX + canvasWidth + 500;
+            
+            // Generate new trees ahead
+            const lastTreeX = layer.trees.length > 0 
+                ? Math.max(...layer.trees.map(t => t.x))
+                : -500;
+            
+            if (viewportRight > lastTreeX) {
+                this.generateLayerTrees(layer, lastTreeX, viewportRight + 500);
+            }
+            
+            // Cleanup trees behind viewport
+            const viewportLeft = parallaxX - 500;
+            layer.trees = layer.trees.filter(tree => tree.x > viewportLeft);
+        });
+    }
+    
+    /**
+     * Generate trees for a specific layer in a range
+     */
+    generateLayerTrees(layer, startX, endX) {
+        let currentX = startX + layer.spacing;
+        
+        while (currentX < endX) {
+            const height = layer.heightRange[0] + 
+                         Math.random() * (layer.heightRange[1] - layer.heightRange[0]);
+            const trunkWidth = layer.trunkWidth[0] + 
+                             Math.random() * (layer.trunkWidth[1] - layer.trunkWidth[0]);
+            const frondCount = layer.frondCount[0] + 
+                             Math.floor(Math.random() * (layer.frondCount[1] - layer.frondCount[0] + 1));
+            
+            layer.trees.push({
+                x: currentX,
+                height: height,
+                trunkWidth: trunkWidth,
+                frondCount: frondCount,
+                lean: (Math.random() - 0.5) * 0.15,
+                swayPhase: Math.random() * Math.PI * 2
+            });
+            
+            currentX += layer.spacing + Math.random() * 100 - 50; // Add variation
+        }
+    }
+    
+    /**
+     * Render all palm tree layers with parallax scrolling
+     */
+    render(ctx, camera, gameTime) {
+        if (!this.enabled) return;
+        
+        // Draw sky gradient and background elements (pass camera and gameTime for parallax and animation)
+        this.drawSkyGradient(ctx, camera, gameTime);
+        
+        // Draw each layer from back to front
+        this.layers.forEach(layer => {
+            const parallaxOffset = camera.x * layer.scrollSpeed;
+            const time = gameTime * 0.0001;
+            
+            layer.trees.forEach(tree => {
+                const screenX = tree.x - parallaxOffset;
+                
+                // Only render visible trees
+                if (screenX > -400 && screenX < ctx.canvas.width + 400) {
+                    const swayOffset = Math.sin(time + tree.swayPhase) * 3;
+                    const lean = tree.lean + swayOffset * 0.001;
+                    
+                    this.drawPalmTree(
+                        ctx,
+                        screenX,
+                        layer.groundY,
+                        tree.height,
+                        lean,
+                        tree.trunkWidth,
+                        tree.frondCount,
+                        layer.trunkColor,
+                        layer.frondColor
+                    );
+                }
+            });
+        });
+    }
+    
+    /**
+     * Draw detailed pixel-art beach scene matching reference images
+     */
+    drawSkyGradient(ctx, camera, gameTime) {
+        const h = ctx.canvas.height;
+        const w = ctx.canvas.width;
+        
+        // Sky gradient - vibrant blue like reference image 1 (static, no parallax)
+        const skyGradient = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+        skyGradient.addColorStop(0, '#4da6ff');    // Bright sky blue at top
+        skyGradient.addColorStop(0.5, '#6bb8ff');  // Mid blue
+        skyGradient.addColorStop(1, '#a8d8ff');    // Lighter blue near horizon
+        
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, w, h * 0.55);
+        
+        // Draw sun in upper right area
+        this.drawSun(ctx, w * 0.85, h * 0.12, 50);
+        
+        // Draw floating clouds with parallax
+        this.drawClouds(ctx, camera, w, h, gameTime);
+        
+        // Distant mountains/hills silhouette with very slow parallax (0.1x)
+        ctx.save();
+        const mountainParallax = camera.x * 0.1;
+        ctx.translate(-mountainParallax, 0);
+        this.drawMountainSilhouettes(ctx, h * 0.45, h * 0.55, w, mountainParallax);
+        ctx.restore();
+        
+        // Ocean water - turquoise blue gradient (static background)
+        const oceanGradient = ctx.createLinearGradient(0, h * 0.55, 0, h * 0.7);
+        oceanGradient.addColorStop(0, '#4db8e8');   // Turquoise at horizon
+        oceanGradient.addColorStop(0.5, '#3da8d8'); // Medium blue
+        oceanGradient.addColorStop(1, '#2d98c8');   // Deeper blue
+        
+        ctx.fillStyle = oceanGradient;
+        ctx.fillRect(0, h * 0.55, w, h * 0.15);
+        
+        // Add ocean waves texture (with slight parallax and time-based animation)
+        this.drawOceanWaves(ctx, h * 0.55, h * 0.7, camera, gameTime);
+        
+        // Beach sand gradient - warm golden tones extending to water edge
+        const sandGradient = ctx.createLinearGradient(0, h * 0.68, 0, h);
+        sandGradient.addColorStop(0, '#f0e4b5');   // Lightest sand at water edge
+        sandGradient.addColorStop(0.15, '#f4d89f'); // Light golden sand
+        sandGradient.addColorStop(0.5, '#e8c878');  // Medium sand
+        sandGradient.addColorStop(1, '#d8b868');    // Warm sand at bottom
+        
+        ctx.fillStyle = sandGradient;
+        ctx.fillRect(0, h * 0.68, w, h * 0.32);
+    }
+    
+    /**
+     * Draw stylized mountain silhouettes in background
+     */
+    drawMountainSilhouettes(ctx, startY, endY, canvasWidth, parallaxOffset) {
+        ctx.fillStyle = '#5a8c7a';
+        
+        // Draw wider to cover parallax scrolling
+        const extendedWidth = canvasWidth + 1000;
+        const mountainHeight = 80;
+        const peaks = 6;
+        const peakSpacing = extendedWidth / peaks;
+        
+        ctx.beginPath();
+        ctx.moveTo(-500, endY);
+        
+        // Create consistent mountain peaks (not random per frame)
+        for (let i = 0; i <= peaks; i++) {
+            const x = -500 + (peakSpacing * i);
+            // Use deterministic height based on position
+            const heightFactor = Math.sin(i * 0.8) * 0.5 + 0.5;
+            const peakY = startY - (mountainHeight * heightFactor);
+            
+            if (i > 0) {
+                const prevX = -500 + (peakSpacing * (i - 1));
+                ctx.quadraticCurveTo(
+                    prevX + peakSpacing * 0.5,
+                    startY,
+                    x,
+                    peakY
+                );
+            } else {
+                ctx.lineTo(x, peakY);
+            }
+        }
+        
+        ctx.lineTo(extendedWidth, endY);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    /**
+     * Draw stylized ocean wave patterns
+     */
+    drawOceanWaves(ctx, startY, endY, camera, gameTime) {
+        const w = ctx.canvas.width;
+        const waveHeight = 8;
+        const time = gameTime * 0.0005; // Slow animation speed
+        const waveParallax = camera.x * 0.05; // Very subtle wave movement
+        const timeOffset = time * 40; // Move waves horizontally over time
+        
+        // Light foam waves
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        
+        for (let row = 0; row < 3; row++) {
+            ctx.beginPath();
+            const baseY = startY + (endY - startY) * (row / 3);
+            const verticalWave = Math.sin(time * 2 + row * 0.5) * 2; // Vertical sway
+            const y = baseY + waveHeight + verticalWave;
+            
+            // Extend wave pattern for scrolling
+            for (let x = -100; x < w + 100; x += 40) {
+                const offsetX = x - (waveParallax % 40) - (timeOffset % 40);
+                ctx.moveTo(offsetX, y);
+                ctx.quadraticCurveTo(offsetX + 10, y - waveHeight, offsetX + 20, y);
+                ctx.quadraticCurveTo(offsetX + 30, y + waveHeight, offsetX + 40, y);
+            }
+            ctx.stroke();
+        }
+    }
+    
+    /**
+     * Draw sun in the sky
+     */
+    drawSun(ctx, x, y, radius) {
+        ctx.save();
+        
+        // Draw sun glow
+        const glowGradient = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 2);
+        glowGradient.addColorStop(0, 'rgba(255, 255, 150, 0.4)');
+        glowGradient.addColorStop(1, 'rgba(255, 255, 150, 0)');
+        
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw sun core
+        const sunGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        sunGradient.addColorStop(0, '#ffff66');    // Bright yellow center
+        sunGradient.addColorStop(0.7, '#ffdd44');  // Golden yellow
+        sunGradient.addColorStop(1, '#ffbb33');    // Orange-yellow edge
+        
+        ctx.fillStyle = sunGradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw clouds with parallax scrolling
+     */
+    drawClouds(ctx, camera, canvasWidth, canvasHeight, gameTime) {
+        ctx.save();
+        
+        // Define cloud positions and properties
+        const clouds = [
+            { baseX: 200, y: canvasHeight * 0.15, parallax: 0.08, width: 120, height: 40 },
+            { baseX: 500, y: canvasHeight * 0.25, parallax: 0.12, width: 100, height: 35 },
+            { baseX: 800, y: canvasHeight * 0.18, parallax: 0.10, width: 140, height: 45 },
+            { baseX: 1200, y: canvasHeight * 0.22, parallax: 0.09, width: 110, height: 38 },
+            { baseX: 1600, y: canvasHeight * 0.28, parallax: 0.11, width: 130, height: 42 }
+        ];
+        
+        clouds.forEach(cloud => {
+            // Calculate parallax offset and wrap position
+            const parallaxOffset = camera.x * cloud.parallax;
+            const wrappedX = ((cloud.baseX - parallaxOffset) % (canvasWidth + 400)) - 200;
+            
+            // Draw cloud if visible
+            if (wrappedX > -cloud.width && wrappedX < canvasWidth + cloud.width) {
+                this.drawCloud(ctx, wrappedX, cloud.y, cloud.width, cloud.height);
+            }
+            
+            // Draw wrapped cloud on the other side
+            const wrappedX2 = wrappedX + canvasWidth + 400;
+            if (wrappedX2 > -cloud.width && wrappedX2 < canvasWidth + cloud.width) {
+                this.drawCloud(ctx, wrappedX2, cloud.y, cloud.width, cloud.height);
+            }
+        });
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw a single fluffy cloud
+     */
+    drawCloud(ctx, x, y, width, height) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        
+        // Draw multiple circles to create cloud shape
+        const circles = 5;
+        for (let i = 0; i < circles; i++) {
+            const circleX = x + (i * width / circles) - width / 2;
+            const circleY = y + Math.sin(i * 0.8) * height * 0.3;
+            const radius = (width / circles) * 0.8 + Math.random() * 10;
+            
+            ctx.beginPath();
+            ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw a single stylized palm tree
+     */
+    drawPalmTree(ctx, x, groundY, height, lean, trunkWidth, frondCount, trunkColor, frondColor) {
+        ctx.save();
+        
+        // Draw slender trunk with curve
+        this.drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, trunkColor);
+        
+        // Draw frond canopy
+        this.drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, frondColor);
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Draw detailed palm trunk with texture - pixel art style
+     */
+    drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, color) {
+        const segments = 12;
+        const segmentHeight = height / segments;
+        
+        // Draw trunk segments with horizontal rings (like reference images)
+        for (let i = 0; i < segments; i++) {
+            const progress = i / segments;
+            const segmentX = x + lean * progress * 50;
+            const segmentY = groundY - (i * segmentHeight);
+            const width = trunkWidth * (1 - progress * 0.4);
+            
+            // Main trunk segment - brown
+            ctx.fillStyle = color;
+            ctx.fillRect(
+                segmentX - width / 2,
+                segmentY - segmentHeight,
+                width,
+                segmentHeight - 2
+            );
+            
+            // Darker horizontal ring texture
+            const darkerColor = this.darkenColor(color, 0.2);
+            ctx.fillStyle = darkerColor;
+            ctx.fillRect(
+                segmentX - width / 2,
+                segmentY - segmentHeight,
+                width,
+                2
+            );
+            
+            // Highlight on one side for dimension
+            if (i > 0 && i < segments - 1) {
+                const lightColor = this.lightenColor(color, 0.15);
+                ctx.fillStyle = lightColor;
+                ctx.fillRect(
+                    segmentX - width / 2,
+                    segmentY - segmentHeight + 2,
+                    2,
+                    segmentHeight - 4
+                );
+            }
+        }
+    }
+    
+    /**
+     * Helper to darken colors
+     */
+    darkenColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const r = Math.max(0, Math.floor((num >> 16) * (1 - percent)));
+        const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - percent)));
+        const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - percent)));
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    }
+    
+    /**
+     * Helper to lighten colors
+     */
+    lightenColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
+        const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
+        const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+    }
+    
+    /**
+     * Draw detailed palm frond canopy - pixel art style matching reference images
+     */
+    drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, color) {
+        const topX = x + lean * 50;
+        const topY = groundY - height;
+        
+        // Create lush, full frond cluster (reference images show dense canopies)
+        const totalFronds = frondCount * 3; // Triple for fullness
+        const baseColor = color;
+        const darkColor = this.darkenColor(color, 0.25);
+        const lightColor = this.lightenColor(color, 0.15);
+        
+        // Draw fronds in layers for depth
+        for (let layer = 0; layer < 3; layer++) {
+            const layerColor = layer === 0 ? darkColor : (layer === 1 ? baseColor : lightColor);
+            ctx.strokeStyle = layerColor;
+            ctx.fillStyle = layerColor;
+            
+            const frondOffset = layer * (Math.PI / 18); // Slight rotation per layer
+            
+            for (let i = 0; i < totalFronds; i++) {
+                const angle = (i / totalFronds) * Math.PI * 2 + frondOffset;
+                const frondLength = height * 0.65;
+                
+                // Calculate droop based on angle (top fronds droop down)
+                const verticalComponent = Math.sin(angle);
+                const droop = 0.15 + Math.abs(verticalComponent) * 0.3;
+                
+                // Main frond stem end position
+                const stemEndX = topX + Math.cos(angle) * frondLength;
+                const stemEndY = topY + (verticalComponent * frondLength * droop) + Math.abs(verticalComponent) * 25;
+                
+                // Draw thick central stem
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(topX, topY);
+                
+                // Curved frond stem
+                const midX = topX + Math.cos(angle) * frondLength * 0.5;
+                const midY = topY + verticalComponent * frondLength * 0.25;
+                ctx.quadraticCurveTo(midX, midY, stemEndX, stemEndY);
+                ctx.stroke();
+                
+                // Draw many small leaves along frond - DENSE like reference images
+                const leafCount = 12;
+                for (let j = 0; j < leafCount; j++) {
+                    const leafProgress = j / leafCount;
+                    
+                    // Position along curved stem
+                    const t = leafProgress;
+                    const leafBaseX = topX + Math.cos(angle) * frondLength * t * 0.5;
+                    const leafBaseY = topY + verticalComponent * frondLength * 0.25 * t;
+                    
+                    // Leaves alternate sides
+                    for (let side = -1; side <= 1; side += 2) {
+                        const leafAngle = angle + (Math.PI / 2.5) * side;
+                        const leafLength = 18 * (1 - leafProgress * 0.2);
+                        
+                        // Draw leaf as filled triangle/wedge
+                        ctx.beginPath();
+                        ctx.moveTo(leafBaseX, leafBaseY);
+                        
+                        const leafEndX = leafBaseX + Math.cos(leafAngle) * leafLength;
+                        const leafEndY = leafBaseY + Math.sin(leafAngle) * leafLength * 0.5;
+                        
+                        // Leaf with slight curve
+                        ctx.quadraticCurveTo(
+                            leafBaseX + Math.cos(leafAngle) * leafLength * 0.7,
+                            leafBaseY + Math.sin(leafAngle) * leafLength * 0.3,
+                            leafEndX,
+                            leafEndY
+                        );
+                        
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                        
+                        // Add small leaf tips
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(leafEndX, leafEndY);
+                        ctx.lineTo(
+                            leafEndX + Math.cos(leafAngle + 0.3) * 5,
+                            leafEndY + Math.sin(leafAngle + 0.3) * 5
+                        );
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Reset the palm tree system
+     */
+    reset() {
+        this.layers.forEach(layer => {
+            layer.trees = [];
+        });
+        this.initialize();
+    }
+    
+    /**
+     * Enable or disable palm tree system
+     */
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        if (!enabled) {
+            this.layers.forEach(layer => layer.trees = []);
+        } else {
+            this.initialize();
+        }
+    }
+    
+    /**
+     * Check if system is enabled
+     */
+    isEnabled() {
+        return this.enabled;
+    }
+}

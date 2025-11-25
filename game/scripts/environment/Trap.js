@@ -28,6 +28,11 @@ class Trap {
         
         if (collision) {
             player.takeDamage(this.damage, this);
+            
+            // Play hurt sound when trap is triggered
+            if (player.game && player.game.audioManager) {
+                player.game.audioManager.playSound('hurt', 0.6);
+            }
         }
     }
     
