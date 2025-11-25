@@ -10,12 +10,9 @@ class Entity {
         this.width = width;
         this.height = height;
         
-        // Physics properties
+        // Simple physics
         this.velocity = { x: 0, y: 0 };
-        this.acceleration = { x: 0, y: 0 };
-        this.maxSpeed = { x: 5, y: 15 };
-        this.friction = 0.8;
-        this.gravity = 0.5;
+        this.gravity = 800; // Simple gravity (pixels/second²)
         this.onGround = false;
         
         // Collision properties
@@ -33,6 +30,16 @@ class Entity {
         this.scale = { x: 1, y: 1 };
         this.flipX = false;
         this.flipY = false;
+        
+        // Sprite sheet tile configuration (32x64 tiles)
+        this.useTileSheet = false;
+        this.tileWidth = 32;
+        this.tileHeight = 64;
+        this.tileIndex = 0; // Current tile to display
+        this.tileAnimationFrames = []; // Array of tile indices for animation
+        this.tileAnimationSpeed = 200; // ms per frame
+        this.tileAnimationTime = 0;
+        this.tileAnimationIndex = 0;
         
         // Animation properties
         this.animations = {};
@@ -67,6 +74,35 @@ class Entity {
             this.sprite = null;
         };
         this.sprite.src = imagePath;
+    }
+
+    /**
+     * Load tile-based sprite sheet (32x64 tiles)
+     * @param {string} imagePath - Path to sprite sheet image
+     * @param {number} tileWidth - Width of each tile (default: 32)
+     * @param {number} tileHeight - Height of each tile (default: 64)
+     * @param {Array} animationFrames - Array of tile indices to animate [0, 1] (optional)
+     * @param {number} animationSpeed - ms per frame (default: 200)
+     */
+    loadTileSheet(imagePath, tileWidth = 32, tileHeight = 64, animationFrames = null, animationSpeed = 200) {
+        this.useTileSheet = true;
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
+        this.tileAnimationSpeed = animationSpeed;
+        
+        // Set up animation frames (default to first 2 tiles if not specified)
+        if (animationFrames && animationFrames.length > 0) {
+            this.tileAnimationFrames = animationFrames;
+        } else {
+            this.tileAnimationFrames = [0, 1]; // Animate first 2 tiles by default
+        }
+        
+        this.tileIndex = this.tileAnimationFrames[0];
+        this.tileAnimationIndex = 0;
+        this.tileAnimationTime = 0;
+        
+        // Load the sprite sheet
+        this.loadSprite(imagePath);
     }
 
     /**
@@ -126,21 +162,16 @@ class Entity {
      * @param {number} deltaTime - Time since last frame
      */
     updatePhysics(deltaTime) {
-        // Apply gravity
+        // Simple physics - gravity only
+        const dt = deltaTime / 1000; // Convert to seconds
+        
+        // Apply gravity when not on ground
         if (!this.onGround) {
-            this.velocity.y += this.gravity;
+            this.velocity.y += this.gravity * dt;
         }
-
-        // Apply friction
-        this.velocity.x *= this.friction;
-
-        // Clamp velocities to max speeds
-        this.velocity.x = Math.max(-this.maxSpeed.x, Math.min(this.maxSpeed.x, this.velocity.x));
-        this.velocity.y = Math.max(-this.maxSpeed.y, Math.min(this.maxSpeed.y, this.velocity.y));
-
-        // Update position
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
+        
+        // Position is updated in the entity's own update method
+        // This allows for more control over movement
     }
 
     /**
@@ -148,6 +179,24 @@ class Entity {
      * @param {number} deltaTime - Time since last frame
      */
     updateAnimation(deltaTime) {
+        // Handle tile-based animation
+        if (this.useTileSheet && this.tileAnimationFrames.length > 1) {
+            this.tileAnimationTime += deltaTime;
+            
+            if (this.tileAnimationTime >= this.tileAnimationSpeed) {
+                this.tileAnimationTime = 0;
+                this.tileAnimationIndex++;
+                
+                if (this.tileAnimationIndex >= this.tileAnimationFrames.length) {
+                    this.tileAnimationIndex = 0;
+                }
+                
+                this.tileIndex = this.tileAnimationFrames[this.tileAnimationIndex];
+            }
+            return;
+        }
+        
+        // Handle traditional animation system
         if (!this.currentAnimation || !this.animations[this.currentAnimation]) return;
 
         const animation = this.animations[this.currentAnimation];
@@ -197,7 +246,20 @@ class Entity {
 
         // Draw sprite or animation frame if available
         if (this.sprite && this.spriteLoaded) {
-            if (this.currentAnimation && this.animations[this.currentAnimation]) {
+            if (this.useTileSheet) {
+                // Tile-based rendering - calculate tile position in sprite sheet
+                const tilesPerRow = Math.floor(this.sprite.width / this.tileWidth);
+                const tileRow = Math.floor(this.tileIndex / tilesPerRow);
+                const tileCol = this.tileIndex % tilesPerRow;
+                const sourceX = tileCol * this.tileWidth;
+                const sourceY = tileRow * this.tileHeight;
+                
+                ctx.drawImage(
+                    this.sprite,
+                    sourceX, sourceY, this.tileWidth, this.tileHeight,
+                    -this.width / 2, -this.height / 2, this.width, this.height
+                );
+            } else if (this.currentAnimation && this.animations[this.currentAnimation]) {
                 const animation = this.animations[this.currentAnimation];
                 const frame = animation.frames[this.animationFrame];
                 

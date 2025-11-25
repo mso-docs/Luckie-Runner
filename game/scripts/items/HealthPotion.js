@@ -12,7 +12,16 @@ class HealthPotion extends Item {
         this.regenAmount = 2; // HP per second
         this.regenDuration = 5000; // 5 seconds
         this.collectMessage = `+${healAmount} Health`;
-        this.collectSound = 'health_pickup';
+        
+        // Set appropriate sound based on potion type
+        if (healAmount >= 50) {
+            this.collectSound = 'great'; // Greater health potion
+        } else if (healAmount >= 25) {
+            this.collectSound = 'less'; // Standard health potion (red rectangle)
+        } else {
+            this.collectSound = 'health'; // Minor health potion
+        }
+        
         this.collectScore = healAmount;
         
         // Health potion specific properties
@@ -355,12 +364,6 @@ class HealthPotion extends Item {
         // Create special effect for greater potions
         if (this.healAmount >= 50) {
             this.createGreaterHealEffect();
-        }
-        
-        // Add healing sound effect
-        if (this.game.audioManager) {
-            const soundName = this.healAmount >= 50 ? 'greater_heal' : 'heal';
-            this.game.audioManager.playSound(soundName, 0.8);
         }
     }
 

@@ -19,6 +19,9 @@ class Enemy extends Entity {
         this.attackCooldownTime = 1000;
         this.stunTime = 0;
         
+        // Physics settings
+        this.gravity = 800; // Simple gravity (pixels/second²)
+        
         // State machine
         this.state = 'patrol';
         this.previousState = 'patrol';
@@ -316,7 +319,7 @@ class Enemy extends Entity {
         
         // Play attack sound
         if (this.game.audioManager) {
-            this.game.audioManager.playSound('enemy_attack', 0.6);
+            this.game.audioManager.playSound('slimy', 0.6);
         }
     }
 
@@ -355,7 +358,7 @@ class Enemy extends Entity {
         
         // Play death sound
         if (this.game.audioManager) {
-            this.game.audioManager.playSound('enemy_death', 0.7);
+            this.game.audioManager.playSound('slime_defeat', 0.7);
         }
         
         // Award score to player

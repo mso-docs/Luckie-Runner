@@ -41,7 +41,11 @@ class AudioManager {
      * @param {number} volume - Volume override (0-1)
      */
     playSound(name, volume = 1.0) {
-        if (this.muted || !this.sounds[name]) return;
+        if (this.muted || !this.sounds[name]) {
+            // For now, just log the sound that would be played
+            // Playing sound
+            return;
+        }
 
         const sound = this.sounds[name];
         sound.volume = this.masterVolume * this.sfxVolume * volume;
@@ -49,23 +53,32 @@ class AudioManager {
         // Clone audio for overlapping sounds
         const playSound = sound.cloneNode();
         playSound.volume = sound.volume;
-        playSound.play().catch(e => console.warn('Could not play sound:', e));
+        playSound.play().catch(e => {/* Sound play failed - silently ignore */});
     }
 
     /**
      * Play background music
      * @param {string} name - Music identifier
      * @param {number} volume - Volume override (0-1)
+     * @returns {Promise} Promise that resolves when music starts or rejects if blocked
      */
     playMusic(name, volume = 1.0) {
-        if (this.muted || !this.music[name]) return;
+        if (this.muted || !this.music[name]) {
+            // Music not played
+            return Promise.resolve();
+        }
 
         // Stop current music
         this.stopAllMusic();
 
         const music = this.music[name];
         music.volume = this.masterVolume * this.musicVolume * volume;
-        music.play().catch(e => console.warn('Could not play music:', e));
+        
+        // Attempting to play music
+        return music.play().catch(e => {
+            // Could not play music - rethrowing
+            throw e;
+        });
     }
 
     /**
@@ -111,7 +124,18 @@ class AudioManager {
         this.muted = !this.muted;
         if (this.muted) {
             this.stopAllMusic();
+        } else {
+            // Store reference to game for context-aware music restart
+            this.restartContextualMusic();
         }
+    }
+
+    /**
+     * Restart music based on current game context
+     */
+    restartContextualMusic() {
+        // This will be called by the game when unmuting
+        // The game will determine which music to play based on current state
     }
 
     /**
@@ -127,18 +151,63 @@ class AudioManager {
      * Initialize common game sounds
      */
     initializeGameSounds() {
-        // Sound effects (will be loaded when audio files are available)
-        /*
-        this.loadSound('jump', 'sfx/jump.mp3');
+        // Sound effects - load all available sound files
         this.loadSound('coin', 'sfx/coin.mp3');
+        this.loadSound('game_over', 'sfx/game-over.mp3');
+        this.loadSound('health', 'sfx/health.mp3');
+        this.loadSound('less', 'sfx/less.mp3');
+        this.loadSound('great', 'sfx/great.mp3');
         this.loadSound('hurt', 'sfx/hurt.mp3');
-        this.loadSound('attack', 'sfx/attack.mp3');
-        this.loadSound('enemy_death', 'sfx/enemy_death.mp3');
-        this.loadSound('item_pickup', 'sfx/item_pickup.mp3');
+        this.loadSound('jump', 'sfx/jump.mp3');
+        this.loadSound('level', 'sfx/level.mp3');
+        this.loadSound('rock', 'sfx/rock.mp3');
+        this.loadSound('slime_defeat', 'sfx/slime-defeat.mp3');
+        this.loadSound('slimy', 'sfx/slimy.mp3');
+        this.loadSound('special', 'sfx/special.mp3');
+        this.loadSound('high_score', 'sfx/high-score.mp3');
+        
+        // Additional sound aliases for backwards compatibility
+        this.loadSound('attack', 'sfx/rock.mp3'); // Rock throwing sound
+        this.loadSound('enemy_death', 'sfx/slime-defeat.mp3'); // Enemy defeat sound
+        this.loadSound('item_pickup', 'sfx/special.mp3'); // Item pickup sound
+        this.loadSound('victory', 'sfx/level.mp3'); // Level complete sound
+        this.loadSound('hit', 'sfx/slimy.mp3'); // Hit enemy sound
+        this.loadSound('health_pickup', 'sfx/health.mp3'); // Health potion sound
         
         // Background music
-        this.loadMusic('game', 'music/game_music.mp3');
-        this.loadMusic('menu', 'music/menu_music.mp3');
-        */
+        this.loadMusic('title', 'music/titlescreen.mp3');
+        this.loadMusic('level1', 'music/level1.mp3');
+    }
+
+    /**
+     * Get current master volume
+     * @returns {number} Current master volume (0-1)
+     */
+    getMasterVolume() {
+        return this.masterVolume;
+    }
+
+    /**
+     * Get current SFX volume
+     * @returns {number} Current SFX volume (0-1)
+     */
+    getSfxVolume() {
+        return this.sfxVolume;
+    }
+
+    /**
+     * Get current music volume
+     * @returns {number} Current music volume (0-1)
+     */
+    getMusicVolume() {
+        return this.musicVolume;
+    }
+
+    /**
+     * Get mute state
+     * @returns {boolean} True if muted
+     */
+    isMuted() {
+        return this.muted;
     }
 }

@@ -155,7 +155,12 @@ class Projectile extends Entity {
     createHitEffect(target) {
         // TODO: Add particle effects, sound effects, screen shake, etc.
         if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('hit', 0.5);
+            // Use different sounds for different hit types
+            if (target && target.type === 'enemy') {
+                this.game.audioManager.playSound('slimy', 0.5);
+            } else {
+                this.game.audioManager.playSound('hit', 0.3);
+            }
         }
     }
 

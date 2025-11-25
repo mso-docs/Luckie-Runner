@@ -32,20 +32,21 @@ class InputManager {
             this.keys[e.code.toLowerCase()] = false;
         });
 
-        // Mouse event listeners
-        document.addEventListener('mousemove', (e) => {
-            const canvas = document.getElementById('gameCanvas');
+        // Mouse event listeners - attach to canvas only to avoid UI clicks
+        const canvas = document.getElementById('gameCanvas');
+        
+        canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
         });
 
-        document.addEventListener('mousedown', (e) => {
+        canvas.addEventListener('mousedown', (e) => {
             this.mouse.pressed = true;
             this.mouse.clicked = true;
         });
 
-        document.addEventListener('mouseup', (e) => {
+        canvas.addEventListener('mouseup', (e) => {
             this.mouse.pressed = false;
         });
 
@@ -58,7 +59,7 @@ class InputManager {
         return !!this.keys[key.toLowerCase()];
     }
 
-    // Movement controls
+    // Movement controls - WASD + Arrow keys
     isMovingLeft() {
         return this.isKeyPressed('a') || this.isKeyPressed('arrowleft');
     }
@@ -66,13 +67,17 @@ class InputManager {
     isMovingRight() {
         return this.isKeyPressed('d') || this.isKeyPressed('arrowright');
     }
+    
+    isMovingDown() {
+        return this.isKeyPressed('s') || this.isKeyPressed('arrowdown');
+    }
 
     isJumping() {
-        return this.isKeyPressed('w') || this.isKeyPressed(' ') || this.isKeyPressed('arrowup');
+        return this.isKeyPressed('w') || this.isKeyPressed(' ') || this.isKeyPressed('arrowup') || this.isKeyPressed('space');
     }
 
     isDashing() {
-        return this.isKeyPressed('shift');
+        return this.isKeyPressed('shift') || this.isKeyPressed('shiftleft') || this.isKeyPressed('shiftright');
     }
 
     // UI controls

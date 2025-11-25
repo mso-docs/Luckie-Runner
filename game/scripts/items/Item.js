@@ -354,7 +354,7 @@ class RockItem extends Item {
         
         this.type = 'rocks';
         this.value = rockCount;
-        this.collectSound = 'rock_pickup';
+        this.collectSound = 'special';
         this.collectMessage = `+${rockCount} Rocks`;
         this.collectScore = 5;
         
