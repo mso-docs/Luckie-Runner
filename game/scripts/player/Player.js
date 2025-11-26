@@ -41,6 +41,7 @@ class Player extends Entity {
         this.hitFlashAngle = -Math.PI / 2;
         this.hitFlashParticles = [];
         this.hitFlashDamage = 0;
+        this.hitRayDuration = 500; // ms for quick pow lines
     }
 
     /**
@@ -329,11 +330,13 @@ class Player extends Entity {
                 x: Math.cos(this.hitFlashAngle),
                 y: Math.sin(this.hitFlashAngle)
             };
-            const originX = this.x - camera.x + this.width / 2 - dir.x * (this.width * 0.2);
-            const originY = this.y - camera.y + this.height * 0.2 - dir.y * (this.height * 0.2);
+            const originX = this.x - camera.x + this.width / 2 + dir.x * (this.width * 0.3);
+            const originY = this.y - camera.y + this.height * 0.2 + dir.y * (this.height * 0.1);
             const life = 1 - intensity;
             const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
             const perp = { x: -dir.y, y: dir.x };
+            const rayElapsed = this.hitFlashDuration - this.hitFlashTime;
+            const rayIntensity = Math.max(0, 1 - rayElapsed / this.hitRayDuration);
 
             ctx.save();
             ctx.globalAlpha = Math.min(1, intensity);
@@ -343,18 +346,23 @@ class Player extends Entity {
             const damageStarSize = bigStar ? bigStar.size * 5 : 30;
 
             // Impact rays
-            rays.forEach(ray => {
-                const len = ray.length * (0.6 + 0.4 * intensity);
-                ctx.strokeStyle = ray.color;
-                ctx.lineWidth = ray.width;
-                ctx.beginPath();
-                ctx.moveTo(originX, originY);
-                ctx.lineTo(
-                    originX + Math.cos(ray.angle) * len,
-                    originY + Math.sin(ray.angle) * len
-                );
-                ctx.stroke();
-            });
+            if (rayElapsed < this.hitRayDuration) {
+                ctx.save();
+                ctx.globalAlpha = rayIntensity;
+                rays.forEach(ray => {
+                    const len = ray.length * (0.6 + 0.4 * rayIntensity);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = ray.width;
+                    ctx.beginPath();
+                    ctx.moveTo(originX, originY);
+                    ctx.lineTo(
+                        originX + Math.cos(ray.angle) * len,
+                        originY + Math.sin(ray.angle) * len
+                    );
+                    ctx.stroke();
+                });
+                ctx.restore();
+            }
 
             // Pastel stars (behind)
             stars.filter(s => !s.isBig).forEach(star => {
@@ -521,6 +529,7 @@ class Player extends Entity {
         this.tileAnimationTime = 0;
         this.hitFlashTime = 0;
         this.hitFlashDamage = 0;
+        this.hitRayDuration = 500;
         this.updateUI();
         this.updateHealthUI();
     }
