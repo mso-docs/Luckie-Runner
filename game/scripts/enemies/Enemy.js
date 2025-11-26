@@ -60,6 +60,11 @@ class Enemy extends Entity {
             { item: 'rocks', chance: 0.17, amount: Math.floor(Math.random() * 3) + 2 } // 2-4 rocks, 17% chance
         ];
 
+        // Knockback tilt state
+        this.knockbackTiltTime = 0;
+        this.knockbackTiltDuration = 500;
+        this.knockbackTiltDir = 1;
+
         // Quick hit flash/pow effect
         this.hitFlashTime = 0;
         this.hitFlashDuration = 600; // ms
@@ -194,6 +199,15 @@ class Enemy extends Entity {
 
         if (this.hitFlashTime > 0) {
             this.hitFlashTime -= deltaTime;
+        }
+
+        // Decay knockback tilt
+        if (this.knockbackTiltTime > 0) {
+            this.knockbackTiltTime -= deltaTime;
+            const t = Math.max(0, this.knockbackTiltTime) / this.knockbackTiltDuration;
+            this.rotation = -this.knockbackTiltDir * 0.35 * t;
+        } else if (this.rotation !== 0) {
+            this.rotation = 0;
         }
     }
 
@@ -494,7 +508,7 @@ class Enemy extends Entity {
      */
     hurtState(deltaTime) {
         // Brief stun period
-        this.velocity.x *= 0.7;
+        this.velocity.x *= 0.95; // keep most of knockback while slightly damping
         
         // Play hurt animation
         this.playAnimation('hurt');
@@ -552,10 +566,21 @@ class Enemy extends Entity {
         
         // Add knockback
         if (source) {
-            const direction = source.x < this.x ? 1 : -1;
-            this.velocity.x += direction * 220;
-            this.velocity.y = Math.min(this.velocity.y, -180);
+            const selfCenter = this.getCenter ? this.getCenter() : { x: this.x, y: this.y };
+            const srcCenter = source.getCenter ? source.getCenter() : { x: source.x, y: source.y };
+            const dx = selfCenter.x - srcCenter.x;
+            const dy = selfCenter.y - srcCenter.y;
+            const mag = Math.max(1, Math.hypot(dx, dy));
+            const impulseX = (dx / mag) * 420; // stronger push away
+            const impulseY = Math.min((dy / mag) * 220, -140); // ensure an upward pop
+            this.velocity.x = impulseX;
+            this.velocity.y = impulseY;
             this.onGround = false;
+
+            // Tilt back to show knockback
+            this.knockbackTiltDir = dx >= 0 ? 1 : -1;
+            this.knockbackTiltTime = this.knockbackTiltDuration;
+            this.rotation = -this.knockbackTiltDir * 0.35;
         }
         
         // Become aggressive if hit
