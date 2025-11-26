@@ -1,10 +1,14 @@
 # Luckie Runner!
 
+Play the game [here](https://mso-docs.github.io/Luckie-Runner/)!
+
 This is a simple JavaScript runner game, based off an idea I had in 2019. I was going through some tough times then, so I wasn't able to finish the project. Now, I am striving to create the game I envisioned so long ago with my recent programming experience. Let's see how this goes!
 
-## What is Luckie Runner
+![Luckie Runner cover art](game/art/content/Luckie%20Runner.png)
 
-In Luckie Runner, you play as Luckie Puppy, a barista dog who is running late to her shift at Beachside Boba Cafe! Can she make it in time? Or will RNG screw her over? Find out by playing the game!
+## What is Luckie Runner?
+
+In Luckie Runner, you play as Luckie Puppie, a barista dog who is running late to her shift at Beachside Boba Cafe! Can she make it in time? Or will RNG screw her over? Find out by playing the game!
 
 ## Core Objectives
 
@@ -118,4 +122,3 @@ I was inspired to start this project by following a tutorial from Coding Ninjas.
 Have an architecture where I can have classes that contain modular code for all of my entities in the game. Put all files within this directory: [C:\Code\luckie-runner\game](C:\Code\luckie-runner\game).
 
 Create a server to bring up the local host.
-
