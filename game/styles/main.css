@@ -253,6 +253,13 @@ body {
     letter-spacing: 1.5px;
     color: #555;
     text-align: right;
+    animation: speechHintPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes speechHintPulse {
+    0% { opacity: 0.35; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-1px); }
+    100% { opacity: 0.35; transform: translateY(0); }
 }
 
 /* Menus */
