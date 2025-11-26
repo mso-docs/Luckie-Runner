@@ -88,6 +88,22 @@ class Coin extends Item {
     }
 
     /**
+     * Render coin with gold glow
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        if (!this.visible) return;
+        
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,215,0,0.8)';
+        ctx.shadowBlur = 22;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        super.render(ctx, camera);
+        ctx.restore();
+    }
+
+    /**
      * Apply coin collection effect
      * @param {Entity} collector - Entity collecting the coin
      * @returns {boolean} True if successfully collected

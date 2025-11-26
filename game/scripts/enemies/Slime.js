@@ -67,18 +67,21 @@ class Slime extends Enemy {
 
         const dropX = this.x + this.width / 2;
         const dropY = this.y + this.height / 2;
+        const spread = 35;
 
         // Always drop 1-5 coins (value 1 each)
         const coinCount = Math.floor(Math.random() * 5) + 1;
         for (let i = 0; i < coinCount; i++) {
-            const coin = new Coin(dropX - 8 + (Math.random() * 10 - 5), dropY - 8);
+            const offsetX = (Math.random() * spread * 2) - spread;
+            const coin = new Coin(dropX + offsetX, dropY - 12);
             coin.game = this.game;
             this.game.items.push(coin);
         }
 
         // 1/4 chance health potion
         if (Math.random() <= 0.25) {
-            const potion = new HealthPotion(dropX - 10, dropY - 10, 25);
+            const offsetX = (Math.random() * spread * 2) - spread;
+            const potion = new HealthPotion(dropX + offsetX, dropY - 16, 25);
             potion.game = this.game;
             this.game.items.push(potion);
         }
@@ -86,7 +89,8 @@ class Slime extends Enemy {
         // 1/2 chance rock bag with 2-5 rocks
         if (Math.random() <= 0.5) {
             const rocks = Math.floor(Math.random() * 4) + 2; // 2-5
-            const bag = new RockBag(dropX - 10, dropY - 10, rocks);
+            const offsetX = (Math.random() * spread * 2) - spread;
+            const bag = new RockBag(dropX + offsetX, dropY - 16, rocks);
             bag.game = this.game;
             this.game.items.push(bag);
         }
