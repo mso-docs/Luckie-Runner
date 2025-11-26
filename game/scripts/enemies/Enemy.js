@@ -65,6 +65,7 @@ class Enemy extends Entity {
         this.hitFlashDuration = 260; // ms
         this.hitFlashAngle = -Math.PI / 2;
         this.hitFlashParticles = [];
+        this.hitFlashDamage = 0;
     }
 
     /**
@@ -72,7 +73,7 @@ class Enemy extends Entity {
      */
     takeDamage(amount, source = null) {
         if (this.invulnerable) return false;
-        this.spawnHitFlash(source);
+        this.spawnHitFlash(source, amount);
         return super.takeDamage(amount, source);
     }
 
@@ -80,8 +81,9 @@ class Enemy extends Entity {
      * Build a hit flash effect with stars and rays
      * @param {Entity|null} source - What hit the enemy
      */
-    spawnHitFlash(source) {
+    spawnHitFlash(source, amount = 0) {
         this.hitFlashTime = this.hitFlashDuration;
+        this.hitFlashDamage = amount;
 
         // Determine incoming angle (from source toward enemy)
         const enemyCenter = this.getCenter();
@@ -96,7 +98,7 @@ class Enemy extends Entity {
         const rays = [];
         const stars = [];
         const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
-        const pastel = ['#f4d6ff', '#ffe9d6', '#d6f4ff', '#e4f2ff', '#ffd6ec'];
+        const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
 
         // Rays showing impact direction
         for (let i = 0; i < 8; i++) {
@@ -110,28 +112,30 @@ class Enemy extends Entity {
             });
         }
 
-        // One or two big yellow stars
-        const bigCount = 1 + Math.floor(Math.random() * 2);
-        for (let i = 0; i < bigCount; i++) {
-            const dist = 28 + Math.random() * 18;
-            stars.push({
-                size: 10 + Math.random() * 4,
-                angle: angle + (i === 0 ? 0 : (Math.random() - 0.5) * Math.PI / 4),
-                distance: dist,
-                color: '#ffd12f',
-                stroke: '#e2a400'
-            });
-        }
+        // One big yellow star with damage text
+        stars.push({
+            size: 12,
+            angle: angle,
+            distance: 36,
+            color: '#ffd12f',
+            stroke: '#e2a400',
+            isBig: true,
+            rotation: (Math.random() - 0.5) * 0.35
+        });
 
-        // Cluster of small pastel stars trailing the hit direction
-        for (let i = 0; i < 12; i++) {
-            const dist = 26 + Math.random() * 40 + i * 2; // stagger so they don't overlap
+        // Three small pastel stars with spacing
+        const smallCount = 3;
+        const smallOffsets = [-0.5, 0.5, Math.PI * 0.85];
+        for (let i = 0; i < smallCount; i++) {
+            const dist = 46 + i * 8;
             stars.push({
-                size: 5 + Math.random() * 3,
-                angle: angle + (Math.random() - 0.5) * (Math.PI * 0.8),
+                size: 6 + Math.random() * 1.5,
+                angle: angle + smallOffsets[i],
                 distance: dist,
                 color: pastel[i % pastel.length],
-                stroke: 'rgba(0,0,0,0.08)'
+                stroke: 'rgba(0,0,0,0.08)',
+                isBig: false,
+                rotation: (Math.random() - 0.5) * 0.5
             });
         }
 
@@ -231,7 +235,26 @@ class Enemy extends Entity {
             const dist = star.distance * (0.7 + 0.3 * intensity);
             const sx = originX + Math.cos(star.angle) * dist;
             const sy = originY + Math.sin(star.angle) * dist - this.height * 0.6; // lift stars higher above ground
-            this.drawStar(ctx, sx, sy, star.size * 5, star.color, star.stroke);
+            const size = star.size * 5;
+            this.drawStar(ctx, sx, sy, size, star.color, star.stroke, star.rotation || 0);
+
+            // Damage text on the big star
+            if (star.isBig && this.hitFlashDamage > 0) {
+                ctx.save();
+                ctx.font = 'bold 20px Arial';
+                ctx.fillStyle = '#ff8c00';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#000000';
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(String(this.hitFlashDamage), sx, sy);
+                ctx.fillText(String(this.hitFlashDamage), sx, sy);
+                ctx.restore();
+            }
         });
 
             ctx.restore();
@@ -241,14 +264,16 @@ class Enemy extends Entity {
     /**
      * Draw a simple 5-point star
      */
-    drawStar(ctx, x, y, size, fill, stroke = null) {
+    drawStar(ctx, x, y, size, fill, stroke = null, rotation = 0) {
         ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
         ctx.beginPath();
         for (let i = 0; i < 10; i++) {
             const angle = Math.PI / 5 * i - Math.PI / 2;
             const radius = i % 2 === 0 ? size : size * 0.45;
-            const px = x + Math.cos(angle) * radius;
-            const py = y + Math.sin(angle) * radius;
+            const px = Math.cos(angle) * radius;
+            const py = Math.sin(angle) * radius;
             if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
         }
