@@ -274,16 +274,21 @@ body {
 .speech-glow {
     color: #c5ff4a;
     -webkit-text-stroke: 0.5px #0f3a0f;
-    text-shadow: none;
+    text-shadow:
+        0 0 6px rgba(197,255,74,0.8),
+        0 0 12px rgba(40,120,40,0.8),
+        0 0 18px rgba(40,120,40,0.6);
     animation: speechGlowPulse 1.4s ease-in-out infinite;
 }
 .speech-bounce { display: inline-block; animation: speechBounce 0.8s ease-in-out infinite; }
 .speech-shake { display: inline-block; animation: speechShake 0.18s ease-in-out infinite; }
 .speech-rainbow {
     display: inline-block;
-    animation: speechRainbow 1.8s linear infinite;
+    animation: speechRainbow 1.8s linear infinite, speechRainbowGlow 1.8s linear infinite;
     -webkit-text-stroke: 0.5px #000;
-    text-shadow: none;
+    text-shadow:
+        0 0 6px rgba(0,0,0,0.5),
+        0 0 10px rgba(0,0,0,0.4);
 }
 
 @keyframes speechBounce {
@@ -307,14 +312,17 @@ body {
 }
 
 @keyframes speechRainbowGlow {
-    0% { }
-    100% { }
+    0% { text-shadow: 0 0 8px rgba(255,107,107,0.7); }
+    25% { text-shadow: 0 0 8px rgba(255,209,102,0.7); }
+    50% { text-shadow: 0 0 8px rgba(111,255,217,0.7); }
+    75% { text-shadow: 0 0 8px rgba(107,155,255,0.7); }
+    100% { text-shadow: 0 0 8px rgba(255,107,255,0.7); }
 }
 
 @keyframes speechGlowPulse {
-    0% { filter: brightness(1); }
-    50% { filter: brightness(1.25); }
-    100% { filter: brightness(1); }
+    0% { filter: brightness(1); text-shadow: 0 0 6px rgba(197,255,74,0.8), 0 0 12px rgba(40,120,40,0.8), 0 0 18px rgba(40,120,40,0.6); }
+    50% { filter: brightness(1.25); text-shadow: 0 0 10px rgba(197,255,74,1), 0 0 18px rgba(40,120,40,0.95), 0 0 26px rgba(40,120,40,0.8); }
+    100% { filter: brightness(1); text-shadow: 0 0 6px rgba(197,255,74,0.8), 0 0 12px rgba(40,120,40,0.8), 0 0 18px rgba(40,120,40,0.6); }
 }
 
 /* Menus */
