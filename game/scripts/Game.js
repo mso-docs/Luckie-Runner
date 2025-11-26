@@ -267,8 +267,8 @@ class Game {
         }
 
         this.dialogueState.messages = [
-            "Hey, I'm Luckie Puppie. !Welcome! to the %test% ^room^.",
-            "Click the ~mouse~ button to ~throw~ !a! rock. `Try` hitting that slime!"
+            "Hey, I'm Luckie Puppie. !Welcome! #to# the %test% ^room^.",
+            "#Click# the ~mouse~ button to ~throw~ !a! #rock#. `Try` hitting that slime!"
         ];
         this.dialogueState.index = 0;
         this.dialogueState.active = true;
@@ -394,6 +394,7 @@ class Game {
      *  ~rainbow~
      *  ^glow^
      *  !bounce!
+     *  #wave#
      *  `mono`
      */
     formatSpeechText(text) {
@@ -418,8 +419,23 @@ class Game {
         apply(/\^(.+?)\^/g, 'speech-glow');
         apply(/!(.+?)!/g, 'speech-bounce');
         apply(/`(.+?)`/g, 'speech-mono');
+        // Wave needs per-letter animation; replace with staggered spans
+        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
 
         return safe;
+    }
+
+    /**
+     * Split text into letter spans with staggered wave animation
+     * @param {string} inner
+     * @returns {string}
+     */
+    wrapWaveText(inner) {
+        const letters = Array.from(inner);
+        return letters.map((ch, i) => {
+            const delay = (i * 0.06).toFixed(2);
+            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
+        }).join('');
     }
 
     /**

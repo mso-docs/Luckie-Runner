@@ -290,6 +290,11 @@ body {
         0 0 6px rgba(0,0,0,0.5),
         0 0 10px rgba(0,0,0,0.4);
 }
+.speech-wave-letter {
+    display: inline-block;
+    animation: speechWave 1.1s ease-in-out infinite;
+    transform-origin: bottom center;
+}
 
 @keyframes speechBounce {
     0%, 100% { transform: translateY(0); }
@@ -309,6 +314,14 @@ body {
     50% { color: #6fffd9; }
     75% { color: #6b9bff; }
     100% { color: #ff6bff; }
+}
+
+@keyframes speechWave {
+    0% { transform: translateY(0); }
+    25% { transform: translateY(-3px); }
+    50% { transform: translateY(0); }
+    75% { transform: translateY(3px); }
+    100% { transform: translateY(0); }
 }
 
 @keyframes speechRainbowGlow {
