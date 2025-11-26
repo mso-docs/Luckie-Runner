@@ -325,8 +325,11 @@ class Entity {
    * @param {number} screenGroundY - Ground/platform Y in screen space
    */
   renderShadow(ctx, screenX, screenGroundY) {
-    const radiusX = (Math.max(this.width, this.height) * 0.55); // slightly longer footprint
-    const radiusY = radiusX * 0.28; // thinner profile
+    const shadowScale = this.getShadowScale();
+    const baseRadiusX = (Math.max(this.width, this.height) * 0.55); // slightly longer footprint
+    const baseRadiusY = baseRadiusX * 0.28; // thinner profile
+    const radiusX = baseRadiusX * (shadowScale.x || 1);
+    const radiusY = baseRadiusY * (shadowScale.y || 1);
     const centerX = screenX + this.width / 2;
     // Position so the top of the ellipse touches the ground/platform
     const centerY = screenGroundY + radiusY;
@@ -340,6 +343,14 @@ class Entity {
     ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  /**
+   * Shadow scaling hook (override in subclasses)
+   * @returns {{x:number, y:number}}
+   */
+  getShadowScale() {
+    return { x: 1, y: 1 };
   }
 
   /**
