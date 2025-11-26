@@ -72,6 +72,12 @@ class Game {
             text: null,
             hint: null
         };
+
+        // Inventory overlay UI state
+        this.inventoryUI = {
+            overlay: null,
+            isOpen: false
+        };
         
         // Game statistics
         this.stats = {
@@ -98,6 +104,7 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
+        this.setupInventoryUI();
         
         // Create initial level
         this.createLevel();
@@ -243,6 +250,11 @@ class Game {
                 case 'M':
                     this.toggleMute();
                     break;
+                case 'i':
+                case 'I':
+                    this.toggleInventoryOverlay();
+                    e.preventDefault();
+                    break;
             }
         });
     }
@@ -255,6 +267,56 @@ class Game {
         this.speechBubble.text = document.getElementById('speechText');
         this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
         this.hideSpeechBubble(true);
+    }
+
+    /**
+     * Prepare the inventory overlay UI state
+     */
+    setupInventoryUI() {
+        this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
+        this.hideInventoryOverlay(true);
+    }
+
+    /**
+     * Show the inventory overlay
+     */
+    showInventoryOverlay() {
+        const overlay = this.inventoryUI.overlay;
+        if (!overlay) return;
+
+        overlay.classList.add('active');
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        this.inventoryUI.isOpen = true;
+    }
+
+    /**
+     * Hide the inventory overlay
+     * @param {boolean} immediate - Included for API symmetry; no animation currently
+     */
+    hideInventoryOverlay(immediate = false) {
+        const overlay = this.inventoryUI.overlay;
+        if (!overlay) return;
+
+        overlay.classList.remove('active');
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        this.inventoryUI.isOpen = false;
+    }
+
+    /**
+     * Toggle inventory overlay with the I key
+     */
+    toggleInventoryOverlay() {
+        // Only allow while playing or paused so it doesn't overlap start/game over menus
+        if (!this.stateManager) return;
+        if (!this.stateManager.isPlaying() && !this.stateManager.isPaused()) return;
+
+        if (this.inventoryUI.isOpen) {
+            this.hideInventoryOverlay();
+        } else {
+            this.showInventoryOverlay();
+        }
     }
 
     /**
@@ -1378,6 +1440,7 @@ class Game {
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
         this.hideSpeechBubble(true);
+        this.hideInventoryOverlay(true);
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
         
