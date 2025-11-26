@@ -18,6 +18,7 @@ class Projectile extends Entity {
         this.age = 0;
         this.piercing = false;
         this.hitTargets = new Set();
+        this.autoFadeOnImpact = true;
         
         // Projectiles don't use gravity by default
         this.gravity = 0;
@@ -144,12 +145,12 @@ class Projectile extends Entity {
         // Play hit effect
         this.createHitEffect(target);
         
-        // Remove projectile if not piercing
-        if (!this.piercing) {
+        // Auto fade on impact if enabled
+        if (this.autoFadeOnImpact && !this.piercing) {
             this.startFadeOut();
         }
         
-        // Trigger hit callback
+        // Trigger hit callback (projectile decides what to do next)
         this.onHitTarget(target);
     }
 
@@ -161,10 +162,12 @@ class Projectile extends Entity {
         // Create impact effect
         this.createHitEffect(obstacle);
         
-        // Remove projectile
-        this.startFadeOut();
+        // Auto fade on impact if enabled
+        if (this.autoFadeOnImpact && !this.piercing) {
+            this.startFadeOut();
+        }
         
-        // Trigger hit callback
+        // Trigger hit callback (projectile decides what to do next)
         this.onHitObstacle(obstacle);
     }
 
@@ -250,6 +253,7 @@ class Rock extends Projectile {
         this.lifeTime = 8000; // allow time to arc to ground
         this.prevX = x;
         this.prevY = y;
+        this.autoFadeOnImpact = false; // handle fade manually when motion stops
         this.bounceDamping = 0.5; // lose half vertical speed each bounce
         this.bounceFriction = 0.8; // horizontal friction per bounce
         this.minBounceSpeed = 60; // below this, the rock disintegrates
@@ -280,7 +284,7 @@ class Rock extends Projectile {
 
     onHitTarget(target) {
         // Rock disappears on collision with enemy (no bouncing on enemies)
-        this.disintegrate(target);
+        this.disintegrate(target, false);
         
         // Add small knockback to target
         if (target.velocity) {
@@ -347,11 +351,11 @@ class Rock extends Projectile {
             const outOfEnergy = speed < this.minBounceSpeed || this.bounceCount > this.maxBounces;
 
             if (outOfEnergy) {
-                this.disintegrate(obstacle);
+                this.disintegrate(obstacle, false);
             }
         } else {
             // Unknown collision direction; just disintegrate to avoid sticking
-            this.disintegrate(obstacle);
+            this.disintegrate(obstacle, false);
         }
     }
 
@@ -394,9 +398,15 @@ class Rock extends Projectile {
     /**
      * Disintegrate the rock when it no longer has energy to bounce
      */
-    disintegrate(target) {
-        this.createHitEffect(target);
-        this.active = false;
+    disintegrate(target, playEffect = true) {
+        if (this.fadeOut) return;
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+        this.onGround = true;
+        if (playEffect) {
+            this.createHitEffect(target);
+        }
+        this.startFadeOut();
     }
 }
 
