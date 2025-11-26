@@ -597,7 +597,7 @@ class Game {
         this.items = this.items.filter(item => {
             if (item.active) {
                 item.update(deltaTime);
-                this.updateItemPhysics(item);
+                this.updateItemPhysics(item, deltaTime);
                 
                 // Check player collection
                 if (this.player && item.checkCollision(this.player)) {
@@ -804,14 +804,25 @@ class Game {
      * Update item physics
      * @param {Item} item - Item to update
      */
-    updateItemPhysics(item) {
+    updateItemPhysics(item, deltaTime) {
+        const dt = deltaTime / 1000;
+
+        // Apply simple gravity
+        if (!item.onGround) {
+            item.velocity.y += item.gravity * dt;
+        }
+
+        // Integrate position
+        item.x += item.velocity.x * dt;
+        item.y += item.velocity.y * dt;
+
         // Simple ground collision for items
         this.platforms.forEach(platform => {
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(item),
                 platform
             )) {
-                if (item.y + item.height > platform.y && item.velocity.y > 0) {
+                if (item.y + item.height > platform.y && item.velocity.y >= 0) {
                     item.y = platform.y - item.height;
                     item.velocity.y = 0;
                     item.onGround = true;
@@ -819,6 +830,9 @@ class Game {
                 }
             }
         });
+
+        // Light friction to slow horizontal drift
+        item.velocity.x *= 0.95;
     }
 
     /**

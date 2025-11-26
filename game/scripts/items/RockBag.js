@@ -3,7 +3,7 @@
  */
 class RockBag extends Item {
     constructor(x, y, rockCount = 2) {
-        super(x, y, 18, 18);
+        super(x, y, 36, 36);
         this.type = 'rock_bag';
         this.value = rockCount;
         this.collectSound = 'special';

@@ -29,28 +29,8 @@ class Coin extends Item {
         // Set fallback color (gold for coins)
         this.fallbackColor = '#FFD700';
         
-        // Load appropriate sprite based on value
-        this.loadCoinSprite();
-    }
-
-    /**
-     * Load appropriate coin sprite based on value
-     */
-    loadCoinSprite() {
-        let spritePath;
-        
-        if (this.value >= 5) {
-            // Use gold coin sprite for high value
-            spritePath = 'art/items/coin_gold.png';
-        } else if (this.value >= 3) {
-            // Use silver coin sprite for medium value
-            spritePath = 'art/items/coin_silver.png';
-        } else {
-            // Use animated coin sprite for basic coins
-            spritePath = 'art/items/coin_animated.png';
-        }
-        
-        this.loadSprite(spritePath);
+        // Load shared sheet (4 frames, 32x32)
+        this.loadTileSheet('art/items/coin-sheet.png', 32, 32, [0, 1, 2, 3], 140);
     }
 
     /**
@@ -60,19 +40,19 @@ class Coin extends Item {
     setupCoinType(value) {
         if (value >= 5) {
             // Gold coin
-            this.width = this.height = 20;
+            this.width = this.height = 40;
             this.glowColor = '#FFD700';
             this.sparkleColor = '#FFF700';
             this.collectScore = value * 15;
         } else if (value >= 3) {
             // Silver coin
-            this.width = this.height = 18;
+            this.width = this.height = 36;
             this.glowColor = '#C0C0C0';
             this.sparkleColor = '#E0E0E0';
             this.collectScore = value * 12;
         } else {
             // Bronze/copper coin
-            this.width = this.height = 16;
+            this.width = this.height = 32;
             this.glowColor = '#CD7F32';
             this.sparkleColor = '#DAA520';
             this.collectScore = value * 10;

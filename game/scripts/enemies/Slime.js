@@ -11,12 +11,12 @@ class Slime extends Enemy {
         this.patrolSpeed = 0.8;
         this.chaseSpeed = 1.4;
         this.attackDamage = 15;
-        this.attackRange = 32;
-        this.detectionRange = 220;
+        this.attackRange = 64; // wider than body to ensure contact hits
+        this.detectionRange = 260;
         this.dropChance = 1; // always evaluate drops via custom logic
 
-        // Load 4-frame sheet (single row, 32px each)
-        this.loadTileSheet('art/sprites/ground-slime.png', 32, 32, [0, 1, 2, 3], 160);
+        // Load 4-frame sheet (single row, 59x32 each)
+        this.loadTileSheet('art/sprites/ground-slime.png', 59, 32, [0, 1, 2, 3], 160);
 
         // Collision slightly smaller than sprite
         this.collisionOffset = { x: 6, y: 6 };
@@ -29,6 +29,11 @@ class Slime extends Enemy {
      */
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
+
+        // Don't override movement when attacking/hurt/dead
+        if (this.state === 'attack' || this.state === 'hurt' || this.state === 'death') {
+            return;
+        }
 
         // Choose target and basic movement
         if (this.game && this.game.player) {
@@ -44,6 +49,12 @@ class Slime extends Enemy {
                 if (this.x <= leftBound) this.patrolDirection = 1;
                 if (this.x >= rightBound) this.patrolDirection = -1;
                 this.velocity.x = this.patrolDirection * this.patrolSpeed;
+            }
+
+            // Contact damage when overlapping the player
+            if (CollisionDetection.entityCollision(this, this.game.player) && this.attackCooldown <= 0) {
+                this.dealDamageToTarget();
+                this.attackCooldown = this.attackCooldownTime;
             }
         }
     }

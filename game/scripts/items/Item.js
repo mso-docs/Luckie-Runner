@@ -350,7 +350,7 @@ class Item extends Entity {
  */
 class RockItem extends Item {
     constructor(x, y, rockCount = 5) {
-        super(x, y, 12, 12);
+        super(x, y, 24, 24);
         
         this.type = 'rocks';
         this.value = rockCount;
