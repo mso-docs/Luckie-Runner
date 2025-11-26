@@ -275,14 +275,16 @@ class Player extends Entity {
         const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
         const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
 
-        // Rays (2-5) emanating from the impact side (left/right)
-        const rayCount = Math.floor(Math.random() * 4) + 2; // 2-5 rays
-        const sideAngle = angle > 0 ? 0 : Math.PI; // face right if hit from left, else left
+        // Five short rays in an upper semicircle for visibility
+        const rayCount = 5;
+        const start = -Math.PI;  // up-left
+        const end = 0;           // up-right
         for (let i = 0; i < rayCount; i++) {
-            const rayAngle = sideAngle + (Math.random() - 0.5) * (Math.PI / 3);
+            const t = rayCount === 1 ? 0.5 : i / (rayCount - 1);
+            const rayAngle = start + (end - start) * t;
             rays.push({
                 angle: rayAngle,
-                length: 22 + Math.random() * 16,
+                length: 16 + Math.random() * 8, // larger but still close
                 width: 2 + Math.random() * 1.5
             });
         }
@@ -356,11 +358,13 @@ class Player extends Entity {
                     const len = ray.length * (0.6 + 0.4 * rayIntensity);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = ray.width;
+                    const startX = rayOriginX + Math.cos(ray.angle) * 10;
+                    const startY = rayOriginY + Math.sin(ray.angle) * 10;
                     ctx.beginPath();
-                    ctx.moveTo(rayOriginX, rayOriginY);
+                    ctx.moveTo(startX, startY);
                     ctx.lineTo(
-                        rayOriginX + Math.cos(ray.angle) * len,
-                        rayOriginY + Math.sin(ray.angle) * len
+                        startX + Math.cos(ray.angle) * len,
+                        startY + Math.sin(ray.angle) * len
                     );
                     ctx.stroke();
                 });
