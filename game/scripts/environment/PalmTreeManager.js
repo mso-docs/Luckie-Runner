@@ -60,6 +60,7 @@ class PalmTreeManager {
         
         this.lastGeneratedX = 0;
         this.enabled = true;
+        this.clouds = []; // persistent cloud field
     }
     
     /**
@@ -80,6 +81,9 @@ class PalmTreeManager {
             layer.trees = [];
             this.generateLayerTrees(layer, -500, 2000);
         });
+
+        // Build new cloud field
+        this.generateCloudField(this.game.canvas.width, this.game.canvas.height);
     }
     
     /**
@@ -324,60 +328,94 @@ class PalmTreeManager {
         
         ctx.restore();
     }
+
+    /**
+     * Generate a persistent cloud field so shapes don't flicker frame to frame
+     */
+    generateCloudField(canvasWidth = 1600, canvasHeight = 900) {
+        this.clouds = [];
+        const count = 8;
+        const span = canvasWidth + 800;
+        const baseYMin = canvasHeight * 0.10;
+        const baseYMax = canvasHeight * 0.30;
+
+        for (let i = 0; i < count; i++) {
+            const width = 110 + Math.random() * 70;
+            const height = width * 0.3;
+            const baseX = -400 + Math.random() * span;
+            const y = baseYMin + Math.random() * (baseYMax - baseYMin);
+            const parallax = 0.01 + Math.random() * 0.015; // very slow parallax
+            const driftSpeed = 3 + Math.random() * 2; // px/sec rightward
+
+            // Precompute blob layout for consistent shapes
+            const blobs = [];
+            const blobCount = 4 + Math.floor(Math.random() * 3);
+            for (let b = 0; b < blobCount; b++) {
+                const offsetX = (Math.random() * 0.9 - 0.45) * width;
+                const offsetY = (Math.random() * 0.5 - 0.25) * height;
+                const radius = width * (0.18 + Math.random() * 0.12);
+                blobs.push({ x: offsetX, y: offsetY, r: radius });
+            }
+
+            this.clouds.push({
+                baseX,
+                y,
+                width,
+                height,
+                parallax,
+                driftSpeed,
+                blobs
+            });
+        }
+    }
     
     /**
      * Draw clouds with parallax scrolling
      */
     drawClouds(ctx, camera, canvasWidth, canvasHeight, gameTime) {
         ctx.save();
-        
-        // Define cloud positions and properties
-        const clouds = [
-            { baseX: 200, y: canvasHeight * 0.15, parallax: 0.08, width: 120, height: 40 },
-            { baseX: 500, y: canvasHeight * 0.25, parallax: 0.12, width: 100, height: 35 },
-            { baseX: 800, y: canvasHeight * 0.18, parallax: 0.10, width: 140, height: 45 },
-            { baseX: 1200, y: canvasHeight * 0.22, parallax: 0.09, width: 110, height: 38 },
-            { baseX: 1600, y: canvasHeight * 0.28, parallax: 0.11, width: 130, height: 42 }
-        ];
-        
-        clouds.forEach(cloud => {
-            // Calculate parallax offset and wrap position
+
+        // Rebuild if missing (defensive for dynamic canvas sizes)
+        if (this.clouds.length === 0) {
+            this.generateCloudField(canvasWidth, canvasHeight);
+        }
+
+        const wrapSpan = canvasWidth + 800;
+
+        this.clouds.forEach(cloud => {
+            const drift = (gameTime / 1000) * cloud.driftSpeed; // always move right
             const parallaxOffset = camera.x * cloud.parallax;
-            const wrappedX = ((cloud.baseX - parallaxOffset) % (canvasWidth + 400)) - 200;
-            
-            // Draw cloud if visible
-            if (wrappedX > -cloud.width && wrappedX < canvasWidth + cloud.width) {
-                this.drawCloud(ctx, wrappedX, cloud.y, cloud.width, cloud.height);
-            }
-            
-            // Draw wrapped cloud on the other side
-            const wrappedX2 = wrappedX + canvasWidth + 400;
-            if (wrappedX2 > -cloud.width && wrappedX2 < canvasWidth + cloud.width) {
-                this.drawCloud(ctx, wrappedX2, cloud.y, cloud.width, cloud.height);
+
+            let screenX = cloud.baseX + drift - parallaxOffset;
+            screenX = ((screenX + wrapSpan) % wrapSpan) - 400;
+
+            if (screenX > -cloud.width && screenX < canvasWidth + cloud.width) {
+                this.drawCloud(ctx, screenX, cloud.y, cloud);
             }
         });
-        
+
         ctx.restore();
     }
     
     /**
      * Draw a single fluffy cloud
      */
-    drawCloud(ctx, x, y, width, height) {
+    drawCloud(ctx, x, y, cloud) {
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        
-        // Draw multiple circles to create cloud shape
-        const circles = 5;
-        for (let i = 0; i < circles; i++) {
-            const circleX = x + (i * width / circles) - width / 2;
-            const circleY = y + Math.sin(i * 0.8) * height * 0.3;
-            const radius = (width / circles) * 0.8 + Math.random() * 10;
-            
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+
+        // Draw precomputed blobs for a stable fluffy shape
+        cloud.blobs.forEach(blob => {
             ctx.beginPath();
-            ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
+            ctx.arc(
+                x + blob.x,
+                y + blob.y,
+                blob.r,
+                0,
+                Math.PI * 2
+            );
             ctx.fill();
-        }
+        });
         
         ctx.restore();
     }
