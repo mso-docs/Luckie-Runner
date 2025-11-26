@@ -365,34 +365,6 @@ class Game {
      * Spawn items throughout the level
      */
     spawnItems() {
-        // Health potions
-        const healthSpawns = [
-            { x: 700, y: 300, type: 'minor' },
-            { x: 1150, y: 330, type: 'standard' },
-            { x: 1800, y: 370, type: 'standard' },
-            { x: 2300, y: 480, type: 'greater' }
-        ];
-        
-        healthSpawns.forEach(spawn => {
-            let potion;
-            switch (spawn.type) {
-                case 'minor':
-                    potion = HealthPotion.createMinor(spawn.x, spawn.y);
-                    break;
-                case 'standard':
-                    potion = HealthPotion.createStandard(spawn.x, spawn.y);
-                    break;
-                case 'greater':
-                    potion = HealthPotion.createGreater(spawn.x, spawn.y);
-                    break;
-            }
-            
-            if (potion) {
-                potion.game = this;
-                this.items.push(potion);
-            }
-        });
-        
         // Rock items for ammo
         const rockSpawns = [
             { x: 450, y: 450, count: 1, rocksPerPile: 5 },

@@ -241,11 +241,12 @@ class GroundSlime extends Enemy {
      * Override drops for ground slime
      */
     handleDrops() {
-        // Ground slimes have higher coin drop rate
-        this.dropChance = 0.85;
+        // Ground slimes drop coins often and have a 25% health potion chance
+        this.dropChance = 1;
         this.dropTable = [
-            { item: 'coin', chance: 0.95, amount: Math.floor(Math.random() * 3) + 1 }, // 1-3 coins
-            { item: 'health', chance: 0.05, amount: 10 } // 5% chance for health potion
+            { item: 'health_potion', chance: 0.25, amount: 1 }, // 25% chance for health potion
+            { item: 'coin', chance: 0.6, amount: Math.floor(Math.random() * 3) + 1 }, // 60% chance coins
+            { item: 'rocks', chance: 0.3, amount: Math.floor(Math.random() * 2) + 1 } // rocks as fallback
         ];
         
         super.handleDrops();

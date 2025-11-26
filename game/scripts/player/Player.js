@@ -94,13 +94,13 @@ class Player extends Entity {
             this.onGround = false;
         }
         
-        // ROCK THROWING - Space or X key
+        // ROCK THROWING - mouse click to toss toward cursor
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaTime;
         }
         
-        if ((input.keys['Space'] || input.keys['KeyX']) && this.rocks > 0 && this.attackCooldown <= 0) {
-            this.throwRock();
+        if (input.isMouseClicked() && this.rocks > 0 && this.attackCooldown <= 0) {
+            this.throwRock(input.getMousePosition());
         }
         
         // GRAVITY - Always pull down when not on ground
@@ -148,28 +148,37 @@ class Player extends Entity {
      * @param {Object} mousePos - Mouse position (unused in new system)
      */
     throwRock(mousePos) {
-        // Throw straight in the direction player is facing
         const playerCenter = this.getCenter();
-        
-        // Throw straight horizontally (no arc)
-        const throwSpeed = 15;
-        
-        // Create velocity vector - straight horizontal
-        const velocity = {
-            x: this.facing * throwSpeed, // Straight left or right
-            y: 0 // No vertical component - completely straight
+        const worldMouse = {
+            x: this.game.camera.x + mousePos.x,
+            y: this.game.camera.y + mousePos.y
         };
         
-        // Create rock projectile
+        // Aim toward the cursor; dampen Y a bit for a flatter arc
+        const dirX = worldMouse.x - playerCenter.x;
+        const dirY = worldMouse.y - playerCenter.y;
+        const len = Math.hypot(dirX, dirY) || 1;
+        const normalized = { x: dirX / len, y: dirY / len };
+        
+        // Speed tuned to travel about 4x player length, with a gentle arc
+        const throwSpeed = this.moveSpeed * 1.2; // px/sec
+        const velocity = {
+            x: normalized.x * throwSpeed,
+            y: normalized.y * throwSpeed * 0.6
+        };
+        
         const rock = new Rock(playerCenter.x - 4, playerCenter.y - 4, velocity);
         rock.setOwner(this, 'player');
         rock.game = this.game;
+        
+        // Range about 4x the player's body length
+        rock.maxDistance = this.width * 4;
         
         // Add to game projectiles
         this.game.projectiles.push(rock);
         
         // Use rock and set cooldown
-        this.rocks--;
+        this.rocks = Math.max(0, this.rocks - 1);
         this.attackCooldown = this.attackCooldownTime;
         
         // Update UI to show rock count

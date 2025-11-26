@@ -477,11 +477,11 @@ class MagicArrowSlime extends Enemy {
      * Override drops for magic arrow slime
      */
     handleDrops() {
-        // Magic slimes have chance to drop special items
-        this.dropChance = 0.75;
+        // Magic slimes can drop a health potion 25% of the time
+        this.dropChance = 1;
         this.dropTable = [
-            { item: 'coin', chance: 0.7, amount: 3 },
-            { item: 'health', chance: 0.3, amount: 20 }
+            { item: 'health_potion', chance: 0.25, amount: 1 },
+            { item: 'coin', chance: 0.7, amount: 3 }
         ];
         
         super.handleDrops();

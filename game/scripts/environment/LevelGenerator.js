@@ -94,14 +94,6 @@ class LevelGenerator {
                 }
             }
         });
-        
-        // Health potions
-        items.push(
-            { type: 'health', x: 700, y: 300, healAmount: 20 },
-            { type: 'health', x: 1150, y: 330, healAmount: 30 },
-            { type: 'health', x: 1800, y: 370, healAmount: 30 }
-        );
-        
         return items;
     }
     
