@@ -306,6 +306,7 @@ class Game {
         bubble.setAttribute('aria-hidden', 'false');
         this.dialogueState.active = true;
         this.dialogueState.dismissing = false;
+        this.updateSpeechBubblePosition();
     }
 
     /**
@@ -355,6 +356,32 @@ class Game {
             this.dialogueState.dismissing = false;
             this.dialogueState.hideTimeout = null;
         }, 250);
+    }
+
+    /**
+     * Keep the bubble anchored to the player's mouth horizontally
+     */
+    updateSpeechBubblePosition() {
+        const bubble = this.speechBubble.container;
+        if (!bubble) return;
+
+        let targetX = this.canvas.width / 2;
+        let headY = this.canvas.height / 2;
+        if (this.player) {
+            targetX = this.player.x - this.camera.x + this.player.width / 2;
+            headY = this.player.y - this.camera.y;
+        }
+
+        bubble.style.left = `${targetX}px`;
+
+        // Position bubble just above the player's head
+        const aboveHeadOffset = 10; // pixels above the top of the sprite
+        const bottomFromCanvas = this.canvas.height - headY + aboveHeadOffset;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+
+        // Offset tail toward the player's mouth (slight bias toward facing direction)
+        const mouthOffset = this.player ? this.player.width * 0.22 * (this.player.facing || 1) : 0;
+        bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
     }
 
     /**
@@ -1042,10 +1069,15 @@ class Game {
         if (this.player) {
             this.player.render(this.ctx, this.camera);
         }
-        
+
         // Render flag
         if (this.flag) {
             this.flag.render(this.ctx, this.camera);
+        }
+
+        // Keep speech bubble following player
+        if (this.dialogueState.active) {
+            this.updateSpeechBubblePosition();
         }
     }
 
