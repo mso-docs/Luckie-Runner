@@ -275,15 +275,15 @@ class Player extends Entity {
         const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
         const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
 
-        // Rays showing impact direction
-        for (let i = 0; i < 8; i++) {
-            const spread = (Math.PI / 3) * (Math.random() * 0.5 + 0.5);
-            const offset = (i / 7 - 0.5) * spread;
+        // Rays (2-5) emanating from the impact side (left/right)
+        const rayCount = Math.floor(Math.random() * 4) + 2; // 2-5 rays
+        const sideAngle = angle > 0 ? 0 : Math.PI; // face right if hit from left, else left
+        for (let i = 0; i < rayCount; i++) {
+            const rayAngle = sideAngle + (Math.random() - 0.5) * (Math.PI / 3);
             rays.push({
-                angle: angle + offset,
-                length: 28 + Math.random() * 14,
-                width: 2 + Math.random() * 1.5,
-                color: mainColors[i % mainColors.length]
+                angle: rayAngle,
+                length: 22 + Math.random() * 16,
+                width: 2 + Math.random() * 1.5
             });
         }
 
@@ -330,8 +330,11 @@ class Player extends Entity {
                 x: Math.cos(this.hitFlashAngle),
                 y: Math.sin(this.hitFlashAngle)
             };
-            const originX = this.x - camera.x + this.width / 2 + dir.x * (this.width * 0.3);
-            const originY = this.y - camera.y + this.height * 0.2 + dir.y * (this.height * 0.1);
+            const side = dir.x >= 0 ? 1 : -1;
+            const starOriginX = this.x - camera.x + this.width / 2 + side * (this.width * 0.6);
+            const starOriginY = this.y - camera.y - this.height * 0.6; // above the ground but near body
+            const rayOriginX = this.x - camera.x + this.width / 2 + side * 10; // closer to body
+            const rayOriginY = starOriginY;
             const life = 1 - intensity;
             const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
             const perp = { x: -dir.y, y: dir.x };
@@ -354,10 +357,10 @@ class Player extends Entity {
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = ray.width;
                     ctx.beginPath();
-                    ctx.moveTo(originX, originY);
+                    ctx.moveTo(rayOriginX, rayOriginY);
                     ctx.lineTo(
-                        originX + Math.cos(ray.angle) * len,
-                        originY + Math.sin(ray.angle) * len
+                        rayOriginX + Math.cos(ray.angle) * len,
+                        rayOriginY + Math.sin(ray.angle) * len
                     );
                     ctx.stroke();
                 });
@@ -367,8 +370,8 @@ class Player extends Entity {
             // Pastel stars (behind)
             stars.filter(s => !s.isBig).forEach(star => {
                 const dist = star.distance * (0.7 + 0.3 * intensity);
-                let sx = originX + Math.cos(star.angle) * dist;
-                let sy = originY + Math.sin(star.angle) * dist - this.height * 2.0;
+                let sx = starOriginX + Math.cos(star.angle) * dist;
+                let sy = starOriginY + Math.sin(star.angle) * dist - this.height * 2.0;
                 sx += perp.x * wiggle;
                 sy += perp.y * wiggle;
                 const size = damageStarSize / 3;
@@ -379,8 +382,8 @@ class Player extends Entity {
             // Big star on top with damage text
             if (bigStar) {
                 const dist = bigStar.distance * (0.7 + 0.3 * intensity);
-                let sx = originX + Math.cos(bigStar.angle) * dist;
-                let sy = originY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
+                let sx = starOriginX + Math.cos(bigStar.angle) * dist;
+                let sy = starOriginY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
                 sx += perp.x * wiggle;
                 sy += perp.y * wiggle;
                 const rot = (bigStar.baseRotation || 0) + (bigStar.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.35;
