@@ -1454,6 +1454,24 @@ class Game {
         const wallHeight = this.canvas.height;
         this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
 
+        // Parkour challenge platforms (test room only)
+        const baseY = groundY - 90;
+        const parkour = [
+            { x: 220, width: 120, y: baseY },
+            { x: 420, width: 90, y: baseY - 50 },
+            { x: 600, width: 100, y: baseY - 90 },
+            { x: 780, width: 80, y: baseY - 130 },
+            { x: 950, width: 110, y: baseY - 60 },
+            { x: 1140, width: 90, y: baseY - 20 },
+            { x: 1320, width: 80, y: baseY - 70 },
+            { x: 1480, width: 120, y: baseY - 120 },
+            { x: 1660, width: 80, y: baseY - 160 },
+            { x: 1800, width: 160, y: baseY - 60 }
+        ];
+        parkour.forEach(p => {
+            this.platforms.push(new Platform(p.x, p.y, p.width, 12));
+        });
+
         // Quick test spawns
         const slime = new Slime(300, groundY);
         slime.game = this;
