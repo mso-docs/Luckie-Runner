@@ -58,6 +58,20 @@ class Game {
         this.frameCount = 0;
         this.fps = 60;
         this.targetFrameTime = 1000 / this.fps;
+
+        // Intro dialogue UI
+        this.dialogueState = {
+            messages: [],
+            index: 0,
+            active: false,
+            dismissing: false,
+            hideTimeout: null
+        };
+        this.speechBubble = {
+            container: null,
+            text: null,
+            hint: null
+        };
         
         // Game statistics
         this.stats = {
@@ -83,6 +97,7 @@ class Game {
         
         // Set up event listeners
         this.setupEventListeners();
+        this.setupSpeechBubbleUI();
         
         // Create initial level
         this.createLevel();
@@ -230,6 +245,116 @@ class Game {
                     break;
             }
         });
+    }
+
+    /**
+     * Prepare DOM references for the speech bubble overlay
+     */
+    setupSpeechBubbleUI() {
+        this.speechBubble.container = document.getElementById('speechBubble');
+        this.speechBubble.text = document.getElementById('speechText');
+        this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
+        this.hideSpeechBubble(true);
+    }
+
+    /**
+     * Begin the intro dialogue for the test room
+     */
+    startTestIntroDialogueIfNeeded() {
+        if (!this.testMode) {
+            this.hideSpeechBubble(true);
+            return;
+        }
+
+        this.dialogueState.messages = [
+            "Hey, I'm Luckie Puppie! Welcome to the test room!",
+            "Click the mouse button to throw a rock. Try hitting that slime!"
+        ];
+        this.dialogueState.index = 0;
+        this.dialogueState.active = true;
+        this.dialogueState.dismissing = false;
+        this.showSpeechBubble(this.dialogueState.messages[0]);
+    }
+
+    /**
+     * Advance or dismiss dialogue when Enter is pressed
+     */
+    handleSpeechBubbleInput() {
+        if (!this.dialogueState.active || this.dialogueState.dismissing) return;
+
+        if (this.input.consumeKeyPress('enter') || this.input.consumeKeyPress('numpadenter')) {
+            this.advanceSpeechBubble();
+        }
+    }
+
+    /**
+     * Show the speech bubble with provided text
+     * @param {string} text - Dialogue text to display
+     */
+    showSpeechBubble(text) {
+        const bubble = this.speechBubble.container;
+        const bubbleText = this.speechBubble.text;
+        if (!bubble || !bubbleText) return;
+
+        if (this.dialogueState.hideTimeout) {
+            clearTimeout(this.dialogueState.hideTimeout);
+            this.dialogueState.hideTimeout = null;
+        }
+
+        bubbleText.textContent = text;
+        bubble.classList.add('show');
+        bubble.setAttribute('aria-hidden', 'false');
+        this.dialogueState.active = true;
+        this.dialogueState.dismissing = false;
+    }
+
+    /**
+     * Move to the next line or hide the bubble
+     */
+    advanceSpeechBubble() {
+        if (!this.dialogueState.active) return;
+
+        if (this.dialogueState.index < this.dialogueState.messages.length - 1) {
+            this.dialogueState.index++;
+            this.showSpeechBubble(this.dialogueState.messages[this.dialogueState.index]);
+        } else {
+            this.hideSpeechBubble();
+        }
+    }
+
+    /**
+     * Hide the speech bubble, optionally immediately
+     * @param {boolean} immediate - Skip fade when true
+     */
+    hideSpeechBubble(immediate = false) {
+        const bubble = this.speechBubble.container;
+        if (this.dialogueState.hideTimeout) {
+            clearTimeout(this.dialogueState.hideTimeout);
+            this.dialogueState.hideTimeout = null;
+        }
+
+        if (!bubble) {
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            return;
+        }
+
+        if (immediate) {
+            bubble.classList.remove('show');
+            bubble.setAttribute('aria-hidden', 'true');
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            return;
+        }
+
+        this.dialogueState.dismissing = true;
+        bubble.classList.remove('show');
+        this.dialogueState.hideTimeout = setTimeout(() => {
+            bubble.setAttribute('aria-hidden', 'true');
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            this.dialogueState.hideTimeout = null;
+        }, 250);
     }
 
     /**
@@ -531,6 +656,8 @@ class Game {
             distanceTraveled: 0,
             timeElapsed: 0
         };
+
+        this.startTestIntroDialogueIfNeeded();
     }
 
     /**
@@ -562,6 +689,7 @@ class Game {
     update(deltaTime) {
         // Update input
         this.input.update();
+        this.handleSpeechBubbleInput();
         
         // Update player
         if (this.player) {
@@ -1163,6 +1291,9 @@ class Game {
         this.hazards = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
+        this.hideSpeechBubble(true);
+        this.dialogueState.messages = [];
+        this.dialogueState.active = false;
         
         // Reset managers
         this.palmTreeManager.reset();
