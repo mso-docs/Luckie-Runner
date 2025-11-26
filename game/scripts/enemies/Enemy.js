@@ -62,7 +62,7 @@ class Enemy extends Entity {
 
         // Quick hit flash/pow effect
         this.hitFlashTime = 0;
-        this.hitFlashDuration = 180; // ms
+        this.hitFlashDuration = 260; // ms
     }
 
     /**
@@ -128,32 +128,43 @@ class Enemy extends Entity {
         if (this.hitFlashTime > 0) {
             const intensity = this.hitFlashTime / this.hitFlashDuration;
             const screenX = this.x - camera.x + this.width / 2;
-            const screenY = this.y - camera.y + this.height * 0.25;
+            const screenY = this.y - camera.y - this.height * 0.2; // lift above body for visibility
 
             ctx.save();
             ctx.globalAlpha = Math.min(1, intensity);
-            ctx.fillStyle = '#ffd166';
-            ctx.strokeStyle = '#e76f51';
+            ctx.strokeStyle = '#f4a261';
             ctx.lineWidth = 2;
 
-            // Simple comic-style burst
-            const size = 18 + 10 * intensity;
-            ctx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                const angle = (Math.PI * 2 * i) / 8;
-                const r = size * (i % 2 === 0 ? 1 : 0.55);
-                ctx.lineTo(screenX + Math.cos(angle) * r, screenY + Math.sin(angle) * r);
+            // Radiating lines
+            const rays = 10;
+            const baseLen = 26 + 12 * intensity;
+            for (let i = 0; i < rays; i++) {
+                const angle = (Math.PI * 2 * i) / rays;
+                const len = baseLen * (0.7 + 0.3 * Math.sin(intensity * Math.PI + i));
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(screenX + Math.cos(angle) * len, screenY + Math.sin(angle) * len);
+                ctx.stroke();
             }
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
 
-            // Text for extra clarity
-            ctx.fillStyle = '#5a189a';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('POW', screenX, screenY);
+            // Star sparks at the ray tips
+            ctx.fillStyle = '#ffe066';
+            const starSize = 6 + 3 * intensity;
+            for (let i = 0; i < rays; i++) {
+                const angle = (Math.PI * 2 * i) / rays;
+                const len = baseLen * 1.15;
+                const sx = screenX + Math.cos(angle) * len;
+                const sy = screenY + Math.sin(angle) * len;
+
+                ctx.beginPath();
+                for (let p = 0; p < 5; p++) {
+                    const a = angle + (Math.PI * 2 * p) / 5;
+                    const r = starSize * (p % 2 === 0 ? 1 : 0.5);
+                    ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
 
             ctx.restore();
         }
