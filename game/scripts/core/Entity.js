@@ -246,8 +246,10 @@ class Entity {
       return;
     }
 
-    // Draw a soft ground shadow (persistent, follows entity base)
-    this.renderShadow(ctx, screenX, screenY);
+    // Draw a soft ground shadow projected onto the platform/floor beneath
+    const groundY = this.getGroundY();
+    const screenGroundY = groundY - camera.y;
+    this.renderShadow(ctx, screenX, screenGroundY);
 
     ctx.save();
 
@@ -320,14 +322,14 @@ class Entity {
    * Render a small soft shadow beneath the entity
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} screenX
-   * @param {number} screenY
+   * @param {number} screenGroundY - Ground/platform Y in screen space
    */
-  renderShadow(ctx, screenX, screenY) {
+  renderShadow(ctx, screenX, screenGroundY) {
     const radiusX = (Math.max(this.width, this.height) * 0.55); // slightly longer footprint
     const radiusY = radiusX * 0.28; // thinner profile
     const centerX = screenX + this.width / 2;
-    // Position so the top of the ellipse touches the bottom of the sprite
-    const centerY = screenY + this.height + radiusY;
+    // Position so the top of the ellipse touches the ground/platform
+    const centerY = screenGroundY + radiusY;
 
     ctx.save();
     ctx.globalAlpha = 0.2;
@@ -338,6 +340,31 @@ class Entity {
     ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  /**
+   * Find the nearest ground/platform Y directly beneath the entity center.
+   * Falls back to the entity's current base if none is found.
+   * @returns {number} world-space Y for shadow contact
+   */
+  getGroundY() {
+    const defaultGround = this.y + this.height;
+    if (!this.game || !Array.isArray(this.game.platforms)) return defaultGround;
+
+    const centerX = this.x + this.width / 2;
+    let bestY = null;
+
+    for (const platform of this.game.platforms) {
+      if (!platform || platform.solid === false) continue;
+      if (centerX < platform.x || centerX > platform.x + platform.width) continue;
+      if (platform.y < defaultGround) continue; // only consider beneath/at entity base
+
+      if (bestY === null || platform.y < bestY) {
+        bestY = platform.y;
+      }
+    }
+
+    return bestY !== null ? bestY : defaultGround;
   }
 
   /**
