@@ -284,7 +284,7 @@ class Player extends Entity {
             const rayAngle = start + (end - start) * t;
             rays.push({
                 angle: rayAngle,
-                length: 32 + Math.random() * 12, // larger rays for a broader fan
+                length: 18 + Math.random() * 8, // closer, shorter rays
                 width: 2 + Math.random() * 1.5
             });
         }
@@ -335,7 +335,7 @@ class Player extends Entity {
             const side = dir.x >= 0 ? 1 : -1;
             const starOriginX = this.x - camera.x + this.width / 2 + side * (this.width * 0.6);
             const starOriginY = this.y - camera.y - this.height * 0.6; // above the ground but near body
-            const rayOriginX = this.x - camera.x + this.width / 2 + side * 14; // slightly wider origin for fan
+            const rayOriginX = this.x - camera.x + this.width / 2 + side * 7; // closer to body
             const rayOriginY = starOriginY;
             const life = 1 - intensity;
             const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
@@ -358,8 +358,8 @@ class Player extends Entity {
                     const len = ray.length * (0.6 + 0.4 * rayIntensity);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = ray.width;
-                    const startX = rayOriginX + Math.cos(ray.angle) * 12;
-                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 12, rayOriginY); // clamp to upper half
+                    const startX = rayOriginX + Math.cos(ray.angle) * 6;
+                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 6, rayOriginY); // clamp to upper half
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     ctx.lineTo(
