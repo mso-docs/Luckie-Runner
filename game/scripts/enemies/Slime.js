@@ -17,6 +17,8 @@ class Slime extends Enemy {
 
         // Optional simple patrol behavior (used in the test room)
         this.simplePatrol = null;
+        this.patrolSoundInterval = 0.9; // seconds between shuffle sounds
+        this.patrolSoundCooldown = 0;
 
         // Load 4-frame sheet (single row, 59x32 each)
         this.loadTileSheet('art/sprites/ground-slime.png', 59, 32, [0, 1, 2, 3], 160);
@@ -50,6 +52,7 @@ class Slime extends Enemy {
      */
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
+        const dtSeconds = deltaTime / 1000;
 
         // Simple patrol mode for the test room (keeps core enemy logic running)
         if (this.simplePatrol) {
@@ -84,6 +87,11 @@ class Slime extends Enemy {
                 this.attackCooldown = this.attackCooldownTime;
             }
         }
+
+        // Play soft shuffle when in the normal patrol state
+        if (this.state === 'patrol') {
+            this.playPatrolShuffle(dtSeconds);
+        }
     }
 
     /**
@@ -116,6 +124,9 @@ class Slime extends Enemy {
             this.velocity.y = 0;
             this.onGround = true;
         }
+
+        // Play a soft shuffle as the slime patrols
+        this.playPatrolShuffle(dt);
 
         // Contact damage in patrol mode
         if (this.state !== 'death' && this.game && this.game.player && this.attackCooldown <= 0) {
@@ -160,6 +171,28 @@ class Slime extends Enemy {
             const bag = new RockBag(dropX + offsetX, dropY - 16, rocks);
             bag.game = this.game;
             this.game.items.push(bag);
+        }
+    }
+
+    /**
+     * Play a gentle patrol shuffle sound on a cooldown while moving
+     * @param {number} deltaSeconds - Time since last frame in seconds
+     */
+    playPatrolShuffle(deltaSeconds) {
+        if (this.state === 'death') return;
+
+        // Reduce cooldown
+        if (this.patrolSoundCooldown > 0) {
+            this.patrolSoundCooldown -= deltaSeconds;
+        }
+
+        // Only play when actually sliding along the ground
+        if (Math.abs(this.velocity.x) <= 1) return;
+        if (!this.game || !this.game.audioManager) return;
+
+        if (this.patrolSoundCooldown <= 0) {
+            this.game.audioManager.playSound('slime_patrol', 0.5);
+            this.patrolSoundCooldown = this.patrolSoundInterval;
         }
     }
 }
