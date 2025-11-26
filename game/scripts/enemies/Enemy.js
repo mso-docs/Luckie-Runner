@@ -110,7 +110,7 @@ class Enemy extends Entity {
             const rayAngle = start + (end - start) * t;
             rays.push({
                 angle: rayAngle,
-                length: 24 + Math.random() * 10, // larger rays
+                length: 32 + Math.random() * 12, // larger rays for a broader fan
                 width: 2 + Math.random() * 1.5
             });
         }
@@ -216,7 +216,7 @@ class Enemy extends Entity {
             const side = dir.x >= 0 ? 1 : -1;
             const starOriginX = this.x - camera.x + this.width / 2 + side * (this.width * 0.6);
             const starOriginY = this.y - camera.y - this.height * 0.6; // above the ground but near body
-            const rayOriginX = this.x - camera.x + this.width / 2 + side * 10; // closer to body
+            const rayOriginX = this.x - camera.x + this.width / 2 + side * 14; // slightly wider origin for fan
             const rayOriginY = starOriginY;
             const life = 1 - intensity; // 0 at start, 1 at end
             const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
@@ -237,8 +237,8 @@ class Enemy extends Entity {
                     const len = ray.length * (0.6 + 0.4 * rayIntensity);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = ray.width;
-                    const startX = rayOriginX + Math.cos(ray.angle) * 6;
-                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 6, rayOriginY); // clamp to upper half
+                    const startX = rayOriginX + Math.cos(ray.angle) * 12;
+                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 12, rayOriginY); // clamp to upper half
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     ctx.lineTo(
