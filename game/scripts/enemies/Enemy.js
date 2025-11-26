@@ -120,6 +120,7 @@ class Enemy extends Entity {
             color: '#ffd12f',
             stroke: '#e2a400',
             isBig: true,
+            baseRotation: angle + Math.PI / 2,
             rotation: (Math.random() - 0.5) * 0.35
         });
 
@@ -135,6 +136,7 @@ class Enemy extends Entity {
                 color: pastel[i % pastel.length],
                 stroke: 'rgba(0,0,0,0.08)',
                 isBig: false,
+                baseRotation: angle + smallOffsets[i],
                 rotation: (Math.random() - 0.5) * 0.5
             });
         }
@@ -210,6 +212,9 @@ class Enemy extends Entity {
             };
             const originX = this.x - camera.x + this.width / 2 - dir.x * (this.width * 0.2);
             const originY = this.y - camera.y + this.height * 0.2 - dir.y * (this.height * 0.2);
+            const life = 1 - intensity; // 0 at start, 1 at end
+            const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
+            const perp = { x: -dir.y, y: dir.x };
 
             ctx.save();
             ctx.globalAlpha = Math.min(1, intensity);
@@ -237,29 +242,35 @@ class Enemy extends Entity {
         // Pastel stars (background layer, 1/3 of big star)
         stars.filter(s => !s.isBig).forEach(star => {
             const dist = star.distance * (0.7 + 0.3 * intensity);
-            const sx = originX + Math.cos(star.angle) * dist;
-            const sy = originY + Math.sin(star.angle) * dist - this.height * 2.0; // lift stars to ~2x enemy height
+            let sx = originX + Math.cos(star.angle) * dist;
+            let sy = originY + Math.sin(star.angle) * dist - this.height * 2.0; // lift stars to ~2x enemy height
+            sx += perp.x * wiggle;
+            sy += perp.y * wiggle;
             const size = damageStarSize / 3;
-            this.drawStar(ctx, sx, sy, size, star.color, star.stroke, star.rotation || 0);
+            const rot = (star.baseRotation || 0) + (star.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.4;
+            this.drawStar(ctx, sx, sy, size, star.color, star.stroke, rot);
         });
 
         // Big damage star on top
         if (bigStar) {
             const dist = bigStar.distance * (0.7 + 0.3 * intensity);
-            const sx = originX + Math.cos(bigStar.angle) * dist;
-            const sy = originY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
-            this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, bigStar.rotation || 0);
+            let sx = originX + Math.cos(bigStar.angle) * dist;
+            let sy = originY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
+            sx += perp.x * wiggle;
+            sy += perp.y * wiggle;
+            const rot = (bigStar.baseRotation || 0) + (bigStar.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.35;
+            this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, rot);
 
             if (this.hitFlashDamage > 0) {
                 ctx.save();
-                ctx.font = 'bold 20px Arial';
+                ctx.font = 'bold 26px Arial';
                 ctx.fillStyle = '#ff8c00';
-                ctx.lineWidth = 4;
+                ctx.lineWidth = 6;
                 ctx.strokeStyle = '#000000';
-                ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                ctx.shadowBlur = 6;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 4;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.strokeText(String(this.hitFlashDamage), sx, sy);
