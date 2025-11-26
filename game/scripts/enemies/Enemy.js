@@ -553,7 +553,9 @@ class Enemy extends Entity {
         // Add knockback
         if (source) {
             const direction = source.x < this.x ? 1 : -1;
-            this.velocity.x += direction * 3;
+            this.velocity.x += direction * 220;
+            this.velocity.y = Math.min(this.velocity.y, -180);
+            this.onGround = false;
         }
         
         // Become aggressive if hit

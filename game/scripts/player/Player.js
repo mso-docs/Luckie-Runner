@@ -30,6 +30,11 @@ class Player extends Entity {
         this.rocks = 10;
         this.attackCooldown = 0;
         this.attackCooldownTime = 500; // 500ms cooldown
+
+        // Hit reaction tilt/knockback
+        this.knockbackTiltTime = 0;
+        this.knockbackTiltDuration = 1000; // matches i-frame window
+        this.knockbackTiltDir = 1;
         
         // Load tile-based sprite sheet (45x66 tiles)
         // Animates first 2 tiles by default at 200ms per frame
@@ -128,6 +133,15 @@ class Player extends Entity {
         // Update animations
         this.updateSimpleAnimation();
         
+        // Decay knockback tilt during i-frames
+        if (this.knockbackTiltTime > 0) {
+            this.knockbackTiltTime -= deltaTime;
+            const t = Math.max(0, this.knockbackTiltTime) / this.knockbackTiltDuration;
+            this.rotation = -this.knockbackTiltDir * 0.35 * t;
+        } else if (this.rotation !== 0) {
+            this.rotation = 0;
+        }
+
         // Decay hit flash timer
         if (this.hitFlashTime > 0) {
             this.hitFlashTime -= deltaTime;
@@ -239,9 +253,14 @@ class Player extends Entity {
         
         // Add noticeable knockback (push away and a small hop)
         const knockDir = source && source.x < this.x ? 1 : -1;
-        this.velocity.x = knockDir * 250; // px/sec impulse
-        this.velocity.y = Math.min(this.velocity.y, -220); // upward nudge
+        this.velocity.x = knockDir * 450; // stronger horizontal knockback
+        this.velocity.y = Math.min(this.velocity.y, -280); // higher hop
         this.onGround = false;
+
+        // Tilt back during invulnerability to feel the knockback fall
+        this.knockbackTiltDir = knockDir;
+        this.knockbackTiltTime = this.knockbackTiltDuration;
+        this.rotation = -knockDir * 0.35;
         
         // Update UI
         this.updateHealthUI();
@@ -537,6 +556,8 @@ class Player extends Entity {
         this.hitFlashTime = 0;
         this.hitFlashDamage = 0;
         this.hitRayDuration = 500;
+        this.knockbackTiltTime = 0;
+        this.rotation = 0;
         this.updateUI();
         this.updateHealthUI();
     }
