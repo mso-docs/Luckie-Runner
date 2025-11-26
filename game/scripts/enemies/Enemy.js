@@ -57,7 +57,6 @@ class Enemy extends Entity {
         this.dropChance = 0.8; // 80% chance to drop something
         this.dropTable = [
             { item: 'coin', chance: 0.75, amount: Math.floor(Math.random() * 2) + 1 }, // 1-2 coins, 75% chance
-            { item: 'health', chance: 0.08, amount: 15 }, // 8% chance for health potion (15 HP)
             { item: 'rocks', chance: 0.17, amount: Math.floor(Math.random() * 3) + 2 } // 2-4 rocks, 17% chance
         ];
     }
@@ -406,8 +405,8 @@ class Enemy extends Entity {
             case 'coin':
                 droppedItem = new Coin(dropX - 8, dropY - 8);
                 break;
-            case 'health':
-                droppedItem = new HealthPotion(dropX - 8, dropY - 8);
+            case 'health_potion':
+                droppedItem = new HealthPotion(dropX - 10, dropY - 10);
                 break;
             case 'rocks':
                 droppedItem = new RockItem(dropX - 6, dropY - 6, amount);

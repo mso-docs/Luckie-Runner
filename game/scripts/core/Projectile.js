@@ -44,12 +44,18 @@ class Projectile extends Entity {
      * @param {number} deltaTime - Time since last frame
      */
     onUpdate(deltaTime) {
+        const dt = deltaTime / 1000;
+        
         // Update age and check lifetime
         this.age += deltaTime;
         if (this.age >= this.lifeTime) {
             this.active = false;
             return;
         }
+
+        // Move with current velocity (gravity already applied in base physics)
+        this.x += this.velocity.x * dt;
+        this.y += this.velocity.y * dt;
 
         // Update rotation to match movement direction
         this.rotation = Math.atan2(this.velocity.y, this.velocity.x);
@@ -126,7 +132,7 @@ class Projectile extends Entity {
         
         // Remove projectile if not piercing
         if (!this.piercing) {
-            this.active = false;
+            this.startFadeOut();
         }
         
         // Trigger hit callback
@@ -142,7 +148,7 @@ class Projectile extends Entity {
         this.createHitEffect(obstacle);
         
         // Remove projectile
-        this.active = false;
+        this.startFadeOut();
         
         // Trigger hit callback
         this.onHitObstacle(obstacle);
@@ -185,6 +191,9 @@ class Projectile extends Entity {
      * @param {Object} camera - Camera object
      */
     drawTrail(ctx, camera) {
+        // Skip trail for rocks to keep the sprite clean
+        if (this instanceof Rock) return;
+
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
         
@@ -217,17 +226,20 @@ class Projectile extends Entity {
  */
 class Rock extends Projectile {
     constructor(x, y, velocity) {
-        super(x, y, 8, 8, velocity, 15);
+        super(x, y, 24, 24, velocity, 15);
         
-        // Rock specific properties for straight travel
-        this.gravity = 0.015; // 90% less gravity - very minimal drop
+        // Rock specific properties for arcing, long-range travel
+        this.gravity = 300; // slight drop compared to player gravity
         this.startX = x; // Track starting position for distance calculation
         this.startY = y;
-        this.maxDistance = 400; // Minimum 5 tiles (64px each = 320px, rounded to 400px)
-        this.lifeTime = 4000; // Enough time to travel the distance
+        this.maxDistance = 400; // fallback; overridden by player
+        this.lifeTime = 8000; // allow time to arc to ground
         
         // Set fallback color (brown for rocks)
         this.fallbackColor = '#8B4513';
+        
+        // Pixel-art rock sprite
+        this.loadSprite('art/items/rock-item.png');
         
         // Set owner as player type
         this.ownerType = 'player';
@@ -242,9 +254,7 @@ class Rock extends Projectile {
             Math.pow(this.y - this.startY, 2)
         );
         
-        if (distanceTraveled >= this.maxDistance) {
-            this.active = false; // Disappear after 400px (5+ tiles)
-        }
+        // No auto-despawn on distance; let it fall to ground/obstacle
     }
 
     onHitTarget(target) {
@@ -261,6 +271,42 @@ class Rock extends Projectile {
     onHitObstacle(obstacle) {
         // Rock disappears on collision with any obstacle
         this.active = false;
+    }
+
+    /**
+     * Begin a fade-out timer before removal
+     */
+    startFadeOut() {
+        if (this.fadeOut) return;
+        this.fadeOut = true;
+        this.fadeDuration = 2000; // 2 seconds
+        this.fadeElapsed = 0;
+    }
+
+    /**
+     * Override update to handle gravity and fade
+     */
+    update(deltaTime) {
+        if (!this.active) return;
+
+        // Apply gravity (projectiles don't use base Entity gravity)
+        if (!this.onGround) {
+            const dt = deltaTime / 1000;
+            this.velocity.y += this.gravity * dt;
+        }
+
+        // Standard update (movement, collisions, lifetime)
+        super.update(deltaTime);
+
+        // Handle fade-out
+        if (this.fadeOut) {
+            this.fadeElapsed += deltaTime;
+            const progress = Math.min(1, this.fadeElapsed / this.fadeDuration);
+            this.alpha = 1 - progress;
+            if (progress >= 1) {
+                this.active = false;
+            }
+        }
     }
 }
 

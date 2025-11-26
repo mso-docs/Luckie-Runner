@@ -346,11 +346,11 @@ class PoisonSlime extends Enemy {
      * Override drops for poison slime
      */
     handleDrops() {
-        // Poison slimes drop health items more often
-        this.dropChance = 0.6;
+        // Poison slimes can drop a health potion 25% of the time
+        this.dropChance = 1;
         this.dropTable = [
-            { item: 'coin', chance: 0.6, amount: 2 },
-            { item: 'health', chance: 0.4, amount: 15 }
+            { item: 'health_potion', chance: 0.25, amount: 1 },
+            { item: 'coin', chance: 0.6, amount: 2 }
         ];
         
         super.handleDrops();
