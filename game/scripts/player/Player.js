@@ -278,10 +278,14 @@ class Player extends Entity {
         const scoreElement = document.getElementById('score');
         const coinsElement = document.getElementById('coins');
         const rocksElement = document.getElementById('rocks');
+        const hudCoinsElement = document.getElementById('hudCoins');
+        const hudRocksElement = document.getElementById('hudRocks');
         
         if (scoreElement) scoreElement.textContent = this.score;
         if (coinsElement) coinsElement.textContent = this.coins;
         if (rocksElement) rocksElement.textContent = this.rocks;
+        if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
+        if (hudRocksElement) hudRocksElement.textContent = this.rocks;
     }
 
     /**
@@ -290,8 +294,16 @@ class Player extends Entity {
     updateHealthUI() {
         const healthFill = document.getElementById('healthFill');
         if (healthFill) {
-            const healthPercent = (this.health / this.maxHealth) * 100;
+            const healthPercent = Math.max(0, (this.health / this.maxHealth) * 100);
             healthFill.style.width = healthPercent + '%';
+            
+            let color = '#3fd97b'; // default green
+            if (healthPercent <= 25) {
+                color = '#ff5b5b'; // red for low health
+            } else if (healthPercent <= 50) {
+                color = '#ffd447'; // yellow for mid health
+            }
+            healthFill.style.backgroundColor = color;
         }
     }
 
