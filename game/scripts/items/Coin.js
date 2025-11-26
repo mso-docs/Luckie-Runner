@@ -15,7 +15,7 @@ class Coin extends Item {
         // Coin-specific properties
         this.magnetRange = 60; // Coins are more magnetic
         this.autoCollect = true;
-        this.spinSpeed = 5; // Rotation speed
+        this.spinSpeed = 0; // Disable manual spin; use sheet animation only
         this.sparkleTimer = 0;
         this.sparkleInterval = 500; // Sparkle every 500ms
         
@@ -29,8 +29,8 @@ class Coin extends Item {
         // Set fallback color (gold for coins)
         this.fallbackColor = '#FFD700';
         
-        // Load shared sheet (4 frames, 32x32)
-        this.loadTileSheet('art/items/coin-sheet.png', 32, 32, [0, 1, 2, 3], 140);
+        // Load shared sheet (4 frames, 24x23)
+        this.loadTileSheet('art/items/coin-sheet.png', 24, 23, [0, 1, 2, 3], 140);
     }
 
     /**
@@ -63,23 +63,19 @@ class Coin extends Item {
      * Set up coin spin animation
      */
     setupAnimations() {
-        const frameWidth = this.width;
-        const frameHeight = this.height;
+        const frameWidth = 24;
+        const frameHeight = 23;
         
-        // Spinning animation - coin rotating (8 frames)
+        // Spinning animation - use 4-frame sheet
         this.addAnimation('spin', [
             { x: 0 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
             { x: 1 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
             { x: 2 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 3 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 4 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 5 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 6 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 7 * frameWidth, y: 0, width: frameWidth, height: frameHeight }
+            { x: 3 * frameWidth, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
         // Set animation speed - slower for better visibility
-        this.animations.spin.speed = 120;
+        this.animations.spin.speed = 140;
     }
 
     /**
@@ -89,9 +85,6 @@ class Coin extends Item {
     onItemUpdate(deltaTime) {
         // Update sparkle timer
         this.sparkleTimer += deltaTime;
-        
-        // Rotate for 3D effect
-        this.rotation += (this.spinSpeed * deltaTime) / 1000;
     }
 
     /**
