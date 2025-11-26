@@ -284,7 +284,7 @@ class Rock extends Projectile {
 
     onHitTarget(target) {
         // Rock disappears on collision with enemy (no bouncing on enemies)
-        this.disintegrate(target, false);
+        this.active = false;
         
         // Add small knockback to target
         if (target.velocity) {
