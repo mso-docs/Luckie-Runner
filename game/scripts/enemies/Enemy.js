@@ -238,7 +238,7 @@ class Enemy extends Entity {
         stars.filter(s => !s.isBig).forEach(star => {
             const dist = star.distance * (0.7 + 0.3 * intensity);
             const sx = originX + Math.cos(star.angle) * dist;
-            const sy = originY + Math.sin(star.angle) * dist - this.height * 0.6; // lift stars higher above ground
+            const sy = originY + Math.sin(star.angle) * dist - this.height * 2.0; // lift stars to ~2x enemy height
             const size = damageStarSize / 3;
             this.drawStar(ctx, sx, sy, size, star.color, star.stroke, star.rotation || 0);
         });
@@ -247,7 +247,7 @@ class Enemy extends Entity {
         if (bigStar) {
             const dist = bigStar.distance * (0.7 + 0.3 * intensity);
             const sx = originX + Math.cos(bigStar.angle) * dist;
-            const sy = originY + Math.sin(bigStar.angle) * dist - this.height * 0.6;
+            const sy = originY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
             this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, bigStar.rotation || 0);
 
             if (this.hitFlashDamage > 0) {
