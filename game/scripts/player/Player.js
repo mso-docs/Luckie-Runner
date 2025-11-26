@@ -229,9 +229,6 @@ class Player extends Entity {
         if (this.game.audioManager) {
             this.game.audioManager.playSound('hurt', 0.8);
         }
-        
-        // Show damage number on the player
-        this.showDamageNumber(amount);
 
         // Star burst hit flash
         this.spawnHitFlash(source, amount);
@@ -251,29 +248,8 @@ class Player extends Entity {
 
     /**
      * Spawn a floating damage number above the player
-     * @param {number} amount - Damage amount taken
      */
-    showDamageNumber(amount) {
-        const container = document.getElementById('gameContainer');
-        const canvas = document.getElementById('gameCanvas');
-        if (!container || !canvas || !this.game) return;
-
-        const dmg = document.createElement('div');
-        dmg.className = 'damage-number';
-        const value = Math.max(1, Math.round(amount));
-        dmg.textContent = `-${value}`;
-
-        // Position relative to game container using camera-adjusted coords
-        const screenX = this.x - this.game.camera.x + this.width / 2;
-        const screenY = this.y - this.game.camera.y - 10; // slightly above
-        dmg.style.left = `${screenX}px`;
-        dmg.style.top = `${screenY}px`;
-
-        container.appendChild(dmg);
-
-        // Clean up after animation
-        setTimeout(() => dmg.remove(), 3200);
-    }
+    // Deprecated: damage number now replaced by star burst
 
     /**
      * Build a hit flash effect with stars and rays (player variant)
