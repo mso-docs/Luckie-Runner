@@ -375,12 +375,13 @@ class Game {
         bubble.style.left = `${targetX}px`;
 
         // Position bubble just above the player's head
-        const aboveHeadOffset = 10; // pixels above the top of the sprite
+        const aboveHeadOffset = 20; // pixels above the top of the sprite
         const bottomFromCanvas = this.canvas.height - headY + aboveHeadOffset;
         bubble.style.bottom = `${bottomFromCanvas}px`;
 
         // Offset tail toward the player's mouth (slight bias toward facing direction)
-        const mouthOffset = this.player ? this.player.width * 0.22 * (this.player.facing || 1) : 0;
+        // Nudge tail 20px further right relative to previous anchor
+        const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
     }
 

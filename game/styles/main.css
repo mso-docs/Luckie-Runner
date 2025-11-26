@@ -228,6 +228,7 @@ body {
     border-left-color: #6b6b6b;
     transform: translateX(-50%) skewX(-8deg);
     filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.2));
+    z-index: -1;
 }
 
 .speech-bubble__body::after {
@@ -242,6 +243,7 @@ body {
     border-left-color: #ededed;
     transform: translateX(-50%) skewX(-8deg);
     filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.15));
+    z-index: -1;
 }
 
 .speech-bubble__hint {
