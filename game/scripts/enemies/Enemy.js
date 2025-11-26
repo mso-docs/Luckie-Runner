@@ -62,7 +62,7 @@ class Enemy extends Entity {
 
         // Quick hit flash/pow effect
         this.hitFlashTime = 0;
-        this.hitFlashDuration = 260; // ms
+        this.hitFlashDuration = 600; // ms
         this.hitFlashAngle = -Math.PI / 2;
         this.hitFlashParticles = [];
         this.hitFlashDamage = 0;
