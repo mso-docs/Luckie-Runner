@@ -230,16 +230,27 @@ class Enemy extends Entity {
                 ctx.stroke();
             });
 
-        // Stars emanating from impact
-        stars.forEach(star => {
+        // Stars emanating from impact: draw small behind, big on top
+        const bigStar = stars.find(s => s.isBig);
+        const damageStarSize = bigStar ? bigStar.size * 5 : 30;
+
+        // Pastel stars (background layer, 1/3 of big star)
+        stars.filter(s => !s.isBig).forEach(star => {
             const dist = star.distance * (0.7 + 0.3 * intensity);
             const sx = originX + Math.cos(star.angle) * dist;
             const sy = originY + Math.sin(star.angle) * dist - this.height * 0.6; // lift stars higher above ground
-            const size = star.size * 5;
+            const size = damageStarSize / 3;
             this.drawStar(ctx, sx, sy, size, star.color, star.stroke, star.rotation || 0);
+        });
 
-            // Damage text on the big star
-            if (star.isBig && this.hitFlashDamage > 0) {
+        // Big damage star on top
+        if (bigStar) {
+            const dist = bigStar.distance * (0.7 + 0.3 * intensity);
+            const sx = originX + Math.cos(bigStar.angle) * dist;
+            const sy = originY + Math.sin(bigStar.angle) * dist - this.height * 0.6;
+            this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, bigStar.rotation || 0);
+
+            if (this.hitFlashDamage > 0) {
                 ctx.save();
                 ctx.font = 'bold 20px Arial';
                 ctx.fillStyle = '#ff8c00';
@@ -255,7 +266,7 @@ class Enemy extends Entity {
                 ctx.fillText(String(this.hitFlashDamage), sx, sy);
                 ctx.restore();
             }
-        });
+        }
 
             ctx.restore();
         }
