@@ -321,12 +321,14 @@ class Entity {
   takeDamage(amount, source = null) {
     if (this.invulnerable) return false;
 
-    this.health -= amount;
-    if (this.health <= 0) {
-      this.health = 0;
+    const newHealth = this.health - amount;
+    const lethal = newHealth <= 0;
+
+    this.health = Math.max(0, newHealth);
+    this.onTakeDamage(amount, source);
+
+    if (lethal) {
       this.onDeath(source);
-    } else {
-      this.onTakeDamage(amount, source);
     }
     return true;
   }
