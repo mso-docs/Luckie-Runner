@@ -275,15 +275,9 @@ class Player extends Entity {
      * Update UI elements
      */
     updateUI() {
-        const scoreElement = document.getElementById('score');
-        const coinsElement = document.getElementById('coins');
-        const rocksElement = document.getElementById('rocks');
         const hudCoinsElement = document.getElementById('hudCoins');
         const hudRocksElement = document.getElementById('hudRocks');
         
-        if (scoreElement) scoreElement.textContent = this.score;
-        if (coinsElement) coinsElement.textContent = this.coins;
-        if (rocksElement) rocksElement.textContent = this.rocks;
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
         if (hudRocksElement) hudRocksElement.textContent = this.rocks;
     }

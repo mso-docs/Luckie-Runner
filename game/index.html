@@ -13,12 +13,12 @@
         
         <!-- Game UI Overlay -->
         <div id="gameUI">
-            <div id="healthBar">
-                <div id="healthFill"></div>
+            <div id="healthWrapper">
+                <div id="playerHealthIcon" aria-hidden="true"></div>
+                <div id="healthBar">
+                    <div id="healthFill"></div>
+                </div>
             </div>
-            <div id="scoreDisplay">Score: <span id="score">0</span></div>
-            <div id="coinDisplay">Coins: <span id="coins">0</span></div>
-            <div id="rockDisplay">Rocks: <span id="rocks">10</span></div>
             
             <div id="inventoryPanel">
                 <div class="hud-entry coin">
@@ -67,8 +67,8 @@
 
         <!-- Pause Menu -->
         <div id="pauseMenu" class="menu hidden">
-            <h2>Paused</h2>
-            <button id="resumeButton">Resume</button>
+            <h2>Paused!</h2>
+            <button id="resumeButton">Resume?</button>
             
             <!-- Audio Controls -->
             <div class="audio-controls">
