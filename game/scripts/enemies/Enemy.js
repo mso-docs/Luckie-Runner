@@ -101,16 +101,16 @@ class Enemy extends Entity {
         const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
         const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
 
-        // Five short rays in an upper semicircle for visibility
+        // Five rays in an upper semicircle for visibility
         const rayCount = 5;
-        const start = -Math.PI;  // up-left
-        const end = 0;           // up-right
+        const start = -Math.PI;  // left/up
+        const end = 0;           // right/up
         for (let i = 0; i < rayCount; i++) {
             const t = rayCount === 1 ? 0.5 : i / (rayCount - 1);
             const rayAngle = start + (end - start) * t;
             rays.push({
                 angle: rayAngle,
-                length: 16 + Math.random() * 8, // larger but still close
+                length: 24 + Math.random() * 10, // larger rays
                 width: 2 + Math.random() * 1.5
             });
         }
@@ -237,8 +237,8 @@ class Enemy extends Entity {
                     const len = ray.length * (0.6 + 0.4 * rayIntensity);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = ray.width;
-                    const startX = rayOriginX + Math.cos(ray.angle) * 10;
-                    const startY = rayOriginY + Math.sin(ray.angle) * 10;
+                    const startX = rayOriginX + Math.cos(ray.angle) * 6;
+                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 6, rayOriginY); // clamp to upper half
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     ctx.lineTo(
