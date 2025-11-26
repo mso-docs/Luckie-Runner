@@ -34,6 +34,13 @@ class Player extends Entity {
         // Load tile-based sprite sheet (45x66 tiles)
         // Animates first 2 tiles by default at 200ms per frame
         this.loadTileSheet('art/sprites/luckie-sprite.png', 45, 66, [0, 1], 200);
+
+        // Hit flash stars (shared style with enemy impact)
+        this.hitFlashTime = 0;
+        this.hitFlashDuration = 600; // ms
+        this.hitFlashAngle = -Math.PI / 2;
+        this.hitFlashParticles = [];
+        this.hitFlashDamage = 0;
     }
 
     /**
@@ -120,6 +127,11 @@ class Player extends Entity {
         // Update animations
         this.updateSimpleAnimation();
         
+        // Decay hit flash timer
+        if (this.hitFlashTime > 0) {
+            this.hitFlashTime -= deltaTime;
+        }
+
         // Update camera
         this.updateCamera();
     }
@@ -220,6 +232,9 @@ class Player extends Entity {
         
         // Show damage number on the player
         this.showDamageNumber(amount);
+
+        // Star burst hit flash
+        this.spawnHitFlash(source, amount);
         
         // Make invulnerable for a short time (1s i-frames)
         this.makeInvulnerable(1000);
@@ -258,6 +273,182 @@ class Player extends Entity {
 
         // Clean up after animation
         setTimeout(() => dmg.remove(), 3200);
+    }
+
+    /**
+     * Build a hit flash effect with stars and rays (player variant)
+     * @param {Entity|null} source - What hit the player
+     * @param {number} amount - Damage amount
+     */
+    spawnHitFlash(source, amount = 0) {
+        this.hitFlashTime = this.hitFlashDuration;
+        this.hitFlashDamage = amount;
+
+        // Determine incoming angle (from source toward player)
+        const playerCenter = this.getCenter();
+        let angle = -Math.PI / 2;
+        if (source && typeof source.x === 'number') {
+            const srcCenter = source.getCenter ? source.getCenter() : { x: source.x, y: source.y };
+            angle = Math.atan2(playerCenter.y - srcCenter.y, playerCenter.x - srcCenter.x);
+        }
+        this.hitFlashAngle = angle;
+
+        const rays = [];
+        const stars = [];
+        const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
+        const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
+
+        // Rays showing impact direction
+        for (let i = 0; i < 8; i++) {
+            const spread = (Math.PI / 3) * (Math.random() * 0.5 + 0.5);
+            const offset = (i / 7 - 0.5) * spread;
+            rays.push({
+                angle: angle + offset,
+                length: 28 + Math.random() * 14,
+                width: 2 + Math.random() * 1.5,
+                color: mainColors[i % mainColors.length]
+            });
+        }
+
+        // One big yellow star with damage text
+        stars.push({
+            size: 12,
+            angle: angle,
+            distance: 36,
+            color: '#ffd12f',
+            stroke: '#e2a400',
+            isBig: true,
+            baseRotation: angle + Math.PI / 2,
+            rotation: (Math.random() - 0.5) * 0.35
+        });
+
+        // Three small pastel stars with spacing
+        const smallOffsets = [-0.5, 0.5, Math.PI * 0.85];
+        for (let i = 0; i < 3; i++) {
+            const dist = 46 + i * 8;
+            stars.push({
+                size: 6 + Math.random() * 1.5,
+                angle: angle + smallOffsets[i],
+                distance: dist,
+                color: pastel[i % pastel.length],
+                stroke: 'rgba(0,0,0,0.08)',
+                isBig: false,
+                baseRotation: angle + smallOffsets[i],
+                rotation: (Math.random() - 0.5) * 0.5
+            });
+        }
+
+        this.hitFlashParticles = { rays, stars };
+    }
+
+    /**
+     * Render player with star hit flash overlay when hurt
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        super.render(ctx, camera);
+
+        if (this.hitFlashTime > 0) {
+            const intensity = this.hitFlashTime / this.hitFlashDuration;
+            const dir = {
+                x: Math.cos(this.hitFlashAngle),
+                y: Math.sin(this.hitFlashAngle)
+            };
+            const originX = this.x - camera.x + this.width / 2 - dir.x * (this.width * 0.2);
+            const originY = this.y - camera.y + this.height * 0.2 - dir.y * (this.height * 0.2);
+            const life = 1 - intensity;
+            const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
+            const perp = { x: -dir.y, y: dir.x };
+
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, intensity);
+
+            const { rays, stars } = this.hitFlashParticles || { rays: [], stars: [] };
+            const bigStar = stars.find(s => s.isBig);
+            const damageStarSize = bigStar ? bigStar.size * 5 : 30;
+
+            // Impact rays
+            rays.forEach(ray => {
+                const len = ray.length * (0.6 + 0.4 * intensity);
+                ctx.strokeStyle = ray.color;
+                ctx.lineWidth = ray.width;
+                ctx.beginPath();
+                ctx.moveTo(originX, originY);
+                ctx.lineTo(
+                    originX + Math.cos(ray.angle) * len,
+                    originY + Math.sin(ray.angle) * len
+                );
+                ctx.stroke();
+            });
+
+            // Pastel stars (behind)
+            stars.filter(s => !s.isBig).forEach(star => {
+                const dist = star.distance * (0.7 + 0.3 * intensity);
+                let sx = originX + Math.cos(star.angle) * dist;
+                let sy = originY + Math.sin(star.angle) * dist - this.height * 2.0;
+                sx += perp.x * wiggle;
+                sy += perp.y * wiggle;
+                const size = damageStarSize / 3;
+                const rot = (star.baseRotation || 0) + (star.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.4;
+                this.drawStar(ctx, sx, sy, size, star.color, star.stroke, rot);
+            });
+
+            // Big star on top with damage text
+            if (bigStar) {
+                const dist = bigStar.distance * (0.7 + 0.3 * intensity);
+                let sx = originX + Math.cos(bigStar.angle) * dist;
+                let sy = originY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
+                sx += perp.x * wiggle;
+                sy += perp.y * wiggle;
+                const rot = (bigStar.baseRotation || 0) + (bigStar.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.35;
+                this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, rot);
+
+                if (this.hitFlashDamage > 0) {
+                    ctx.save();
+                    ctx.font = 'bold 26px Arial';
+                    ctx.fillStyle = '#ff8c00';
+                    ctx.lineWidth = 6;
+                    ctx.strokeStyle = '#000000';
+                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowOffsetX = 4;
+                    ctx.shadowOffsetY = 4;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.strokeText(String(this.hitFlashDamage), sx, sy);
+                    ctx.fillText(String(this.hitFlashDamage), sx, sy);
+                    ctx.restore();
+                }
+            }
+
+            ctx.restore();
+        }
+    }
+
+    /**
+     * Draw a simple 5-point star (reused for hit flash)
+     */
+    drawStar(ctx, x, y, size, fill, stroke = null, rotation = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const angle = Math.PI / 5 * i - Math.PI / 2;
+            const radius = i % 2 === 0 ? size : size * 0.45;
+            const px = Math.cos(angle) * radius;
+            const py = Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
     /**
@@ -352,6 +543,8 @@ class Player extends Entity {
         this.invulnerable = false;
         this.tileAnimationIndex = 0;
         this.tileAnimationTime = 0;
+        this.hitFlashTime = 0;
+        this.hitFlashDamage = 0;
         this.updateUI();
         this.updateHealthUI();
     }
