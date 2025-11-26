@@ -273,25 +273,17 @@ body {
 
 .speech-glow {
     color: #c5ff4a;
-    text-shadow:
-        -1px 0 0 #0f3a0f,
-        1px 0 0 #0f3a0f,
-        0 -1px 0 #0f3a0f,
-        0 1px 0 #0f3a0f,
-        0 0 8px rgba(197,255,74,0.9),
-        0 0 16px rgba(40,120,40,0.9);
+    -webkit-text-stroke: 0.5px #0f3a0f;
+    text-shadow: none;
     animation: speechGlowPulse 1.4s ease-in-out infinite;
 }
 .speech-bounce { display: inline-block; animation: speechBounce 0.8s ease-in-out infinite; }
 .speech-shake { display: inline-block; animation: speechShake 0.18s ease-in-out infinite; }
 .speech-rainbow {
     display: inline-block;
-    animation: speechRainbow 1.8s linear infinite, speechRainbowGlow 1.8s linear infinite;
-    text-shadow:
-        -1px 0 0 #000,
-        1px 0 0 #000,
-        0 -1px 0 #000,
-        0 1px 0 #000;
+    animation: speechRainbow 1.8s linear infinite;
+    -webkit-text-stroke: 0.5px #000;
+    text-shadow: none;
 }
 
 @keyframes speechBounce {
@@ -315,17 +307,14 @@ body {
 }
 
 @keyframes speechRainbowGlow {
-    0% { text-shadow: 0 0 6px rgba(255,107,107,0.6); }
-    25% { text-shadow: 0 0 6px rgba(255,209,102,0.6); }
-    50% { text-shadow: 0 0 6px rgba(111,255,217,0.6); }
-    75% { text-shadow: 0 0 6px rgba(107,155,255,0.6); }
-    100% { text-shadow: 0 0 6px rgba(255,107,255,0.6); }
+    0% { }
+    100% { }
 }
 
 @keyframes speechGlowPulse {
-    0% { text-shadow: 0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(180,200,255,0.85); }
-    50% { text-shadow: 0 0 10px rgba(255,255,255,1), 0 0 18px rgba(180,200,255,0.95); }
-    100% { text-shadow: 0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(180,200,255,0.85); }
+    0% { filter: brightness(1); }
+    50% { filter: brightness(1.25); }
+    100% { filter: brightness(1); }
 }
 
 /* Menus */
