@@ -66,6 +66,15 @@ class Enemy extends Entity {
     }
 
     /**
+     * Override to inject hit flash even on lethal damage
+     */
+    takeDamage(amount, source = null) {
+        if (this.invulnerable) return false;
+        this.hitFlashTime = this.hitFlashDuration;
+        return super.takeDamage(amount, source);
+    }
+
+    /**
      * Update enemy AI and state machine
      * @param {number} deltaTime - Time since last frame
      */
@@ -128,16 +137,16 @@ class Enemy extends Entity {
         if (this.hitFlashTime > 0) {
             const intensity = this.hitFlashTime / this.hitFlashDuration;
             const screenX = this.x - camera.x + this.width / 2;
-            const screenY = this.y - camera.y - this.height * 0.2; // lift above body for visibility
+            const screenY = this.y - camera.y - this.height * 0.6; // lift above body for visibility
 
             ctx.save();
             ctx.globalAlpha = Math.min(1, intensity);
             ctx.strokeStyle = '#f4a261';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
 
             // Radiating lines
             const rays = 10;
-            const baseLen = 26 + 12 * intensity;
+            const baseLen = 34 + 16 * intensity;
             for (let i = 0; i < rays; i++) {
                 const angle = (Math.PI * 2 * i) / rays;
                 const len = baseLen * (0.7 + 0.3 * Math.sin(intensity * Math.PI + i));
@@ -149,7 +158,7 @@ class Enemy extends Entity {
 
             // Star sparks at the ray tips
             ctx.fillStyle = '#ffe066';
-            const starSize = 6 + 3 * intensity;
+            const starSize = 8 + 4 * intensity;
             for (let i = 0; i < rays; i++) {
                 const angle = (Math.PI * 2 * i) / rays;
                 const len = baseLen * 1.15;
