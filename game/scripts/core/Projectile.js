@@ -46,11 +46,25 @@ class Projectile extends Entity {
     onUpdate(deltaTime) {
         const dt = deltaTime / 1000;
         
+        // Track last position for impact resolution
+        this.prevX = this.x;
+        this.prevY = this.y;
+        
         // Update age and check lifetime
         this.age += deltaTime;
         if (this.age >= this.lifeTime) {
             this.active = false;
             return;
+        }
+        
+        // Refresh direction for effects based on current velocity
+        const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+        if (speed > 0.001) {
+            this.speed = speed;
+            this.direction = {
+                x: this.velocity.x / speed,
+                y: this.velocity.y / speed
+            };
         }
 
         // Move with current velocity (gravity already applied in base physics)
@@ -234,6 +248,13 @@ class Rock extends Projectile {
         this.startY = y;
         this.maxDistance = 400; // fallback; overridden by player
         this.lifeTime = 8000; // allow time to arc to ground
+        this.prevX = x;
+        this.prevY = y;
+        this.bounceDamping = 0.5; // lose half vertical speed each bounce
+        this.bounceFriction = 0.8; // horizontal friction per bounce
+        this.minBounceSpeed = 60; // below this, the rock disintegrates
+        this.maxBounces = 6;
+        this.bounceCount = 0;
         
         // Set fallback color (brown for rocks)
         this.fallbackColor = '#8B4513';
@@ -258,8 +279,8 @@ class Rock extends Projectile {
     }
 
     onHitTarget(target) {
-        // Rock disappears on collision with enemy
-        this.active = false;
+        // Rock disappears on collision with enemy (no bouncing on enemies)
+        this.disintegrate(target);
         
         // Add small knockback to target
         if (target.velocity) {
@@ -269,8 +290,69 @@ class Rock extends Projectile {
     }
 
     onHitObstacle(obstacle) {
-        // Rock disappears on collision with any obstacle
-        this.active = false;
+        // Bounce off solid platforms/ground; disintegrate when energy is gone
+        if (!obstacle || !obstacle.solid) {
+            this.disintegrate(obstacle);
+            return;
+        }
+
+        const rockBounds = CollisionDetection.getCollisionBounds(this);
+        const obstacleBounds = CollisionDetection.getCollisionBounds(obstacle);
+
+        const overlapX = Math.min(
+            rockBounds.x + rockBounds.width - obstacleBounds.x,
+            obstacleBounds.x + obstacleBounds.width - rockBounds.x
+        );
+        const overlapY = Math.min(
+            rockBounds.y + rockBounds.height - obstacleBounds.y,
+            obstacleBounds.y + obstacleBounds.height - rockBounds.y
+        );
+
+        const hitFromAbove = (this.prevY + rockBounds.height) <= obstacleBounds.y;
+        const hitFromBelow = this.prevY >= obstacleBounds.y + obstacleBounds.height;
+        const hitFromLeft = (this.prevX + rockBounds.width) <= obstacleBounds.x;
+        const hitFromRight = this.prevX >= obstacleBounds.x + obstacleBounds.width;
+
+        let bounced = false;
+
+        if (overlapY <= overlapX && (hitFromAbove || hitFromBelow)) {
+            // Resolve penetration on vertical axis
+            if (hitFromAbove) {
+                this.y = obstacleBounds.y - this.height - 0.1;
+            } else {
+                this.y = obstacleBounds.y + obstacleBounds.height + 0.1;
+            }
+
+            this.velocity.y = -this.velocity.y * this.bounceDamping;
+            this.velocity.x *= this.bounceFriction;
+            bounced = true;
+        } else if (overlapX < overlapY && (hitFromLeft || hitFromRight)) {
+            // Resolve horizontal collisions (walls/sides of platforms)
+            if (hitFromLeft) {
+                this.x = obstacleBounds.x - this.width - 0.1;
+            } else {
+                this.x = obstacleBounds.x + obstacleBounds.width + 0.1;
+            }
+
+            this.velocity.x = -this.velocity.x * this.bounceDamping;
+            this.velocity.y *= this.bounceFriction;
+            bounced = true;
+        }
+
+        if (bounced) {
+            this.bounceCount++;
+            this.onGround = false; // allow gravity to re-apply for the next arc
+
+            const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+            const outOfEnergy = speed < this.minBounceSpeed || this.bounceCount > this.maxBounces;
+
+            if (outOfEnergy) {
+                this.disintegrate(obstacle);
+            }
+        } else {
+            // Unknown collision direction; just disintegrate to avoid sticking
+            this.disintegrate(obstacle);
+        }
     }
 
     /**
@@ -307,6 +389,14 @@ class Rock extends Projectile {
                 this.active = false;
             }
         }
+    }
+
+    /**
+     * Disintegrate the rock when it no longer has energy to bounce
+     */
+    disintegrate(target) {
+        this.createHitEffect(target);
+        this.active = false;
     }
 }
 
