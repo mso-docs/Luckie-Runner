@@ -59,6 +59,97 @@ class Enemy extends Entity {
             { item: 'coin', chance: 0.75, amount: Math.floor(Math.random() * 2) + 1 }, // 1-2 coins, 75% chance
             { item: 'rocks', chance: 0.17, amount: Math.floor(Math.random() * 3) + 2 } // 2-4 rocks, 17% chance
         ];
+
+        // Knockback tilt state
+        this.knockbackTiltTime = 0;
+        this.knockbackTiltDuration = 500;
+        this.knockbackTiltDir = 1;
+
+        // Quick hit flash/pow effect
+        this.hitFlashTime = 0;
+        this.hitFlashDuration = 600; // ms
+        this.hitFlashAngle = -Math.PI / 2;
+        this.hitFlashParticles = [];
+        this.hitFlashDamage = 0;
+        this.hitRayDuration = 500; // ms for quick pow lines
+    }
+
+    /**
+     * Override to inject hit flash even on lethal damage
+     */
+    takeDamage(amount, source = null) {
+        if (this.invulnerable) return false;
+        this.spawnHitFlash(source, amount);
+        return super.takeDamage(amount, source);
+    }
+
+    /**
+     * Build a hit flash effect with stars and rays
+     * @param {Entity|null} source - What hit the enemy
+     */
+    spawnHitFlash(source, amount = 0) {
+        this.hitFlashTime = this.hitFlashDuration;
+        this.hitFlashDamage = amount;
+
+        // Determine incoming angle (from source toward enemy)
+        const enemyCenter = this.getCenter();
+        let angle = -Math.PI / 2;
+        if (source && typeof source.x === 'number') {
+            const srcCenter = source.getCenter ? source.getCenter() : { x: source.x, y: source.y };
+            angle = Math.atan2(enemyCenter.y - srcCenter.y, enemyCenter.x - srcCenter.x);
+        }
+        this.hitFlashAngle = angle;
+
+        // Build particles once per hit for stable visuals
+        const rays = [];
+        const stars = [];
+        const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
+        const pastel = ['#c8f2ff', '#dff6ff', '#f7e2ff', '#e8ffe7', '#fff0e0'];
+
+        // Five rays in an upper semicircle for visibility
+        const rayCount = 5;
+        const start = -Math.PI;  // left/up
+        const end = 0;           // right/up
+        for (let i = 0; i < rayCount; i++) {
+            const t = rayCount === 1 ? 0.5 : i / (rayCount - 1);
+            const rayAngle = start + (end - start) * t;
+            rays.push({
+                angle: rayAngle,
+                length: 30 + Math.random() * 12, // larger, more pronounced rays
+                width: 2 + Math.random() * 1.5
+            });
+        }
+
+        // One big yellow star with damage text
+        stars.push({
+            size: 12,
+            angle: angle,
+            distance: 36,
+            color: '#ffd12f',
+            stroke: '#e2a400',
+            isBig: true,
+            baseRotation: angle + Math.PI / 2,
+            rotation: (Math.random() - 0.5) * 0.35
+        });
+
+        // Three small pastel stars with spacing
+        const smallCount = 3;
+        const smallOffsets = [-0.5, 0.5, Math.PI * 0.85];
+        for (let i = 0; i < smallCount; i++) {
+            const dist = 46 + i * 8;
+            stars.push({
+                size: 6 + Math.random() * 1.5,
+                angle: angle + smallOffsets[i],
+                distance: dist,
+                color: pastel[i % pastel.length],
+                stroke: 'rgba(0,0,0,0.08)',
+                isBig: false,
+                baseRotation: angle + smallOffsets[i],
+                rotation: (Math.random() - 0.5) * 0.5
+            });
+        }
+
+        this.hitFlashParticles = { rays, stars };
     }
 
     /**
@@ -105,6 +196,147 @@ class Enemy extends Entity {
         if (this.searchTime > 0) {
             this.searchTime -= deltaTime;
         }
+
+        if (this.hitFlashTime > 0) {
+            this.hitFlashTime -= deltaTime;
+        }
+
+        // Decay knockback tilt
+        if (this.knockbackTiltTime > 0) {
+            this.knockbackTiltTime -= deltaTime;
+            const t = Math.max(0, this.knockbackTiltTime) / this.knockbackTiltDuration;
+            this.rotation = -this.knockbackTiltDir * 0.35 * t;
+        } else if (this.rotation !== 0) {
+            this.rotation = 0;
+        }
+    }
+
+    /**
+     * Render enemy with optional hit flash "POW" overlay
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        if (!this.visible) return;
+
+        // Draw enemy sprite/animation
+        super.render(ctx, camera);
+
+        // Draw a quick "POW" overlay when recently hit
+        if (this.hitFlashTime > 0) {
+            const intensity = this.hitFlashTime / this.hitFlashDuration;
+            const dir = {
+                x: Math.cos(this.hitFlashAngle),
+                y: Math.sin(this.hitFlashAngle)
+            };
+            const side = dir.x >= 0 ? 1 : -1;
+            const starOriginX = this.x - camera.x + this.width / 2 + side * (this.width * 0.6);
+            const starOriginY = this.y - camera.y - this.height * 0.6; // above the ground but near body
+            const rayOriginX = this.x - camera.x + this.width / 2 + side * 10; // a bit wider origin for spread
+            const rayOriginY = starOriginY;
+            const life = 1 - intensity; // 0 at start, 1 at end
+            const wiggle = Math.sin(life * Math.PI * 4) * 6 * (0.6 + 0.4 * intensity);
+            const perp = { x: -dir.y, y: dir.x };
+            const rayElapsed = this.hitFlashDuration - this.hitFlashTime;
+            const rayIntensity = Math.max(0, 1 - rayElapsed / this.hitRayDuration);
+
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, intensity);
+
+            const { rays, stars } = this.hitFlashParticles || { rays: [], stars: [] };
+
+            // Impact rays (directional)
+            if (rayElapsed < this.hitRayDuration) {
+                ctx.save();
+                ctx.globalAlpha = rayIntensity * 0.7; // slightly transparent rays
+                rays.forEach(ray => {
+                    const len = ray.length * (0.6 + 0.4 * rayIntensity);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = ray.width;
+                    const startX = rayOriginX + Math.cos(ray.angle) * 10;
+                    const startY = Math.min(rayOriginY + Math.sin(ray.angle) * 10, rayOriginY); // clamp to upper half
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(
+                        startX + Math.cos(ray.angle) * len,
+                        startY + Math.sin(ray.angle) * len
+                    );
+                    ctx.stroke();
+                });
+                ctx.restore();
+            }
+
+        // Stars emanating from impact: draw small behind, big on top
+        const bigStar = stars.find(s => s.isBig);
+        const damageStarSize = bigStar ? bigStar.size * 5 : 30;
+
+        // Pastel stars (background layer, 1/3 of big star)
+        stars.filter(s => !s.isBig).forEach(star => {
+            const dist = star.distance * (0.7 + 0.3 * intensity);
+            let sx = starOriginX + Math.cos(star.angle) * dist;
+            let sy = starOriginY + Math.sin(star.angle) * dist - this.height * 2.0; // lift stars to ~2x enemy height
+            sx += perp.x * wiggle;
+            sy += perp.y * wiggle;
+            const size = damageStarSize / 3;
+            const rot = (star.baseRotation || 0) + (star.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.4;
+            this.drawStar(ctx, sx, sy, size, star.color, star.stroke, rot);
+        });
+
+        // Big damage star on top
+        if (bigStar) {
+            const dist = bigStar.distance * (0.7 + 0.3 * intensity);
+            let sx = starOriginX + Math.cos(bigStar.angle) * dist;
+            let sy = starOriginY + Math.sin(bigStar.angle) * dist - this.height * 2.0;
+            sx += perp.x * wiggle;
+            sy += perp.y * wiggle;
+            const rot = (bigStar.baseRotation || 0) + (bigStar.rotation || 0) + Math.sin(life * Math.PI * 4) * 0.35;
+            this.drawStar(ctx, sx, sy, damageStarSize, bigStar.color, bigStar.stroke, rot);
+
+            if (this.hitFlashDamage > 0) {
+                ctx.save();
+                ctx.font = 'bold 26px Arial';
+                ctx.fillStyle = '#ff8c00';
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#000000';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 4;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(String(this.hitFlashDamage), sx, sy);
+                ctx.fillText(String(this.hitFlashDamage), sx, sy);
+                ctx.restore();
+            }
+        }
+
+            ctx.restore();
+        }
+    }
+
+    /**
+     * Draw a simple 5-point star
+     */
+    drawStar(ctx, x, y, size, fill, stroke = null, rotation = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const angle = Math.PI / 5 * i - Math.PI / 2;
+            const radius = i % 2 === 0 ? size : size * 0.45;
+            const px = Math.cos(angle) * radius;
+            const py = Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
     /**
@@ -276,7 +508,7 @@ class Enemy extends Entity {
      */
     hurtState(deltaTime) {
         // Brief stun period
-        this.velocity.x *= 0.7;
+        this.velocity.x *= 0.95; // keep most of knockback while slightly damping
         
         // Play hurt animation
         this.playAnimation('hurt');
@@ -330,11 +562,25 @@ class Enemy extends Entity {
     onTakeDamage(amount, source) {
         // Enter hurt state
         this.changeState('hurt');
+        this.hitFlashTime = this.hitFlashDuration;
         
         // Add knockback
         if (source) {
-            const direction = source.x < this.x ? 1 : -1;
-            this.velocity.x += direction * 3;
+            const selfCenter = this.getCenter ? this.getCenter() : { x: this.x, y: this.y };
+            const srcCenter = source.getCenter ? source.getCenter() : { x: source.x, y: source.y };
+            const dx = selfCenter.x - srcCenter.x;
+            const dy = selfCenter.y - srcCenter.y;
+            const mag = Math.max(1, Math.hypot(dx, dy));
+            const impulseX = (dx / mag) * 420; // stronger push away
+            const impulseY = Math.min((dy / mag) * 220, -140); // ensure an upward pop
+            this.velocity.x = impulseX;
+            this.velocity.y = impulseY;
+            this.onGround = false;
+
+            // Tilt back to show knockback
+            this.knockbackTiltDir = dx >= 0 ? 1 : -1;
+            this.knockbackTiltTime = this.knockbackTiltDuration;
+            this.rotation = -this.knockbackTiltDir * 0.35;
         }
         
         // Become aggressive if hit

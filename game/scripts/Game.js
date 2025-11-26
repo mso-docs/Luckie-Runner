@@ -1157,24 +1157,18 @@ class Game {
      * Reset game entities and state (used by GameStateManager)
      */
     resetGame() {
-        // Reset level
-        this.createLevel();
-        
-        // Reset camera
-        this.camera = { x: 0, y: 0 };
-        
-        // Clear entity arrays
+        // Clear transient state before rebuilding
+        this.player = null;
         this.projectiles = [];
         this.hazards = [];
-        this.flag = null;
-        
-        // Reset player and entities
-        this.player = null;
-        this.enemies = [];
-        this.items = [];
+        this.camera = { x: 0, y: 0 };
+        this.backgroundLayers = [];
         
         // Reset managers
         this.palmTreeManager.reset();
+        
+        // Rebuild level content (platforms, enemies, items, flag, background)
+        this.createLevel();
     }
 
     /**
