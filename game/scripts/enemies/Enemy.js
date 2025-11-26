@@ -63,6 +63,8 @@ class Enemy extends Entity {
         // Quick hit flash/pow effect
         this.hitFlashTime = 0;
         this.hitFlashDuration = 260; // ms
+        this.hitFlashAngle = -Math.PI / 2;
+        this.hitFlashParticles = [];
     }
 
     /**
@@ -70,8 +72,70 @@ class Enemy extends Entity {
      */
     takeDamage(amount, source = null) {
         if (this.invulnerable) return false;
-        this.hitFlashTime = this.hitFlashDuration;
+        this.spawnHitFlash(source);
         return super.takeDamage(amount, source);
+    }
+
+    /**
+     * Build a hit flash effect with stars and rays
+     * @param {Entity|null} source - What hit the enemy
+     */
+    spawnHitFlash(source) {
+        this.hitFlashTime = this.hitFlashDuration;
+
+        // Determine incoming angle (from source toward enemy)
+        const enemyCenter = this.getCenter();
+        let angle = -Math.PI / 2;
+        if (source && typeof source.x === 'number') {
+            const srcCenter = source.getCenter ? source.getCenter() : { x: source.x, y: source.y };
+            angle = Math.atan2(enemyCenter.y - srcCenter.y, enemyCenter.x - srcCenter.x);
+        }
+        this.hitFlashAngle = angle;
+
+        // Build particles once per hit for stable visuals
+        const rays = [];
+        const stars = [];
+        const mainColors = ['#ffd166', '#ffe066', '#ffb703'];
+        const pastel = ['#f4d6ff', '#ffe9d6', '#d6f4ff', '#e4f2ff', '#ffd6ec'];
+
+        // Rays showing impact direction
+        for (let i = 0; i < 8; i++) {
+            const spread = (Math.PI / 3) * (Math.random() * 0.5 + 0.5);
+            const offset = (i / 7 - 0.5) * spread;
+            rays.push({
+                angle: angle + offset,
+                length: 28 + Math.random() * 14,
+                width: 2 + Math.random() * 1.5,
+                color: mainColors[i % mainColors.length]
+            });
+        }
+
+        // One or two big yellow stars
+        const bigCount = 1 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < bigCount; i++) {
+            const dist = 28 + Math.random() * 18;
+            stars.push({
+                size: 10 + Math.random() * 4,
+                angle: angle + (i === 0 ? 0 : (Math.random() - 0.5) * Math.PI / 4),
+                distance: dist,
+                color: '#ffd12f',
+                stroke: '#e2a400'
+            });
+        }
+
+        // Cluster of small pastel stars trailing the hit direction
+        for (let i = 0; i < 12; i++) {
+            const dist = 26 + Math.random() * 40 + i * 2; // stagger so they don't overlap
+            stars.push({
+                size: 5 + Math.random() * 3,
+                angle: angle + (Math.random() - 0.5) * (Math.PI * 0.8),
+                distance: dist,
+                color: pastel[i % pastel.length],
+                stroke: 'rgba(0,0,0,0.08)'
+            });
+        }
+
+        this.hitFlashParticles = { rays, stars };
     }
 
     /**
@@ -136,47 +200,67 @@ class Enemy extends Entity {
         // Draw a quick "POW" overlay when recently hit
         if (this.hitFlashTime > 0) {
             const intensity = this.hitFlashTime / this.hitFlashDuration;
-            const screenX = this.x - camera.x + this.width / 2;
-            const screenY = this.y - camera.y - this.height * 0.6; // lift above body for visibility
+            const dir = {
+                x: Math.cos(this.hitFlashAngle),
+                y: Math.sin(this.hitFlashAngle)
+            };
+            const originX = this.x - camera.x + this.width / 2 - dir.x * (this.width * 0.2);
+            const originY = this.y - camera.y + this.height * 0.2 - dir.y * (this.height * 0.2);
 
             ctx.save();
             ctx.globalAlpha = Math.min(1, intensity);
-            ctx.strokeStyle = '#f4a261';
-            ctx.lineWidth = 3;
 
-            // Radiating lines
-            const rays = 10;
-            const baseLen = 34 + 16 * intensity;
-            for (let i = 0; i < rays; i++) {
-                const angle = (Math.PI * 2 * i) / rays;
-                const len = baseLen * (0.7 + 0.3 * Math.sin(intensity * Math.PI + i));
+            const { rays, stars } = this.hitFlashParticles || { rays: [], stars: [] };
+
+            // Impact rays (directional)
+            rays.forEach(ray => {
+                const len = ray.length * (0.6 + 0.4 * intensity);
+                ctx.strokeStyle = ray.color;
+                ctx.lineWidth = ray.width;
                 ctx.beginPath();
-                ctx.moveTo(screenX, screenY);
-                ctx.lineTo(screenX + Math.cos(angle) * len, screenY + Math.sin(angle) * len);
+                ctx.moveTo(originX, originY);
+                ctx.lineTo(
+                    originX + Math.cos(ray.angle) * len,
+                    originY + Math.sin(ray.angle) * len
+                );
                 ctx.stroke();
-            }
+            });
 
-            // Star sparks at the ray tips
-            ctx.fillStyle = '#ffe066';
-            const starSize = 8 + 4 * intensity;
-            for (let i = 0; i < rays; i++) {
-                const angle = (Math.PI * 2 * i) / rays;
-                const len = baseLen * 1.15;
-                const sx = screenX + Math.cos(angle) * len;
-                const sy = screenY + Math.sin(angle) * len;
-
-                ctx.beginPath();
-                for (let p = 0; p < 5; p++) {
-                    const a = angle + (Math.PI * 2 * p) / 5;
-                    const r = starSize * (p % 2 === 0 ? 1 : 0.5);
-                    ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r);
-                }
-                ctx.closePath();
-                ctx.fill();
-            }
+        // Stars emanating from impact
+        stars.forEach(star => {
+            const dist = star.distance * (0.7 + 0.3 * intensity);
+            const sx = originX + Math.cos(star.angle) * dist;
+            const sy = originY + Math.sin(star.angle) * dist - this.height * 0.6; // lift stars higher above ground
+            this.drawStar(ctx, sx, sy, star.size * 5, star.color, star.stroke);
+        });
 
             ctx.restore();
         }
+    }
+
+    /**
+     * Draw a simple 5-point star
+     */
+    drawStar(ctx, x, y, size, fill, stroke = null) {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const angle = Math.PI / 5 * i - Math.PI / 2;
+            const radius = i % 2 === 0 ? size : size * 0.45;
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        if (stroke) {
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
     /**
