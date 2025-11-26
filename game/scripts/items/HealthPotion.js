@@ -1,6 +1,6 @@
 // HealthPotion - simple health pickup that heals the player
 class HealthPotion extends Item {
-    constructor(x, y, healAmount = 25) {
+    constructor(x, y, healAmount = 100) {
         super(x, y, 40, 40);
         this.type = 'health_potion';
         this.healAmount = healAmount;
@@ -29,6 +29,7 @@ class HealthPotion extends Item {
             this.game.audioManager.playSound(this.collectSound, 0.7);
         }
         collector.updateUI?.();
+        collector.updateHealthUI?.();
         return true;
     }
 }
