@@ -267,8 +267,8 @@ class Game {
         }
 
         this.dialogueState.messages = [
-            "Hey, I'm Luckie Puppie! Welcome to the test room!",
-            "Click the mouse button to throw a rock. Try hitting that slime!"
+            "Hey, I'm Luckie Puppie. !Welcome! to the %test% ^room^.",
+            "Click the ~mouse~ button to ~throw~ !a! rock. `Try` hitting that slime!"
         ];
         this.dialogueState.index = 0;
         this.dialogueState.active = true;
@@ -301,7 +301,7 @@ class Game {
             this.dialogueState.hideTimeout = null;
         }
 
-        bubbleText.textContent = text;
+        bubbleText.innerHTML = this.formatSpeechText(text);
         bubble.classList.add('show');
         bubble.setAttribute('aria-hidden', 'false');
         this.dialogueState.active = true;
@@ -383,6 +383,43 @@ class Game {
         // Nudge tail 20px further right relative to previous anchor
         const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+    }
+
+    /**
+     * Lightweight styling parser for speech text.
+     * Markers:
+     *  *bold*
+     *  _italic_
+     *  %shake%
+     *  ~rainbow~
+     *  ^glow^
+     *  !bounce!
+     *  `mono`
+     */
+    formatSpeechText(text) {
+        if (typeof text !== 'string') return '';
+
+        // Escape HTML
+        const escape = (str) => str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        let safe = escape(text);
+
+        const apply = (pattern, cls) => {
+            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
+        };
+
+        apply(/\*(.+?)\*/g, 'speech-bold');
+        apply(/_(.+?)_/g, 'speech-italic');
+        apply(/%(.+?)%/g, 'speech-shake');
+        apply(/~(.+?)~/g, 'speech-rainbow');
+        apply(/\^(.+?)\^/g, 'speech-glow');
+        apply(/!(.+?)!/g, 'speech-bounce');
+        apply(/`(.+?)`/g, 'speech-mono');
+
+        return safe;
     }
 
     /**
