@@ -59,6 +59,10 @@ class Enemy extends Entity {
             { item: 'coin', chance: 0.75, amount: Math.floor(Math.random() * 2) + 1 }, // 1-2 coins, 75% chance
             { item: 'rocks', chance: 0.17, amount: Math.floor(Math.random() * 3) + 2 } // 2-4 rocks, 17% chance
         ];
+
+        // Quick hit flash/pow effect
+        this.hitFlashTime = 0;
+        this.hitFlashDuration = 180; // ms
     }
 
     /**
@@ -104,6 +108,54 @@ class Enemy extends Entity {
         
         if (this.searchTime > 0) {
             this.searchTime -= deltaTime;
+        }
+
+        if (this.hitFlashTime > 0) {
+            this.hitFlashTime -= deltaTime;
+        }
+    }
+
+    /**
+     * Render enemy with optional hit flash "POW" overlay
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        if (!this.visible) return;
+
+        // Draw enemy sprite/animation
+        super.render(ctx, camera);
+
+        // Draw a quick "POW" overlay when recently hit
+        if (this.hitFlashTime > 0) {
+            const intensity = this.hitFlashTime / this.hitFlashDuration;
+            const screenX = this.x - camera.x + this.width / 2;
+            const screenY = this.y - camera.y + this.height * 0.25;
+
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, intensity);
+            ctx.fillStyle = '#ffd166';
+            ctx.strokeStyle = '#e76f51';
+            ctx.lineWidth = 2;
+
+            // Simple comic-style burst
+            const size = 18 + 10 * intensity;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const r = size * (i % 2 === 0 ? 1 : 0.55);
+                ctx.lineTo(screenX + Math.cos(angle) * r, screenY + Math.sin(angle) * r);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Text for extra clarity
+            ctx.fillStyle = '#5a189a';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('POW', screenX, screenY);
+
+            ctx.restore();
         }
     }
 
@@ -330,6 +382,7 @@ class Enemy extends Entity {
     onTakeDamage(amount, source) {
         // Enter hurt state
         this.changeState('hurt');
+        this.hitFlashTime = this.hitFlashDuration;
         
         // Add knockback
         if (source) {
