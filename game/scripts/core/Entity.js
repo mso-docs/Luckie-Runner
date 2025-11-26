@@ -246,6 +246,9 @@ class Entity {
       return;
     }
 
+    // Draw a soft ground shadow (persistent, follows entity base)
+    this.renderShadow(ctx, screenX, screenY);
+
     ctx.save();
 
     // Apply transformations
@@ -310,6 +313,30 @@ class Entity {
       ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
     }
 
+    ctx.restore();
+  }
+
+  /**
+   * Render a small soft shadow beneath the entity
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} screenX
+   * @param {number} screenY
+   */
+  renderShadow(ctx, screenX, screenY) {
+    const radiusX = (Math.max(this.width, this.height) * 0.55); // slightly longer footprint
+    const radiusY = radiusX * 0.28; // thinner profile
+    const centerX = screenX + this.width / 2;
+    // Position so the top of the ellipse touches the bottom of the sprite
+    const centerY = screenY + this.height + radiusY;
+
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
