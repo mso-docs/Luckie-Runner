@@ -353,7 +353,7 @@ class Player extends Entity {
             // Impact rays
             if (rayElapsed < this.hitRayDuration) {
                 ctx.save();
-                ctx.globalAlpha = rayIntensity;
+                ctx.globalAlpha = rayIntensity * 0.7; // slightly transparent rays
                 rays.forEach(ray => {
                     const len = ray.length * (0.6 + 0.4 * rayIntensity);
                     ctx.strokeStyle = '#ffffff';
