@@ -62,12 +62,12 @@ class LevelGenerator {
     
     static generateEnemies() {
         return [
-            { x: 400, y: 350, type: 'GroundSlime' },
-            { x: 600, y: 270, type: 'GroundSlime' },
-            { x: 1000, y: 520, type: 'PoisonSlime' },
-            { x: 1250, y: 250, type: 'MagicArrowSlime' },
-            { x: 1500, y: 370, type: 'GroundSlime' },
-            { x: 2000, y: 300, type: 'MagicArrowSlime' }
+            { x: 400, y: 350, type: 'Slime' },
+            { x: 600, y: 270, type: 'Slime' },
+            { x: 1000, y: 520, type: 'Slime' },
+            { x: 1250, y: 250, type: 'Slime' },
+            { x: 1500, y: 370, type: 'Slime' },
+            { x: 2000, y: 300, type: 'Slime' }
         ];
     }
     

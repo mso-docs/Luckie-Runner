@@ -408,6 +408,9 @@ class Enemy extends Entity {
             case 'health_potion':
                 droppedItem = new HealthPotion(dropX - 10, dropY - 10);
                 break;
+            case 'rock_bag':
+                droppedItem = new RockBag(dropX - 10, dropY - 10, amount || 3);
+                break;
             case 'rocks':
                 droppedItem = new RockItem(dropX - 6, dropY - 6, amount);
                 break;

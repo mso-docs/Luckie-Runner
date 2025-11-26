@@ -330,12 +330,12 @@ class Game {
     spawnEnemies() {
         // Spawn only ground slimes since other types aren't showing up properly
         const enemySpawns = [
-            { x: 250, y: 450, type: 'GroundSlime' },
-            { x: 600, y: 450, type: 'GroundSlime' },
-            { x: 1000, y: 450, type: 'GroundSlime' },
-            { x: 1400, y: 450, type: 'GroundSlime' },
-            { x: 1800, y: 450, type: 'GroundSlime' },
-            { x: 2200, y: 450, type: 'GroundSlime' }
+            { x: 250, y: 450, type: 'Slime' },
+            { x: 600, y: 450, type: 'Slime' },
+            { x: 1000, y: 450, type: 'Slime' },
+            { x: 1400, y: 450, type: 'Slime' },
+            { x: 1800, y: 450, type: 'Slime' },
+            { x: 2200, y: 450, type: 'Slime' }
         ];
         
         enemySpawns.forEach((spawn, index) => {
@@ -343,8 +343,8 @@ class Game {
             
             try {
                 switch (spawn.type) {
-                    case 'GroundSlime':
-                        enemy = new GroundSlime(spawn.x, spawn.y);
+                    case 'Slime':
+                        enemy = new Slime(spawn.x, spawn.y);
                         break;
                     default:
                         return;
@@ -1281,6 +1281,15 @@ class Game {
         const wallWidth = 20;
         const wallHeight = this.canvas.height;
         this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
+
+        // Quick test spawns
+        const slime = new Slime(300, groundY - 32);
+        slime.game = this;
+        this.enemies.push(slime);
+
+        const potion = new HealthPotion(480, groundY - 40, 25);
+        potion.game = this;
+        this.items.push(potion);
     }
     
     /**
