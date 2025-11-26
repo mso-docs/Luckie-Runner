@@ -347,6 +347,9 @@ class Enemy extends Entity {
      * @param {Entity} source - Death source
      */
     onDeath(source) {
+        // Prevent double-processing drops/effects
+        if (this.state === 'death') return;
+
         this.changeState('death');
         
         // Create death effects
@@ -407,6 +410,9 @@ class Enemy extends Entity {
                 break;
             case 'health_potion':
                 droppedItem = new HealthPotion(dropX - 10, dropY - 10);
+                break;
+            case 'rock_bag':
+                droppedItem = new RockBag(dropX - 10, dropY - 10, amount || 3);
                 break;
             case 'rocks':
                 droppedItem = new RockItem(dropX - 6, dropY - 6, amount);

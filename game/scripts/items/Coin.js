@@ -15,7 +15,7 @@ class Coin extends Item {
         // Coin-specific properties
         this.magnetRange = 60; // Coins are more magnetic
         this.autoCollect = true;
-        this.spinSpeed = 5; // Rotation speed
+        this.spinSpeed = 0; // Disable manual spin; use sheet animation only
         this.sparkleTimer = 0;
         this.sparkleInterval = 500; // Sparkle every 500ms
         
@@ -29,28 +29,8 @@ class Coin extends Item {
         // Set fallback color (gold for coins)
         this.fallbackColor = '#FFD700';
         
-        // Load appropriate sprite based on value
-        this.loadCoinSprite();
-    }
-
-    /**
-     * Load appropriate coin sprite based on value
-     */
-    loadCoinSprite() {
-        let spritePath;
-        
-        if (this.value >= 5) {
-            // Use gold coin sprite for high value
-            spritePath = 'art/items/coin_gold.png';
-        } else if (this.value >= 3) {
-            // Use silver coin sprite for medium value
-            spritePath = 'art/items/coin_silver.png';
-        } else {
-            // Use animated coin sprite for basic coins
-            spritePath = 'art/items/coin_animated.png';
-        }
-        
-        this.loadSprite(spritePath);
+        // Load shared sheet (4 frames, 24x23)
+        this.loadTileSheet('art/items/coin-sheet.png', 24, 23, [0, 1, 2, 3], 140);
     }
 
     /**
@@ -60,19 +40,19 @@ class Coin extends Item {
     setupCoinType(value) {
         if (value >= 5) {
             // Gold coin
-            this.width = this.height = 20;
+            this.width = this.height = 40;
             this.glowColor = '#FFD700';
             this.sparkleColor = '#FFF700';
             this.collectScore = value * 15;
         } else if (value >= 3) {
             // Silver coin
-            this.width = this.height = 18;
+            this.width = this.height = 36;
             this.glowColor = '#C0C0C0';
             this.sparkleColor = '#E0E0E0';
             this.collectScore = value * 12;
         } else {
             // Bronze/copper coin
-            this.width = this.height = 16;
+            this.width = this.height = 32;
             this.glowColor = '#CD7F32';
             this.sparkleColor = '#DAA520';
             this.collectScore = value * 10;
@@ -83,23 +63,19 @@ class Coin extends Item {
      * Set up coin spin animation
      */
     setupAnimations() {
-        const frameWidth = this.width;
-        const frameHeight = this.height;
+        const frameWidth = 24;
+        const frameHeight = 23;
         
-        // Spinning animation - coin rotating (8 frames)
+        // Spinning animation - use 4-frame sheet
         this.addAnimation('spin', [
             { x: 0 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
             { x: 1 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
             { x: 2 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 3 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 4 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 5 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 6 * frameWidth, y: 0, width: frameWidth, height: frameHeight },
-            { x: 7 * frameWidth, y: 0, width: frameWidth, height: frameHeight }
+            { x: 3 * frameWidth, y: 0, width: frameWidth, height: frameHeight }
         ], true);
         
         // Set animation speed - slower for better visibility
-        this.animations.spin.speed = 120;
+        this.animations.spin.speed = 140;
     }
 
     /**
@@ -109,9 +85,22 @@ class Coin extends Item {
     onItemUpdate(deltaTime) {
         // Update sparkle timer
         this.sparkleTimer += deltaTime;
+    }
+
+    /**
+     * Render coin with gold glow
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        if (!this.visible) return;
         
-        // Rotate for 3D effect
-        this.rotation += (this.spinSpeed * deltaTime) / 1000;
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,215,0,0.8)';
+        ctx.shadowBlur = 22;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        super.render(ctx, camera);
+        ctx.restore();
     }
 
     /**

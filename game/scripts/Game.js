@@ -330,12 +330,12 @@ class Game {
     spawnEnemies() {
         // Spawn only ground slimes since other types aren't showing up properly
         const enemySpawns = [
-            { x: 250, y: 450, type: 'GroundSlime' },
-            { x: 600, y: 450, type: 'GroundSlime' },
-            { x: 1000, y: 450, type: 'GroundSlime' },
-            { x: 1400, y: 450, type: 'GroundSlime' },
-            { x: 1800, y: 450, type: 'GroundSlime' },
-            { x: 2200, y: 450, type: 'GroundSlime' }
+            { x: 250, y: 450, type: 'Slime' },
+            { x: 600, y: 450, type: 'Slime' },
+            { x: 1000, y: 450, type: 'Slime' },
+            { x: 1400, y: 450, type: 'Slime' },
+            { x: 1800, y: 450, type: 'Slime' },
+            { x: 2200, y: 450, type: 'Slime' }
         ];
         
         enemySpawns.forEach((spawn, index) => {
@@ -343,8 +343,8 @@ class Game {
             
             try {
                 switch (spawn.type) {
-                    case 'GroundSlime':
-                        enemy = new GroundSlime(spawn.x, spawn.y);
+                    case 'Slime':
+                        enemy = new Slime(spawn.x, spawn.y);
                         break;
                     default:
                         return;
@@ -597,7 +597,7 @@ class Game {
         this.items = this.items.filter(item => {
             if (item.active) {
                 item.update(deltaTime);
-                this.updateItemPhysics(item);
+                this.updateItemPhysics(item, deltaTime);
                 
                 // Check player collection
                 if (this.player && item.checkCollision(this.player)) {
@@ -804,14 +804,25 @@ class Game {
      * Update item physics
      * @param {Item} item - Item to update
      */
-    updateItemPhysics(item) {
+    updateItemPhysics(item, deltaTime) {
+        const dt = deltaTime / 1000;
+
+        // Apply simple gravity
+        if (!item.onGround) {
+            item.velocity.y += item.gravity * dt;
+        }
+
+        // Integrate position
+        item.x += item.velocity.x * dt;
+        item.y += item.velocity.y * dt;
+
         // Simple ground collision for items
         this.platforms.forEach(platform => {
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(item),
                 platform
             )) {
-                if (item.y + item.height > platform.y && item.velocity.y > 0) {
+                if (item.y + item.height > platform.y && item.velocity.y >= 0) {
                     item.y = platform.y - item.height;
                     item.velocity.y = 0;
                     item.onGround = true;
@@ -819,6 +830,9 @@ class Game {
                 }
             }
         });
+
+        // Light friction to slow horizontal drift
+        item.velocity.x *= 0.95;
     }
 
     /**
@@ -1281,6 +1295,18 @@ class Game {
         const wallWidth = 20;
         const wallHeight = this.canvas.height;
         this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
+
+        // Quick test spawns
+        const slime = new Slime(300, groundY);
+        slime.game = this;
+        const slimeGroundY = groundY - slime.height;
+        slime.y = slimeGroundY;
+        slime.setSimplePatrol(200, 800, 90, slimeGroundY);
+        this.enemies.push(slime);
+
+        const potion = new HealthPotion(480, groundY - 40, 25);
+        potion.game = this;
+        this.items.push(potion);
     }
     
     /**

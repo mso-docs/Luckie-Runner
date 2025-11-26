@@ -218,18 +218,46 @@ class Player extends Entity {
             this.game.audioManager.playSound('hurt', 0.8);
         }
         
-        // Make invulnerable for a short time
+        // Show damage number on the player
+        this.showDamageNumber(amount);
+        
+        // Make invulnerable for a short time (1s i-frames)
         this.makeInvulnerable(1000);
         
-        // Add knockback
-        if (source && source.x < this.x) {
-            this.velocity.x += 3; // Knock right
-        } else if (source && source.x > this.x) {
-            this.velocity.x -= 3; // Knock left
-        }
+        // Add noticeable knockback (push away and a small hop)
+        const knockDir = source && source.x < this.x ? 1 : -1;
+        this.velocity.x = knockDir * 250; // px/sec impulse
+        this.velocity.y = Math.min(this.velocity.y, -220); // upward nudge
+        this.onGround = false;
         
         // Update UI
         this.updateHealthUI();
+    }
+
+    /**
+     * Spawn a floating damage number above the player
+     * @param {number} amount - Damage amount taken
+     */
+    showDamageNumber(amount) {
+        const container = document.getElementById('gameContainer');
+        const canvas = document.getElementById('gameCanvas');
+        if (!container || !canvas || !this.game) return;
+
+        const dmg = document.createElement('div');
+        dmg.className = 'damage-number';
+        const value = Math.max(1, Math.round(amount));
+        dmg.textContent = `-${value}`;
+
+        // Position relative to game container using camera-adjusted coords
+        const screenX = this.x - this.game.camera.x + this.width / 2;
+        const screenY = this.y - this.game.camera.y - 10; // slightly above
+        dmg.style.left = `${screenX}px`;
+        dmg.style.top = `${screenY}px`;
+
+        container.appendChild(dmg);
+
+        // Clean up after animation
+        setTimeout(() => dmg.remove(), 3200);
     }
 
     /**

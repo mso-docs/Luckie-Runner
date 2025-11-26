@@ -339,6 +339,22 @@ class Item extends Entity {
         this.autoCollect = autoCollect;
     }
 
+    /**
+     * Render item with a subtle glow (white by default)
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        if (!this.visible) return;
+        
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,255,255,0.65)';
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        super.render(ctx, camera);
+        ctx.restore();
+    }
+
     // Virtual methods (override in subclasses)
     onItemUpdate(deltaTime) {}
     onCollected(collector) {}
@@ -350,7 +366,7 @@ class Item extends Entity {
  */
 class RockItem extends Item {
     constructor(x, y, rockCount = 5) {
-        super(x, y, 12, 12);
+        super(x, y, 24, 24);
         
         this.type = 'rocks';
         this.value = rockCount;
