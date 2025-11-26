@@ -347,6 +347,9 @@ class Enemy extends Entity {
      * @param {Entity} source - Death source
      */
     onDeath(source) {
+        // Prevent double-processing drops/effects
+        if (this.state === 'death') return;
+
         this.changeState('death');
         
         // Create death effects

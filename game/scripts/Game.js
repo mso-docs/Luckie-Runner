@@ -1297,8 +1297,11 @@ class Game {
         this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
 
         // Quick test spawns
-        const slime = new Slime(300, groundY - 32);
+        const slime = new Slime(300, groundY);
         slime.game = this;
+        const slimeGroundY = groundY - slime.height;
+        slime.y = slimeGroundY;
+        slime.setSimplePatrol(200, 800, 90, slimeGroundY);
         this.enemies.push(slime);
 
         const potion = new HealthPotion(480, groundY - 40, 25);

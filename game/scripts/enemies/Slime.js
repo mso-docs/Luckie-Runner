@@ -15,6 +15,9 @@ class Slime extends Enemy {
         this.detectionRange = 260;
         this.dropChance = 1; // always evaluate drops via custom logic
 
+        // Optional simple patrol behavior (used in the test room)
+        this.simplePatrol = null;
+
         // Load 4-frame sheet (single row, 59x32 each)
         this.loadTileSheet('art/sprites/ground-slime.png', 59, 32, [0, 1, 2, 3], 160);
 
@@ -25,10 +28,34 @@ class Slime extends Enemy {
     }
 
     /**
+     * Enable a basic left/right patrol between two X positions.
+     * @param {number} leftX - Left patrol point in world space.
+     * @param {number} rightX - Right patrol point in world space.
+     * @param {number} speed - Patrol speed in px/sec.
+     * @param {number|null} groundY - Optional Y position to clamp to (top of platform minus slime height).
+     */
+    setSimplePatrol(leftX, rightX, speed = 90, groundY = null) {
+        this.simplePatrol = {
+            left: Math.min(leftX, rightX),
+            right: Math.max(leftX, rightX),
+            speed,
+            direction: 1,
+            groundY,
+        };
+        this.state = 'patrol';
+    }
+
+    /**
      * Simple update: wander if no target, chase when player in range
      */
     onUpdate(deltaTime) {
         super.onUpdate(deltaTime);
+
+        // Simple patrol mode for the test room (keeps core enemy logic running)
+        if (this.simplePatrol) {
+            this.updateSimplePatrol(deltaTime);
+            return;
+        }
 
         // Don't override movement when attacking/hurt/dead
         if (this.state === 'attack' || this.state === 'hurt' || this.state === 'death') {
@@ -53,6 +80,46 @@ class Slime extends Enemy {
 
             // Contact damage when overlapping the player
             if (CollisionDetection.entityCollision(this, this.game.player) && this.attackCooldown <= 0) {
+                this.dealDamageToTarget();
+                this.attackCooldown = this.attackCooldownTime;
+            }
+        }
+    }
+
+    /**
+     * Simple, reliable patrol between two points with ground clamping.
+     * @param {number} deltaTime - Time since last frame in ms.
+     */
+    updateSimplePatrol(deltaTime) {
+        const dt = deltaTime / 1000;
+        const patrol = this.simplePatrol;
+        if (!patrol) return;
+
+        // Reverse at the bounds
+        if (this.x <= patrol.left) {
+            patrol.direction = 1;
+        } else if (this.x + this.width >= patrol.right) {
+            patrol.direction = -1;
+        }
+
+        // Move horizontally
+        this.velocity.x = patrol.direction * patrol.speed;
+        this.flipX = this.velocity.x < 0;
+
+        // Apply gravity already accumulated in base update
+        this.x += this.velocity.x * dt;
+        this.y += this.velocity.y * dt;
+
+        // Keep the slime pinned to the expected ground height in the test room
+        if (patrol.groundY !== null && this.y > patrol.groundY) {
+            this.y = patrol.groundY;
+            this.velocity.y = 0;
+            this.onGround = true;
+        }
+
+        // Contact damage in patrol mode
+        if (this.state !== 'death' && this.game && this.game.player && this.attackCooldown <= 0) {
+            if (CollisionDetection.entityCollision(this, this.game.player)) {
                 this.dealDamageToTarget();
                 this.attackCooldown = this.attackCooldownTime;
             }
