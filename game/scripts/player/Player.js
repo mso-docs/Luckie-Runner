@@ -561,4 +561,11 @@ class Player extends Entity {
         this.updateUI();
         this.updateHealthUI();
     }
+
+    /**
+     * Slimmer, shorter shadow for player
+     */
+    getShadowScale() {
+        return { x: 0.6, y: 0.5 }; // reduce width ~40% overall, height 50%
+    }
 }

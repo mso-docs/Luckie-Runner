@@ -58,6 +58,20 @@ class Game {
         this.frameCount = 0;
         this.fps = 60;
         this.targetFrameTime = 1000 / this.fps;
+
+        // Intro dialogue UI
+        this.dialogueState = {
+            messages: [],
+            index: 0,
+            active: false,
+            dismissing: false,
+            hideTimeout: null
+        };
+        this.speechBubble = {
+            container: null,
+            text: null,
+            hint: null
+        };
         
         // Game statistics
         this.stats = {
@@ -83,6 +97,7 @@ class Game {
         
         // Set up event listeners
         this.setupEventListeners();
+        this.setupSpeechBubbleUI();
         
         // Create initial level
         this.createLevel();
@@ -230,6 +245,197 @@ class Game {
                     break;
             }
         });
+    }
+
+    /**
+     * Prepare DOM references for the speech bubble overlay
+     */
+    setupSpeechBubbleUI() {
+        this.speechBubble.container = document.getElementById('speechBubble');
+        this.speechBubble.text = document.getElementById('speechText');
+        this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
+        this.hideSpeechBubble(true);
+    }
+
+    /**
+     * Begin the intro dialogue for the test room
+     */
+    startTestIntroDialogueIfNeeded() {
+        if (!this.testMode) {
+            this.hideSpeechBubble(true);
+            return;
+        }
+
+        this.dialogueState.messages = [
+            "Hey, I'm Luckie Puppie. !Welcome! #to# the %test% ^room^.",
+            "#Click# the ~mouse~ button to ~throw~ !a! #rock#. `Try` hitting that slime!"
+        ];
+        this.dialogueState.index = 0;
+        this.dialogueState.active = true;
+        this.dialogueState.dismissing = false;
+        this.showSpeechBubble(this.dialogueState.messages[0]);
+    }
+
+    /**
+     * Advance or dismiss dialogue when Enter is pressed
+     */
+    handleSpeechBubbleInput() {
+        if (!this.dialogueState.active || this.dialogueState.dismissing) return;
+
+        if (this.input.consumeKeyPress('enter') || this.input.consumeKeyPress('numpadenter')) {
+            this.advanceSpeechBubble();
+        }
+    }
+
+    /**
+     * Show the speech bubble with provided text
+     * @param {string} text - Dialogue text to display
+     */
+    showSpeechBubble(text) {
+        const bubble = this.speechBubble.container;
+        const bubbleText = this.speechBubble.text;
+        if (!bubble || !bubbleText) return;
+
+        if (this.dialogueState.hideTimeout) {
+            clearTimeout(this.dialogueState.hideTimeout);
+            this.dialogueState.hideTimeout = null;
+        }
+
+        bubbleText.innerHTML = this.formatSpeechText(text);
+        bubble.classList.add('show');
+        bubble.setAttribute('aria-hidden', 'false');
+        this.dialogueState.active = true;
+        this.dialogueState.dismissing = false;
+        this.updateSpeechBubblePosition();
+    }
+
+    /**
+     * Move to the next line or hide the bubble
+     */
+    advanceSpeechBubble() {
+        if (!this.dialogueState.active) return;
+
+        if (this.dialogueState.index < this.dialogueState.messages.length - 1) {
+            this.dialogueState.index++;
+            this.showSpeechBubble(this.dialogueState.messages[this.dialogueState.index]);
+        } else {
+            this.hideSpeechBubble();
+        }
+    }
+
+    /**
+     * Hide the speech bubble, optionally immediately
+     * @param {boolean} immediate - Skip fade when true
+     */
+    hideSpeechBubble(immediate = false) {
+        const bubble = this.speechBubble.container;
+        if (this.dialogueState.hideTimeout) {
+            clearTimeout(this.dialogueState.hideTimeout);
+            this.dialogueState.hideTimeout = null;
+        }
+
+        if (!bubble) {
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            return;
+        }
+
+        if (immediate) {
+            bubble.classList.remove('show');
+            bubble.setAttribute('aria-hidden', 'true');
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            return;
+        }
+
+        this.dialogueState.dismissing = true;
+        bubble.classList.remove('show');
+        this.dialogueState.hideTimeout = setTimeout(() => {
+            bubble.setAttribute('aria-hidden', 'true');
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            this.dialogueState.hideTimeout = null;
+        }, 250);
+    }
+
+    /**
+     * Keep the bubble anchored to the player's mouth horizontally
+     */
+    updateSpeechBubblePosition() {
+        const bubble = this.speechBubble.container;
+        if (!bubble) return;
+
+        let targetX = this.canvas.width / 2;
+        let headY = this.canvas.height / 2;
+        if (this.player) {
+            targetX = this.player.x - this.camera.x + this.player.width / 2;
+            headY = this.player.y - this.camera.y;
+        }
+
+        bubble.style.left = `${targetX}px`;
+
+        // Position bubble just above the player's head
+        const aboveHeadOffset = 20; // pixels above the top of the sprite
+        const bottomFromCanvas = this.canvas.height - headY + aboveHeadOffset;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+
+        // Offset tail toward the player's mouth (slight bias toward facing direction)
+        // Nudge tail 20px further right relative to previous anchor
+        const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
+        bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+    }
+
+    /**
+     * Lightweight styling parser for speech text.
+     * Markers:
+     *  *bold*
+     *  _italic_
+     *  %shake%
+     *  ~rainbow~
+     *  ^glow^
+     *  !bounce!
+     *  #wave#
+     *  `mono`
+     */
+    formatSpeechText(text) {
+        if (typeof text !== 'string') return '';
+
+        // Escape HTML
+        const escape = (str) => str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        let safe = escape(text);
+
+        const apply = (pattern, cls) => {
+            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
+        };
+
+        apply(/\*(.+?)\*/g, 'speech-bold');
+        apply(/_(.+?)_/g, 'speech-italic');
+        apply(/%(.+?)%/g, 'speech-shake');
+        apply(/~(.+?)~/g, 'speech-rainbow');
+        apply(/\^(.+?)\^/g, 'speech-glow');
+        apply(/!(.+?)!/g, 'speech-bounce');
+        apply(/`(.+?)`/g, 'speech-mono');
+        // Wave needs per-letter animation; replace with staggered spans
+        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
+
+        return safe;
+    }
+
+    /**
+     * Split text into letter spans with staggered wave animation
+     * @param {string} inner
+     * @returns {string}
+     */
+    wrapWaveText(inner) {
+        const letters = Array.from(inner);
+        return letters.map((ch, i) => {
+            const delay = (i * 0.06).toFixed(2);
+            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
+        }).join('');
     }
 
     /**
@@ -531,6 +737,8 @@ class Game {
             distanceTraveled: 0,
             timeElapsed: 0
         };
+
+        this.startTestIntroDialogueIfNeeded();
     }
 
     /**
@@ -562,6 +770,7 @@ class Game {
     update(deltaTime) {
         // Update input
         this.input.update();
+        this.handleSpeechBubbleInput();
         
         // Update player
         if (this.player) {
@@ -914,10 +1123,15 @@ class Game {
         if (this.player) {
             this.player.render(this.ctx, this.camera);
         }
-        
+
         // Render flag
         if (this.flag) {
             this.flag.render(this.ctx, this.camera);
+        }
+
+        // Keep speech bubble following player
+        if (this.dialogueState.active) {
+            this.updateSpeechBubblePosition();
         }
     }
 
@@ -1163,6 +1377,9 @@ class Game {
         this.hazards = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
+        this.hideSpeechBubble(true);
+        this.dialogueState.messages = [];
+        this.dialogueState.active = false;
         
         // Reset managers
         this.palmTreeManager.reset();
@@ -1289,6 +1506,24 @@ class Game {
         const wallWidth = 20;
         const wallHeight = this.canvas.height;
         this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
+
+        // Parkour challenge platforms (test room only)
+        const baseY = groundY - 90;
+        const parkour = [
+            { x: 220, width: 120, y: baseY },
+            { x: 420, width: 90, y: baseY - 50 },
+            { x: 600, width: 100, y: baseY - 90 },
+            { x: 780, width: 80, y: baseY - 130 },
+            { x: 950, width: 110, y: baseY - 60 },
+            { x: 1140, width: 90, y: baseY - 20 },
+            { x: 1320, width: 80, y: baseY - 70 },
+            { x: 1480, width: 120, y: baseY - 120 },
+            { x: 1660, width: 80, y: baseY - 160 },
+            { x: 1800, width: 160, y: baseY - 60 }
+        ];
+        parkour.forEach(p => {
+            this.platforms.push(new Platform(p.x, p.y, p.width, 12));
+        });
 
         // Quick test spawns
         const slime = new Slime(300, groundY);

@@ -11,6 +11,7 @@ class InputManager {
             clicked: false,
             pressed: false
         };
+        this.keyPresses = new Set();
 
         this.init();
     }
@@ -20,6 +21,12 @@ class InputManager {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
             this.keys[e.code.toLowerCase()] = true;
+            
+            // Track single key presses (ignore repeats while held)
+            if (!e.repeat) {
+                this.keyPresses.add(e.key.toLowerCase());
+                this.keyPresses.add(e.code.toLowerCase());
+            }
             
             // Prevent default for game controls
             if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
@@ -57,6 +64,15 @@ class InputManager {
     // Keyboard input methods
     isKeyPressed(key) {
         return !!this.keys[key.toLowerCase()];
+    }
+
+    consumeKeyPress(key) {
+        const normalized = key.toLowerCase();
+        if (this.keyPresses.has(normalized)) {
+            this.keyPresses.delete(normalized);
+            return true;
+        }
+        return false;
     }
 
     // Movement controls - WASD + Arrow keys

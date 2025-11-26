@@ -246,6 +246,9 @@ class Entity {
       return;
     }
 
+    // Draw a soft ground shadow projected onto the platform/floor beneath
+    this.renderShadow(ctx, screenX, camera);
+
     ctx.save();
 
     // Apply transformations
@@ -311,6 +314,85 @@ class Entity {
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Render a small soft shadow beneath the entity
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} screenX
+   * @param {Object} camera
+   */
+  renderShadow(ctx, screenX, camera) {
+    const shadowScale = this.getShadowScale();
+    const baseRadiusX = (Math.max(this.width, this.height) * 0.55); // slightly longer footprint
+    const baseRadiusY = baseRadiusX * 0.28; // thinner profile
+    const radiusX = baseRadiusX * (shadowScale.x || 1);
+    const radiusY = baseRadiusY * (shadowScale.y || 1);
+
+    const slices = 32;
+    const sliceWidth = (radiusX * 2) / slices;
+    const worldCenterX = this.x + this.width / 2;
+    const baseY = this.y + this.height;
+
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#000';
+
+    for (let i = 0; i < slices; i++) {
+      const offsetX = -radiusX + (i + 0.5) * sliceWidth;
+      const worldX = worldCenterX + offsetX;
+      const groundY = this.getGroundYAt(worldX, baseY);
+      const screenGroundY = groundY - camera.y;
+
+      // Ellipse vertical radius for this slice (ellipse equation)
+      const t = offsetX / radiusX;
+      const sliceHeight = radiusY * Math.sqrt(Math.max(0, 1 - t * t));
+      const centerX = screenX + this.width / 2 + offsetX;
+      const centerY = screenGroundY + radiusY;
+
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, sliceWidth * 0.6, sliceHeight, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Shadow scaling hook (override in subclasses)
+   * @returns {{x:number, y:number}}
+   */
+  getShadowScale() {
+    return { x: 1, y: 1 };
+  }
+
+  /**
+   * Find the nearest ground/platform Y directly beneath a given world X.
+   * Falls back to the entity's current base if none is found.
+   * @param {number} worldX
+   * @param {number} fallback
+   * @returns {number} world-space Y for shadow contact
+   */
+  getGroundYAt(worldX, fallback) {
+    let bestY = null;
+    const baseY = this.y + this.height;
+    const platforms = this.game && Array.isArray(this.game.platforms) ? this.game.platforms : null;
+
+    if (platforms) {
+      for (const platform of platforms) {
+        if (!platform || platform.solid === false) continue;
+        if (worldX < platform.x || worldX > platform.x + platform.width) continue;
+        if (platform.y < baseY) continue; // only consider surfaces below the entity base
+
+        if (bestY === null || platform.y < bestY) {
+          bestY = platform.y;
+        }
+      }
+    }
+
+    return bestY !== null ? bestY : (fallback !== undefined ? fallback : baseY);
   }
 
   /**
