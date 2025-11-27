@@ -350,6 +350,20 @@ class Game {
     }
 
     /**
+     * Handle player interaction input (Z key)
+     * Delegates to player if an interaction handler exists
+     */
+    handleInteractionInput() {
+        if (!this.player || !this.input) return;
+
+        if (this.input.consumeActionPress()) {
+            if (typeof this.player.handleInteraction === 'function') {
+                this.player.handleInteraction();
+            }
+        }
+    }
+
+    /**
      * Show the speech bubble with provided text
      * @param {string} text - Dialogue text to display
      */
@@ -833,6 +847,7 @@ class Game {
         // Update input
         this.input.update();
         this.handleSpeechBubbleInput();
+        this.handleInteractionInput();
         
         // Update player
         if (this.player) {

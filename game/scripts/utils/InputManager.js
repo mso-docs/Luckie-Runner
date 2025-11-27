@@ -66,6 +66,22 @@ class InputManager {
         return !!this.keys[key.toLowerCase()];
     }
 
+    /**
+     * Consume a single press of the interaction key (Z)
+     * @returns {boolean} true if a fresh press was detected
+     */
+    consumeActionPress() {
+        return this.consumeKeyPress('z') || this.consumeKeyPress('keyz');
+    }
+
+    /**
+     * Check if the interaction key (Z) is being held
+     * @returns {boolean}
+     */
+    isActionHeld() {
+        return this.isKeyPressed('z') || this.isKeyPressed('keyz');
+    }
+
     consumeKeyPress(key) {
         const normalized = key.toLowerCase();
         if (this.keyPresses.has(normalized)) {
