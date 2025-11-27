@@ -1,24 +1,17 @@
 /**
  * ShopGhost - simple NPC with two-frame sprite and proximity-based interactions
  */
-class ShopGhost {
+class ShopGhost extends Entity {
     constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.width = 47;
-        this.height = 64;
-        this.frameIndex = 0;
-        this.frameWidth = 47;
-        this.frameHeight = 64;
-        this.sprite = new Image();
-        this.sprite.src = 'art/sprites/shop-ghost.png';
+        super(x, y, 47, 64);
+
+        this.loadTileSheet('art/sprites/shop-ghost.png', 47, 64, [0], 999999); // disable auto-anim
+        this.interactRadius = 120;
         this.bobOffset = 0;
         this.bobTime = 0;
-        this.interactRadius = 120;
-        this.visible = true;
     }
 
-    update(deltaTime) {
+    onUpdate(deltaTime) {
         // Gentle vertical bobbing
         this.bobTime += deltaTime * 0.0025;
         this.bobOffset = Math.sin(this.bobTime) * 6;
@@ -26,27 +19,14 @@ class ShopGhost {
 
     render(ctx, camera) {
         if (!this.visible) return;
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y + this.bobOffset;
-
-        ctx.save();
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(
-            this.sprite,
-            this.frameIndex * this.frameWidth,
-            0,
-            this.frameWidth,
-            this.frameHeight,
-            screenX,
-            screenY,
-            this.frameWidth,
-            this.frameHeight
-        );
-        ctx.restore();
+        const originalY = this.y;
+        this.y = originalY + this.bobOffset;
+        super.render(ctx, camera);
+        this.y = originalY;
     }
 
     toggleFrame() {
-        this.frameIndex = this.frameIndex === 0 ? 1 : 0;
+        this.tileIndex = this.tileIndex === 0 ? 1 : 0;
     }
 
     isPlayerNearby(player, customRadius) {

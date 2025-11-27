@@ -365,7 +365,8 @@ class Entity {
    * @returns {{x:number, y:number}}
    */
   getShadowScale() {
-    return { x: 1, y: 1 };
+    // Default to a slimmer, softer footprint like the player
+    return { x: 0.6, y: 0.5 };
   }
 
   /**
