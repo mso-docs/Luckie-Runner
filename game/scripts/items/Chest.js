@@ -5,10 +5,13 @@ class Chest extends Entity {
     constructor(x, y) {
         super(x, y, 64, 64);
 
-        this.loadSprite('art/items/chest.png');
+        this.loadSprite('art/items/chest.png?v=2');
+        this.emptySprite = new Image();
+        this.emptySprite.src = 'art/items/chest-open.png?v=2';
         this.frameWidth = 64;
         this.frameHeight = 64;
         this.currentFrame = 0;
+        this.totalFrames = 3; // closed, open-with-loot, empty
         this.interactRadius = 90;
         this.isOpen = false;
         this.glowTime = 0;
@@ -57,7 +60,6 @@ class Chest extends Entity {
         if (this.isOpen) return;
 
         this.isOpen = true;
-        this.currentFrame = 1;
         this.glowTime = 0;
 
         if (this.game && this.game.audioManager) {
@@ -90,6 +92,7 @@ class Chest extends Entity {
             item.take(player);
         }
         item.taken = true;
+        this.updateFrameFromContents();
         return true;
     }
 
@@ -101,7 +104,22 @@ class Chest extends Entity {
     takeAll(player) {
         const available = this.getAvailableItems();
         available.forEach(entry => this.takeItem(entry.id, player));
+        this.updateFrameFromContents();
         return available.length > 0;
+    }
+
+    /**
+     * Update displayed frame based on loot state and open state
+     */
+    updateFrameFromContents() {
+        const hasLoot = this.getAvailableItems().length > 0;
+        if (!hasLoot) {
+            this.currentFrame = 2; // empty
+        } else if (this.isOpen) {
+            this.currentFrame = 1; // open with loot
+        } else {
+            this.currentFrame = 0; // closed with loot
+        }
     }
 
     /**
@@ -197,26 +215,41 @@ class Chest extends Entity {
             ctx.shadowOffsetY = 0;
         }
 
+        // Decide which frame to show based on state and loot
+        const frameIndex = hasLoot ? (this.isOpen ? 1 : 0) : 2;
+        this.currentFrame = frameIndex;
+
         ctx.translate(screenX + this.width / 2, screenY + this.height / 2);
         ctx.scale(this.scale.x, this.scale.y);
 
         if (this.sprite && this.spriteLoaded) {
             const frameW = Math.min(this.frameWidth, this.sprite.width);
-            const sourceX = Math.min(
-                this.sprite.width - frameW,
-                this.currentFrame * frameW
-            );
-            ctx.drawImage(
-                this.sprite,
-                sourceX,
-                0,
-                frameW,
-                this.frameHeight,
-                -this.width / 2,
-                -this.height / 2,
-                this.width,
-                this.height
-            );
+            const framesAvailable = Math.max(1, Math.floor(this.sprite.width / frameW));
+            const hasEmptyFrame = framesAvailable >= 3;
+            const safeFrame = Math.min(this.currentFrame, framesAvailable - 1);
+            const sourceX = safeFrame * frameW;
+
+            if (this.currentFrame === 2 && !hasEmptyFrame && this.emptySprite && this.emptySprite.complete) {
+                ctx.drawImage(
+                    this.emptySprite,
+                    -this.width / 2,
+                    -this.height / 2,
+                    this.width,
+                    this.height
+                );
+            } else {
+                ctx.drawImage(
+                    this.sprite,
+                    sourceX,
+                    0,
+                    frameW,
+                    this.frameHeight,
+                    -this.width / 2,
+                    -this.height / 2,
+                    this.width,
+                    this.height
+                );
+            }
         }
         ctx.restore();
 
