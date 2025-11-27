@@ -166,6 +166,7 @@ class AudioManager {
         this.loadSound('slimy', 'sfx/slimy.mp3');
         this.loadSound('special', 'sfx/special.mp3');
         this.loadSound('high_score', 'sfx/high-score.mp3');
+        this.loadSound('chest', 'sfx/chest.mp3');
         this.loadSound('button', 'sfx/button.mp3');
         this.loadSound('menu_enter', 'sfx/menu-enter.mp3');
         this.loadSound('menu_exit', 'sfx/menu-exit.mp3');

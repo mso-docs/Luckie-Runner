@@ -80,6 +80,19 @@ class InputManager {
     }
 
     /**
+     * Consume a single press of the chest interaction key (E or Enter)
+     * @returns {boolean} true if a fresh press was detected
+     */
+    consumeInteractPress() {
+        const keys = ['e', 'keye', 'enter', 'numpadenter'];
+        const pressed = keys.some(k => this.keyPresses.has(k));
+        if (pressed) {
+            keys.forEach(k => this.keyPresses.delete(k));
+        }
+        return pressed;
+    }
+
+    /**
      * Check if the interaction key (Z) is being held
      * @returns {boolean}
      */

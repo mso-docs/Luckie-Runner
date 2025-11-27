@@ -223,6 +223,30 @@
             </div>
         </div>
 
+        <!-- Chest Overlay -->
+        <div id="chestOverlay" class="chest-overlay hidden" aria-hidden="true">
+            <div class="chest-window" role="dialog" aria-labelledby="chestTitle">
+                <div class="chest-header">
+                    <div class="chest-icon" aria-hidden="true"></div>
+                    <div class="chest-header__text">
+                        <div class="chest-title" id="chestTitle">Treasure Chest</div>
+                        <div class="chest-subtitle">Press E or Enter to close</div>
+                    </div>
+                    <button type="button" class="chest-close" aria-label="Close chest" data-action="close-chest">×</button>
+                </div>
+
+                <div class="chest-body">
+                    <div class="chest-items"></div>
+                    <div class="chest-empty hidden">This chest is empty.</div>
+                </div>
+
+                <div class="chest-footer">
+                    <button type="button" class="chest-take-all" data-action="take-all">Take all</button>
+                    <span class="chest-hint">E / Enter to exit</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Start Menu -->
         <div id="startMenu" class="menu">
             <h1>Luckie Runner!</h1>
@@ -320,6 +344,7 @@
     <script src="scripts/items/Coin.js"></script>
     <script src="scripts/items/RockBag.js"></script>
     <script src="scripts/items/HealthPotion.js"></script>
+    <script src="scripts/items/Chest.js"></script>
     <script src="scripts/items/Flag.js"></script>
 
     <!-- NPCs -->

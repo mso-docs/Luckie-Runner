@@ -28,6 +28,7 @@ class Game {
         this.projectiles = [];
         this.hazards = [];
         this.platforms = [];
+        this.chests = [];
         this.flag = null;
         
         // Camera system
@@ -79,6 +80,17 @@ class Game {
             isOpen: false
         };
 
+        // Chest overlay UI state
+        this.chestUI = {
+            overlay: null,
+            isOpen: false,
+            list: null,
+            title: null,
+            takeAllButton: null,
+            emptyState: null,
+            currentChest: null
+        };
+
         // Shop UI state and NPCs
         this.shopUI = {
             overlay: null,
@@ -113,6 +125,7 @@ class Game {
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
         this.setupInventoryUI();
+        this.setupChestUI();
         this.setupShopUI();
         
         // Create initial level
@@ -306,6 +319,37 @@ class Game {
     }
 
     /**
+     * Prepare the chest overlay UI
+     */
+    setupChestUI() {
+        const overlay = document.getElementById('chestOverlay');
+        this.chestUI.overlay = overlay;
+        this.chestUI.list = overlay ? overlay.querySelector('.chest-items') : null;
+        this.chestUI.title = overlay ? overlay.querySelector('.chest-title') : null;
+        this.chestUI.takeAllButton = overlay ? overlay.querySelector('[data-action="take-all"]') : null;
+        this.chestUI.emptyState = overlay ? overlay.querySelector('.chest-empty') : null;
+
+        if (overlay) {
+            const closeButton = overlay.querySelector('[data-action="close-chest"]');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => this.hideChestOverlay());
+            }
+        }
+
+        if (this.chestUI.takeAllButton) {
+            this.chestUI.takeAllButton.addEventListener('click', () => {
+                if (!this.chestUI.currentChest || !this.player) return;
+                const chest = this.chestUI.currentChest;
+                const tookAny = chest.takeAll(this.player);
+                this.populateChestOverlay(chest);
+                if (tookAny) this.playMenuEnterSound();
+            });
+        }
+
+        this.hideChestOverlay(true);
+    }
+
+    /**
      * Prepare shop UI state
      */
     setupShopUI() {
@@ -345,6 +389,94 @@ class Game {
         if (wasOpen) {
             this.playMenuExitSound();
         }
+    }
+
+    /**
+     * Show the chest overlay
+     */
+    showChestOverlay(chest) {
+        const ui = this.chestUI;
+        if (!ui.overlay || !chest) return;
+
+        ui.currentChest = chest;
+        ui.isOpen = true;
+        if (ui.title) {
+            ui.title.textContent = chest.displayName || 'Chest';
+        }
+        ui.overlay.classList.add('active');
+        ui.overlay.classList.remove('hidden');
+        ui.overlay.setAttribute('aria-hidden', 'false');
+        this.populateChestOverlay(chest);
+        this.playMenuEnterSound();
+    }
+
+    /**
+     * Hide the chest overlay
+     */
+    hideChestOverlay(immediate = false) {
+        const ui = this.chestUI;
+        if (!ui.overlay) return;
+
+        const wasOpen = ui.isOpen;
+        ui.overlay.classList.remove('active');
+        ui.overlay.classList.add('hidden');
+        ui.overlay.setAttribute('aria-hidden', 'true');
+        ui.isOpen = false;
+        ui.currentChest = null;
+        if (wasOpen && !immediate) {
+            this.playMenuExitSound();
+        }
+    }
+
+    /**
+     * Populate the chest overlay with loot buttons
+     * @param {Chest} chest
+     */
+    populateChestOverlay(chest) {
+        const ui = this.chestUI;
+        if (!ui.list || !chest) return;
+
+        ui.list.innerHTML = '';
+        const items = chest.getAvailableItems();
+
+        if (ui.emptyState) {
+            ui.emptyState.classList.toggle('hidden', items.length > 0);
+        }
+        if (ui.takeAllButton) {
+            ui.takeAllButton.disabled = items.length === 0;
+        }
+
+        items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'chest-item';
+
+            const info = document.createElement('div');
+            info.className = 'chest-item__info';
+            const name = document.createElement('div');
+            name.className = 'chest-item__name';
+            name.textContent = item.name;
+            const desc = document.createElement('div');
+            desc.className = 'chest-item__desc';
+            desc.textContent = item.description || '';
+            info.appendChild(name);
+            info.appendChild(desc);
+
+            const takeBtn = document.createElement('button');
+            takeBtn.type = 'button';
+            takeBtn.className = 'chest-item__take';
+            takeBtn.textContent = 'Take';
+            takeBtn.addEventListener('click', () => {
+                const success = chest.takeItem(item.id, this.player);
+                if (success) {
+                    this.populateChestOverlay(chest);
+                    this.playMenuEnterSound();
+                }
+            });
+
+            row.appendChild(info);
+            row.appendChild(takeBtn);
+            ui.list.appendChild(row);
+        });
     }
 
     /**
@@ -425,6 +557,26 @@ class Game {
     }
 
     /**
+     * Handle player interaction input (E/Enter) for chests
+     */
+    handleChestInput() {
+        if (!this.player || !this.input) return;
+
+        if (this.input.consumeInteractPress()) {
+            if (this.chestUI.isOpen) {
+                this.hideChestOverlay();
+                return;
+            }
+
+            const chest = this.getNearbyChest();
+            if (chest) {
+                chest.open();
+                this.showChestOverlay(chest);
+            }
+        }
+    }
+
+    /**
      * Handle player interaction input (Z key)
      * Delegates to player if an interaction handler exists
      */
@@ -463,6 +615,15 @@ class Game {
             return this.shopGhost;
         }
         return null;
+    }
+
+    /**
+     * Find a chest if the player is close enough
+     * @returns {Chest|null}
+     */
+    getNearbyChest() {
+        if (!this.player || !this.chests) return null;
+        return this.chests.find(chest => chest.isPlayerNearby(this.player)) || null;
     }
 
     /**
@@ -618,6 +779,19 @@ class Game {
     }
 
     /**
+     * Update chests (UI + animation hooks)
+     * @param {number} deltaTime
+     */
+    updateChests(deltaTime) {
+        if (!Array.isArray(this.chests)) return;
+        this.chests.forEach(chest => {
+            if (chest && chest.update) {
+                chest.update(deltaTime);
+            }
+        });
+    }
+
+    /**
      * Lightweight styling parser for speech text.
      * Markers:
      *  *bold*
@@ -678,6 +852,7 @@ class Game {
         this.enemies = [];
         this.items = [];
         this.hazards = [];
+        this.chests = [];
         this.flag = null;
         
         if (this.testMode) {
@@ -959,6 +1134,7 @@ class Game {
 
         // Hide overlays on fresh start
         this.hideInventoryOverlay(true);
+        this.hideChestOverlay(true);
         this.hideShopOverlay(true);
         
         // Create player
@@ -1007,6 +1183,7 @@ class Game {
         // Update input
         this.input.update();
         this.handleSpeechBubbleInput();
+        this.handleChestInput();
         this.handleInteractionInput();
 
         // Update NPCs
@@ -1022,6 +1199,9 @@ class Game {
             this.updateCamera();
             this.checkPlayerCollisions();
         }
+
+        // Update chests (callouts + glow)
+        this.updateChests(deltaTime);
         
         // Update all background layers
         this.backgroundLayers.forEach(layer => {
@@ -1346,6 +1526,9 @@ class Game {
         // Render NPCs
         this.renderNPCs();
 
+        // Render chests
+        this.renderChests();
+
         // Render hazards
         this.hazards.forEach(hazard => {
             hazard.render(this.ctx, this.camera);
@@ -1511,6 +1694,17 @@ class Game {
             }
         });
     }
+
+    /**
+     * Render all placed chests
+     */
+    renderChests() {
+        this.chests.forEach(chest => {
+            if (chest && chest.render) {
+                chest.render(this.ctx, this.camera);
+            }
+        });
+    }
     
     /**
      * Render canvas-based palm trees with parallax effect\n     */
@@ -1640,12 +1834,18 @@ class Game {
         this.backgroundLayers = [];
         this.hideSpeechBubble(true);
         this.hideInventoryOverlay(true);
+        this.hideChestOverlay(true);
         this.hideShopOverlay(true);
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
         
         this.npcs = [];
         this.shopGhost = null;
+        if (Array.isArray(this.chests)) {
+            this.chests.forEach(chest => chest.destroy && chest.destroy());
+        }
+        this.chests = [];
+        this.chestUI.currentChest = null;
 
         // Reset managers
         this.palmTreeManager.reset();
@@ -1808,6 +2008,15 @@ class Game {
         const ghostY = groundY - 64;
         this.shopGhost = new ShopGhost(ghostX, ghostY);
         this.npcs.push(this.shopGhost);
+
+        // Reward chest at the end of the parkour run
+        const lastPlatform = parkour[parkour.length - 1];
+        const chestX = lastPlatform.x + lastPlatform.width - 64;
+        const chestY = lastPlatform.y - 64;
+        const parkourChest = new Chest(chestX, chestY);
+        parkourChest.displayName = 'Parkour Chest';
+        parkourChest.game = this;
+        this.chests.push(parkourChest);
     }
     
     /**
