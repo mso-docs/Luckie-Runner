@@ -1825,12 +1825,14 @@ class Game {
      */
     createFlag() {
         // Position the flag near the end of the level, but not at the very edge
+        const flagHeight = 128;
+        const groundHeight = 40;
         let flagX = this.level.width - 300;
-        let flagY = this.level.height - 120; // Position above ground
+        let flagY = (this.level.height - groundHeight) - flagHeight; // Sit on ground
 
         if (this.testMode) {
             const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.level.height - 50);
-            flagY = groundY - 80; // sit on top of ground
+            flagY = groundY - flagHeight; // sit on top of ground
             flagX = 3880; // at the far/right base of the extended mountain path
         }
         
