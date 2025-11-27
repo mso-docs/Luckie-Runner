@@ -1734,6 +1734,17 @@ class Game {
         if (typeof this.player.updateHealthUI === 'function') {
             this.player.updateHealthUI();
         }
+
+        // In test mode, start just left of the sign for quick interaction
+        if (this.testMode && this.signBoard) {
+            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.canvas.height - 50);
+            const spawnY = groundY - this.player.height;
+            const spawnX = this.signBoard.x - 20 - this.player.width;
+            this.level.spawnX = spawnX;
+            this.level.spawnY = spawnY;
+            this.player.x = spawnX;
+            this.player.y = spawnY;
+        }
         this.updateInventoryOverlay();
         
         // Reset game stats
