@@ -177,7 +177,7 @@ class AudioManager {
         
         // Background music
         this.loadMusic('title', 'music/titlescreen.mp3');
-        this.loadMusic('level1', 'music/level1.mp3');
+        this.loadMusic('level1', 'music/overworld.mp3'); // main level theme
     }
 
     /**
