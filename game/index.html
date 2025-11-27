@@ -166,14 +166,24 @@
                                 </div>
 
                                 <div class="inventory-panel" data-tab-panel="badges">
-                                    <div class="inventory-placeholder">
-                                        <h3>Badges</h3>
-                                        <p>Equip badges for passive bonuses.</p>
-                                        <div class="placeholder-grid">
-                                            <div class="placeholder-card">Sunshine Badge</div>
-                                            <div class="placeholder-card muted">Empty Slot</div>
-                                            <div class="placeholder-card muted">Empty Slot</div>
+                                    <div class="specials-card badge-panel">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Badges</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <p class="badge-panel__hint">Earn or find badges to unlock passive boosts.</p>
+                                        <div class="badge-grid" id="inventoryBadges"></div>
+                                        <div class="badge-empty" id="badgeEmptyState">No badges yet. Defeat a slime to find your first one.</div>
                                     </div>
                                 </div>
 
@@ -338,6 +348,7 @@
     
     <!-- Manager Classes -->
     <script src="scripts/core/GameStateManager.js"></script>
+    <script src="scripts/ui/BadgeUI.js"></script>
     
     <!-- Player System -->
     <script src="scripts/player/Player.js"></script>

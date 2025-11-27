@@ -39,6 +39,7 @@ class Player extends Entity {
         this.healthPotions = 0;
         this.coffeeDrinks = 0;
         this.level = 1;
+        this.combatModifiers = { slimeAttack: 0, slimeDefense: 0 };
         
         // Rock throwing
         this.maxRocks = 10;
@@ -250,6 +251,41 @@ class Player extends Entity {
         const lerpSpeed = 0.12;
         this.game.camera.x += (targetX - this.game.camera.x) * lerpSpeed;
         this.game.camera.y += (targetY - this.game.camera.y) * lerpSpeed;
+    }
+
+    /**
+     * Apply badge-based mitigation before processing damage
+     * @param {number} amount
+     * @param {Entity|null} source
+     */
+    takeDamage(amount, source = null) {
+        let adjusted = amount;
+        const fromSlime = source && source.type === 'slime';
+        if (fromSlime && this.combatModifiers) {
+            const reduction = this.combatModifiers.slimeDefense || 0;
+            adjusted = Math.max(0, amount - reduction);
+        }
+
+        if (adjusted <= 0) {
+            return false;
+        }
+
+        return super.takeDamage(adjusted, source);
+    }
+
+    /**
+     * Adjust outgoing damage with badge bonuses
+     * @param {number} baseDamage
+     * @param {Entity|null} target
+     * @returns {number}
+     */
+    modifyOutgoingDamage(baseDamage, target = null) {
+        let damage = baseDamage;
+        const isSlimeTarget = target && target.type === 'slime';
+        if (isSlimeTarget && this.combatModifiers) {
+            damage += this.combatModifiers.slimeAttack || 0;
+        }
+        return Math.max(0, damage);
     }
 
     /**
@@ -697,6 +733,10 @@ class Player extends Entity {
         this.knockbackTiltTime = 0;
         this.rotation = 0;
         this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        if (this.combatModifiers) {
+            this.combatModifiers.slimeAttack = 0;
+            this.combatModifiers.slimeDefense = 0;
+        }
         this.updateMovementStatsFromBuff();
         this.updateCoffeeHUD(true);
         this.updateUI();

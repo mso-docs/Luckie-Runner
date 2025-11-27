@@ -172,6 +172,7 @@ class AudioManager {
         this.loadSound('menu_enter', 'sfx/menu-enter.mp3');
         this.loadSound('menu_exit', 'sfx/menu-exit.mp3');
         this.loadSound('purchase', 'sfx/purchase.mp3');
+        this.loadSound('badge', 'sfx/badge.mp3');
         
         // Additional sound aliases for backwards compatibility
         this.loadSound('attack', 'sfx/rock.mp3'); // Rock throwing sound

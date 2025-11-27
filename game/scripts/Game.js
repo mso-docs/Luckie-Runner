@@ -20,6 +20,7 @@ class Game {
         this.audioManager = new AudioManager();
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
+        this.badgeUI = null;
         
         // Game entities
         this.player = null;
@@ -175,6 +176,7 @@ class Game {
         this.setupSpeechBubbleUI();
         this.setupSignDialogueUI();
         this.setupInventoryUI();
+        this.badgeUI = new BadgeUI(this);
         this.setupChestUI();
         this.setupShopUI();
         
@@ -408,6 +410,8 @@ class Game {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
         this.inventoryUI.list = document.getElementById('inventoryItems');
         this.inventoryUI.statsList = document.getElementById('inventoryStats');
+        this.inventoryUI.badgesList = document.getElementById('inventoryBadges');
+        this.inventoryUI.badgesEmpty = document.getElementById('badgeEmptyState');
         this.inventoryUI.itemCache = [];
         this.inventoryUI.modal = {
             container: document.getElementById('inventoryItemModal'),
@@ -448,6 +452,10 @@ class Game {
         document.addEventListener('keydown', (e) => {
             this.handleInventoryListNavigation(e);
         });
+
+        if (this.badgeUI) {
+            this.badgeUI.cacheInventoryRefs();
+        }
     }
 
     /**
@@ -579,6 +587,9 @@ class Game {
 
         renderList(statsList, statEntries, false);
         renderList(list, itemEntries, true);
+        if (this.badgeUI) {
+            this.badgeUI.renderInventory();
+        }
     }
 
     /**
@@ -1784,6 +1795,9 @@ class Game {
         if (typeof this.player.updateHealthUI === 'function') {
             this.player.updateHealthUI();
         }
+        if (this.badgeUI) {
+            this.badgeUI.reapplyAllModifiers(this.player);
+        }
 
         this.updateInventoryOverlay();
         
@@ -1874,7 +1888,7 @@ class Game {
                 return true;
             } else {
                 // Enemy defeated
-                this.stats.enemiesDefeated++;
+                this.handleEnemyRemoved(enemy);
                 return false;
             }
         });
@@ -2197,6 +2211,17 @@ class Game {
                 projectile.hitObstacle(platform);
             }
         });
+    }
+
+    /**
+     * Handle bookkeeping when an enemy is removed from play
+     * @param {Enemy} enemy
+     */
+    handleEnemyRemoved(enemy) {
+        this.stats.enemiesDefeated++;
+        if (this.badgeUI) {
+            this.badgeUI.handleEnemyDefeated(enemy);
+        }
     }
 
     /**
@@ -3023,6 +3048,14 @@ class Game {
         slime.y = slimeGroundY;
         slime.setSimplePatrol(200, 800, 90, slimeGroundY);
         this.enemies.push(slime);
+
+        // Slime near the mountain base to test badge modifiers
+        const mountainSlime = new Slime(1960, groundY);
+        mountainSlime.game = this;
+        const mountainSlimeGroundY = groundY - mountainSlime.height;
+        mountainSlime.y = mountainSlimeGroundY;
+        mountainSlime.setSimplePatrol(1880, 2100, 80, mountainSlimeGroundY);
+        this.enemies.push(mountainSlime);
 
         const potion = new HealthPotion(480, groundY - 40, 25);
         potion.game = this;
