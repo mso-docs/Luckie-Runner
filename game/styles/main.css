@@ -928,6 +928,10 @@ body {
     transform: translateY(0);
     filter: brightness(1.05);
 }
+.inventory-tab:focus-visible {
+    outline: 3px solid #ff8b8b;
+    outline-offset: 2px;
+}
 
 .inventory-body {
     position: relative;
@@ -1051,6 +1055,11 @@ body {
     border-color: rgba(255, 143, 143, 0.6);
     transform: translateY(-2px);
 }
+.inventory-item:focus-visible {
+    outline: 3px solid #ff8b8b;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(255, 143, 143, 0.35);
+}
 
 .inventory-item__name {
     font-weight: 900;
@@ -1149,6 +1158,10 @@ body {
     opacity: 0.55;
     cursor: not-allowed;
     box-shadow: none;
+}
+.modal-btn:focus-visible {
+    outline: 3px solid #ff8b8b;
+    outline-offset: 2px;
 }
 
 .profile-card {
@@ -1564,6 +1577,11 @@ body {
     box-shadow: 0 6px 0 #c04646;
     background: linear-gradient(180deg, #fff5f5 0%, #ffe1e1 100%);
 }
+.shop-item:focus-visible {
+    outline: 3px solid #ff8b8b;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(255, 143, 143, 0.35);
+}
 
 .shop-item-icon {
     width: 32px;
@@ -1842,6 +1860,12 @@ body {
 .chest-item__take:active {
     transform: translateY(1px);
     box-shadow: 0 3px 0 #b64c2b;
+}
+.chest-item__take:focus-visible,
+.chest-take-all:focus-visible,
+.chest-close:focus-visible {
+    outline: 3px solid #ff8b8b;
+    outline-offset: 2px;
 }
 
 .chest-empty {
