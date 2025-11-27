@@ -267,7 +267,8 @@ body {
     transform: translate(-50%, 0) scale(1);
 }
 
-.speech-bubble__body {
+.speech-bubble__body,
+.dialog-bubble {
     position: relative;
     background: radial-gradient(circle at 20% 30%, #ffffff 0%, #f7f7f7 55%, #ededed 100%);
     border: 3px solid #6b6b6b;
@@ -282,7 +283,8 @@ body {
     text-shadow: -1px -1px 0 #fff, 1px 1px 0 rgba(0, 0, 0, 0.1);
 }
 
-.speech-bubble__body::before {
+.speech-bubble__body::before,
+.dialog-bubble::before {
     content: '';
     position: absolute;
     left: calc(50% + var(--tail-offset, 0px));
@@ -297,7 +299,8 @@ body {
     z-index: -1;
 }
 
-.speech-bubble__body::after {
+.speech-bubble__body::after,
+.dialog-bubble::after {
     content: '';
     position: absolute;
     left: calc(50% + var(--tail-offset, 0px));

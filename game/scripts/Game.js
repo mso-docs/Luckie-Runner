@@ -339,7 +339,7 @@ class Game {
         container.style.zIndex = '40';
         container.style.transform = 'translate(-50%, -90px)';
         const bubble = document.createElement('div');
-        bubble.className = 'speech-bubble__body';
+        bubble.className = 'dialog-bubble sign-dialogue-bubble';
         bubble.style.marginBottom = '6px';
         bubble.style.maxWidth = '260px';
         bubble.textContent = '';
