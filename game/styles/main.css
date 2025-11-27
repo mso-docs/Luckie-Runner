@@ -1440,7 +1440,7 @@ body {
     content: '';
     position: absolute;
     inset: 9px;
-    background: url('../art/items/chest.png') left center/contain no-repeat;
+    background: url('../art/items/chest-open.png') center/contain no-repeat;
     filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
 }
 
