@@ -870,10 +870,14 @@ body {
     display: flex;
     gap: 10px;
     padding: 4px 6px 14px;
+    width: 100%;
+    flex-wrap: wrap;
     z-index: 1;
 }
 
 .inventory-tab {
+    flex: 1 1 0;
+    text-align: center;
     position: relative;
     border: none;
     background: linear-gradient(180deg, #ffeec0 0%, #ffc46b 85%, #d98145 100%);
@@ -993,10 +997,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: calc(5 * 68px);
+    max-height: calc(3 * 68px);
+    min-height: calc(3 * 68px);
     overflow-y: auto;
     padding-right: 6px;
-    scrollbar-width: thin;
+    scrollbar-width: auto;
     scrollbar-color: #b44a53 rgba(255, 200, 200, 0.4);
 }
 
