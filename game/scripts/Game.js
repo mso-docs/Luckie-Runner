@@ -107,7 +107,7 @@ class Game {
             active: false,
             target: null,
             messages: [
-                '<<<AAAAAAAAAAAAAAAAAAAAAA>>>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                '<<<~AAAAAAAAAAAAAAAAAAAAAA~>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
                 'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
                 '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
             ],
@@ -2388,22 +2388,8 @@ class Game {
      * Render the signboard near the start
      */
     renderSign() {
-        if (!this.signBoard) return;
-        const { x, y, width, height } = this.signBoard;
-        const screenX = x - this.camera.x;
-        const screenY = y - this.camera.y;
-        const ctx = this.ctx;
-        if (screenX + width < 0 || screenX > ctx.canvas.width || screenY + height < 0 || screenY > ctx.canvas.height) return;
-
-        ctx.save();
-        ctx.translate(screenX - width / 2, screenY - height / 2);
-        if (this.signSprite && this.signSprite.complete) {
-            ctx.drawImage(this.signSprite, 0, 0, width, height);
-        } else {
-            ctx.fillStyle = '#d9b178';
-            ctx.fillRect(0, 0, width, height);
-        }
-        ctx.restore();
+        if (!this.signBoard || typeof this.signBoard.render !== 'function') return;
+        this.signBoard.render(this.ctx, this.camera);
     }
     
     /**
@@ -2718,13 +2704,8 @@ class Game {
         this.shopGhost = new ShopGhost(ghostX, ghostY);
         this.npcs.push(this.shopGhost);
 
-        // Signboard near start (left of first parkour platform)
-        this.signBoard = {
-            x: this.level.spawnX + 10,
-            y: groundY - 24,
-            width: 40,
-            height: 52
-        };
+        // Signboard near start (left of first parkour platform) as an Entity for shadow support
+        this.signBoard = new Sign(this.level.spawnX + 10, groundY - 24, 'art/items/sign.png');
 
         // Test coin chest near spawn (coins only)
         const coinChestX = this.level.spawnX + 180;
