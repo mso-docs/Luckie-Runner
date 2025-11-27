@@ -107,7 +107,7 @@ class Game {
             active: false,
             target: null,
             messages: [
-                '<<<AAAAAAAAAAAAAAAAAAAAAA>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                '<<<AAAAAAAAAAAAAAAAAAAAAA>>>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
                 'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
                 '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
             ],
@@ -1311,10 +1311,10 @@ class Game {
             safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
         };
 
-        // Size markers (largest first to avoid nested conflicts)
-        apply(/<<<(.+?)>>>/g, 'speech-gigantic');
-        apply(/<<(.+?)>>/g, 'speech-bigger');
-        apply(/<(.+?)>/g, 'speech-big');
+        // Size markers (escaped angle brackets)
+        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
+        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
+        apply(/&lt;(.+?)&gt;/g, 'speech-big');
         apply(/_(.+?)_/g, 'speech-tiny');
 
         apply(/\*(.+?)\*/g, 'speech-bold');
