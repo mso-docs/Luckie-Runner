@@ -187,6 +187,12 @@ body {
     text-align: left;
 }
 
+.hud-hp-fraction {
+    margin-left: 8px;
+    display: inline-block;
+    min-width: 76px;
+}
+
 /* Buff HUD */
 .buff-panel {
     position: absolute;
@@ -1212,7 +1218,7 @@ body {
     border: 4px solid #c05a44;
     box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.1), 0 10px 0 #7c3322;
     justify-self: center;
-    background-image: url('../art/content/Luckie Runner.png'), radial-gradient(circle at 60% 20%, rgba(255, 255, 255, 0.5), transparent 50%), linear-gradient(180deg, #ffd7d7, #ffb99c);
+    background-image: url('../art/content/luckie-menu.png'), radial-gradient(circle at 60% 20%, rgba(255, 255, 255, 0.5), transparent 50%), linear-gradient(180deg, #ffd7d7, #ffb99c);
     background-size: 110%, auto, cover;
     background-position: center 55%, center, center;
     background-repeat: no-repeat;

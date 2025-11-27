@@ -1418,6 +1418,9 @@ class Game {
         this.player = new Player(this.level.spawnX, this.level.spawnY);
         this.player.game = this;
         // Player uses default gravity from Entity class
+        if (typeof this.player.updateHealthUI === 'function') {
+            this.player.updateHealthUI();
+        }
         this.updateInventoryOverlay();
         
         // Reset game stats

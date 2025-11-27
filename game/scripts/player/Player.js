@@ -581,6 +581,12 @@ class Player extends Entity {
             }
             healthFill.style.backgroundColor = color;
         }
+        const hpFraction = document.getElementById('hudHPFraction');
+        if (hpFraction) {
+            const current = Math.max(0, Math.floor(this.health));
+            const clamped = Math.min(current, 100);
+            hpFraction.textContent = `${clamped}/100`;
+        }
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
         }
