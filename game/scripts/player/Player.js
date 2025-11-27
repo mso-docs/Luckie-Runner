@@ -15,6 +15,11 @@ class Player extends Entity {
         this.jumpStrength = -700; // pixels/second - negative = up (increased to compensate for higher gravity)
         this.gravity = 1000; // pixels/second² - falling acceleration (increased by 25%)
         
+        this.maxAirJumps = 0; // extra jumps granted by buffs (e.g., climbing shoes)
+        this.remainingAirJumps = 0; // replenished when grounded
+        this.jumpHeld = false; // used to detect fresh jump presses for mid-air jumps
+        this.spaceJumpHeld = false; // tracks spacebar state for double-jump activation
+
         this.baseMoveSpeed = this.moveSpeed;
         this.baseAcceleration = this.acceleration;
         this.baseDeceleration = this.deceleration;
@@ -22,9 +27,13 @@ class Player extends Entity {
 
         // Temporary speed buff (coffee)
         this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
         this.buffHud = {
             panel: document.getElementById('buffPanel'),
-            timer: document.getElementById('coffeeTimer')
+            coffeeTimer: document.getElementById('coffeeTimer'),
+            coffeeRow: document.getElementById('coffeeBuffRow'),
+            climbTimer: document.getElementById('climbTimer'),
+            climbRow: document.getElementById('climbBuffRow')
         };
 
         // Simple state
@@ -88,6 +97,7 @@ class Player extends Entity {
 
         // Update timed buffs
         this.updateCoffeeBuff(deltaTime);
+        this.updateClimbingBuff(deltaTime);
         
         // HORIZONTAL MOVEMENT - Smooth acceleration/deceleration
         const movingLeft = input.isMovingLeft();
@@ -121,10 +131,26 @@ class Player extends Entity {
         }
         
         // JUMPING - Only when on ground
-        if (input.isJumping() && this.onGround) {
+        if (this.onGround) {
+            // Refresh air jumps whenever grounded
+            this.remainingAirJumps = this.maxAirJumps;
+        }
+
+        const jumpPressed = input.isJumping();
+        const spacePressed = input.isSpaceJumping ? input.isSpaceJumping() : false;
+        const jumpJustPressed = jumpPressed && !this.jumpHeld;
+        const spaceJustPressed = spacePressed && !this.spaceJumpHeld;
+
+        if (jumpPressed && this.onGround) {
             this.velocity.y = this.jumpStrength;
             this.onGround = false;
+        } else if (spaceJustPressed && !this.onGround && this.remainingAirJumps > 0) {
+            // Mid-air jump granted by climbing shoes (spacebar only)
+            this.velocity.y = this.jumpStrength;
+            this.remainingAirJumps -= 1;
         }
+        this.jumpHeld = jumpPressed;
+        this.spaceJumpHeld = spacePressed;
         
         // ROCK THROWING - mouse click to toss toward cursor
         if (this.attackCooldown > 0) {
@@ -658,7 +684,26 @@ class Player extends Entity {
             multiplier: multiplier
         };
         this.updateMovementStatsFromBuff();
-        this.updateCoffeeHUD();
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Apply climbing shoes buff for double jumps
+     * @param {number} durationMs
+     * @param {number} extraJumps - number of additional jumps (1 = double jump)
+     */
+    applyClimbingBuff(durationMs = 120000, extraJumps = 1) {
+        this.climbingBuff = {
+            active: true,
+            remaining: durationMs,
+            extraJumps: extraJumps
+        };
+        this.maxAirJumps = extraJumps;
+        this.remainingAirJumps = this.maxAirJumps;
+        if (this.game?.audioManager) {
+            this.game.audioManager.playSound('coffee', 0.8);
+        }
+        this.updateBuffHUD();
     }
 
     /**
@@ -673,7 +718,30 @@ class Player extends Entity {
             this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
             this.updateMovementStatsFromBuff();
         }
-        this.updateCoffeeHUD();
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Tick climbing shoes buff timer and clear when done
+     * @param {number} deltaTime
+     */
+    updateClimbingBuff(deltaTime) {
+        if (!this.climbingBuff.active) {
+            this.maxAirJumps = 0;
+            this.remainingAirJumps = Math.min(this.remainingAirJumps, this.maxAirJumps);
+            return;
+        }
+
+        this.climbingBuff.remaining = Math.max(0, this.climbingBuff.remaining - deltaTime);
+        if (this.climbingBuff.remaining <= 0) {
+            this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
+            this.maxAirJumps = 0;
+            this.remainingAirJumps = 0;
+        } else {
+            this.maxAirJumps = this.climbingBuff.extraJumps;
+            this.remainingAirJumps = Math.min(this.remainingAirJumps, this.maxAirJumps);
+        }
+        this.updateBuffHUD();
     }
 
     /**
@@ -688,28 +756,45 @@ class Player extends Entity {
     }
 
     /**
-     * Update the HUD timer for the coffee buff
+     * Update the HUD timers for active buffs
      * @param {boolean} forceHide - hide regardless of state
      */
-    updateCoffeeHUD(forceHide = false) {
+    updateBuffHUD(forceHide = false) {
         const panel = this.buffHud?.panel || document.getElementById('buffPanel');
-        const timer = this.buffHud?.timer || document.getElementById('coffeeTimer');
+        const coffeeTimer = this.buffHud?.coffeeTimer || document.getElementById('coffeeTimer');
+        const coffeeRow = this.buffHud?.coffeeRow || document.getElementById('coffeeBuffRow');
+        const climbTimer = this.buffHud?.climbTimer || document.getElementById('climbTimer');
+        const climbRow = this.buffHud?.climbRow || document.getElementById('climbBuffRow');
 
-        if (!panel || !timer) return;
+        if (!panel) return;
 
-        const active = this.coffeeBuff.active && !forceHide;
-        if (!active) {
-            panel.classList.add('hidden');
-            timer.textContent = '--:--';
-            return;
+        const coffeeActive = this.coffeeBuff.active && !forceHide;
+        const climbActive = this.climbingBuff.active && !forceHide;
+
+        if (coffeeRow && coffeeTimer) {
+            coffeeRow.classList.toggle('hidden', !coffeeActive);
+            coffeeTimer.textContent = coffeeActive ? this.formatBuffTime(this.coffeeBuff.remaining) : '--:--';
         }
 
-        const remainingMs = Math.max(0, this.coffeeBuff.remaining);
-        const totalSeconds = Math.ceil(remainingMs / 1000);
+        if (climbRow && climbTimer) {
+            climbRow.classList.toggle('hidden', !climbActive);
+            climbTimer.textContent = climbActive ? this.formatBuffTime(this.climbingBuff.remaining) : '--:--';
+        }
+
+        const anyActive = coffeeActive || climbActive;
+        panel.classList.toggle('hidden', !anyActive);
+    }
+
+    /**
+     * Format remaining buff time as M:SS
+     * @param {number} remainingMs
+     * @returns {string}
+     */
+    formatBuffTime(remainingMs = 0) {
+        const totalSeconds = Math.ceil(Math.max(0, remainingMs) / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
-        timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        panel.classList.remove('hidden');
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
     /**
@@ -732,13 +817,18 @@ class Player extends Entity {
         this.hitRayDuration = 500;
         this.knockbackTiltTime = 0;
         this.rotation = 0;
+        this.jumpHeld = false;
+        this.maxAirJumps = 0;
+        this.remainingAirJumps = 0;
         this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
+        this.spaceJumpHeld = false;
         if (this.combatModifiers) {
             this.combatModifiers.slimeAttack = 0;
             this.combatModifiers.slimeDefense = 0;
         }
         this.updateMovementStatsFromBuff();
-        this.updateCoffeeHUD(true);
+        this.updateBuffHUD(true);
         this.updateUI();
         this.updateHealthUI();
     }

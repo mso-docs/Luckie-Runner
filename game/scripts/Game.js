@@ -3114,6 +3114,36 @@ class Game {
         const chestY = lastPlatform.y - 64;
         const parkourChest = new Chest(chestX, chestY);
         parkourChest.displayName = 'Parkour Chest';
+        parkourChest.contents = [
+            {
+                id: 'climbing_shoes',
+                name: 'Climbing Shoes',
+                description: 'Sticky soles that let you double jump for 2 minutes.',
+                take: (player) => player?.applyClimbingBuff && player.applyClimbingBuff(120000, 1)
+            },
+            {
+                id: 'health_potion',
+                name: 'Health Potion',
+                description: 'Restores 25 HP (or stashes a potion if you are full).',
+                take: (player) => {
+                    if (!player) return;
+                    if (player.health >= player.maxHealth && typeof player.addHealthPotion === 'function') {
+                        player.addHealthPotion(1);
+                    } else if (typeof player.heal === 'function') {
+                        player.heal(25);
+                    } else {
+                        player.health = Math.min(player.maxHealth ?? player.health, player.health + 25);
+                    }
+                    player.updateHealthUI?.();
+                }
+            },
+            {
+                id: 'rock_bag',
+                name: 'Bag of Rocks',
+                description: "10 sturdy rocks for Luckie's throw.",
+                take: (player) => player?.addRocks && player.addRocks(10)
+            }
+        ];
         parkourChest.game = this;
         this.chests.push(parkourChest);
     }

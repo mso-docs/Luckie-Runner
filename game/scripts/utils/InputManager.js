@@ -126,6 +126,14 @@ class InputManager {
         return this.isKeyPressed('w') || this.isKeyPressed(' ') || this.isKeyPressed('arrowup') || this.isKeyPressed('space');
     }
 
+    /**
+     * Specifically check if spacebar is down (used for double-jump timing)
+     * @returns {boolean}
+     */
+    isSpaceJumping() {
+        return this.isKeyPressed(' ') || this.isKeyPressed('space') || this.isKeyPressed('spacebar');
+    }
+
     isDashing() {
         return this.isKeyPressed('shift') || this.isKeyPressed('shiftleft') || this.isKeyPressed('shiftright');
     }
