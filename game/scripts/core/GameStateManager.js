@@ -89,7 +89,7 @@ class GameStateManager {
         
         // Play level music
         if (this.game.audioManager) {
-            this.game.audioManager.playMusic('level1', 0.6);
+            this.game.audioManager.playMusic('level1', 0.8);
         }
         
         // Game started

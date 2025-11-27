@@ -134,20 +134,24 @@ class Game {
      */
     playTitleMusic() {
         if (this.audioManager && this.audioManager.music['title']) {
-            this.audioManager.playMusic('title', 0.6).catch(error => {
-                // Title music blocked by autoplay policy. Will start on user interaction.
-                
-                // Add one-time listener for first user interaction
+            const targetVolume = 0.8; // match main level loudness
+
+            this.audioManager.playMusic('title', targetVolume).catch(() => {
+                // Title music blocked by autoplay policy. Will start on first user interaction.
                 const startMusicOnInteraction = () => {
-                    if (this.stateManager.isInMenu()) {
-                        this.audioManager.playMusic('title', 0.6);
+                    if (this.stateManager.isInMenu() && !this.audioManager.isMuted()) {
+                        this.audioManager.playMusic('title', targetVolume).catch(() => {});
                     }
                     document.removeEventListener('click', startMusicOnInteraction);
                     document.removeEventListener('keydown', startMusicOnInteraction);
+                    document.removeEventListener('pointerdown', startMusicOnInteraction);
+                    document.removeEventListener('touchstart', startMusicOnInteraction);
                 };
                 
                 document.addEventListener('click', startMusicOnInteraction, { once: true });
                 document.addEventListener('keydown', startMusicOnInteraction, { once: true });
+                document.addEventListener('pointerdown', startMusicOnInteraction, { once: true });
+                document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             });
         }
     }
@@ -161,7 +165,7 @@ class Game {
             const titleMusic = this.audioManager.music['title'];
             if (titleMusic && titleMusic.paused && titleMusic.readyState >= 2) {
                 // Only try to play if the music is paused and ready
-                this.audioManager.playMusic('title', 0.6).catch(() => {
+                this.audioManager.playMusic('title', 0.8).catch(() => {
                     // Audio play failed - silently ignore
                 });
             }
@@ -1609,9 +1613,9 @@ class Game {
             // Restart appropriate music when unmuting
             if (wasMuted && !this.audioManager.isMuted()) {
                 if (this.stateManager.isPlaying()) {
-                    this.audioManager.playMusic('level1', 0.6);
+                    this.audioManager.playMusic('level1', 0.8);
                 } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
-                    this.audioManager.playMusic('title', 0.6);
+                    this.audioManager.playMusic('title', 0.8);
                 }
             }
             
