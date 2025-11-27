@@ -175,8 +175,9 @@ class AudioManager {
         this.loadSound('hit', 'sfx/slimy.mp3'); // Hit enemy sound
         this.loadSound('health_pickup', 'sfx/health.mp3'); // Health potion sound
         
-        // Background music
-        this.loadMusic('title', 'music/titlescreen.mp3');
+        // Background music (add a cache-bust so replaced files take effect)
+        const titleSrc = 'music/titlescreen.mp3?v=1';
+        this.loadMusic('title', titleSrc);
         this.loadMusic('level1', 'music/overworld.mp3'); // main level theme
     }
 
