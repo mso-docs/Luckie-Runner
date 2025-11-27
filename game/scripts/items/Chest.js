@@ -172,6 +172,7 @@ class Chest extends Entity {
     render(ctx, camera) {
         if (!this.visible) return;
 
+        const hasLoot = this.getAvailableItems().length > 0;
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
 
@@ -189,7 +190,7 @@ class Chest extends Entity {
 
         ctx.save();
         ctx.globalAlpha = this.alpha;
-        if (this.isOpen) {
+        if (this.isOpen && hasLoot) {
             ctx.shadowColor = 'rgba(255, 215, 0, 0.85)';
             ctx.shadowBlur = 24;
             ctx.shadowOffsetX = 0;
@@ -219,7 +220,7 @@ class Chest extends Entity {
         }
         ctx.restore();
 
-        if (this.isOpen) {
+        if (this.isOpen && hasLoot) {
             const pulse = 0.6 + Math.sin(this.glowTime * 0.01) * 0.15;
             const cx = this.x - camera.x + this.width / 2;
             const cy = this.y - camera.y + this.height / 2 + 6;
