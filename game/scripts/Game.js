@@ -331,6 +331,28 @@ class Game {
         const items = [];
 
         if (player) {
+            // Priority stats first
+            items.push({
+                name: 'Score',
+                value: player.score ?? 0
+            });
+            items.push({
+                name: 'HP',
+                value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
+            });
+
+            if (stats && typeof stats.timeElapsed === 'number') {
+                const totalSeconds = Math.floor(stats.timeElapsed / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                items.push({
+                    name: 'Time',
+                    value: timeString
+                });
+            }
+
+            // Inventory resources
             items.push({
                 name: 'Coins',
                 value: player.coins ?? 0
@@ -343,17 +365,7 @@ class Game {
                 name: 'Health Potions',
                 value: player.healthPotions ?? 0
             });
-            items.push({
-                name: 'Score',
-                value: player.score ?? 0
-            });
-            items.push({
-                name: 'HP',
-                value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
-            });
-        }
-
-        if (stats && typeof stats.timeElapsed === 'number') {
+        } else if (stats && typeof stats.timeElapsed === 'number') {
             const totalSeconds = Math.floor(stats.timeElapsed / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
