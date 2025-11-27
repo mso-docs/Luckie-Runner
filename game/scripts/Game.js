@@ -48,6 +48,7 @@ class Game {
         
         // Background layers for parallax
         this.backgroundLayers = [];
+        this.initialTestRoomState = null;
         
         // Game timing
         this.lastTime = 0;
@@ -1506,8 +1507,168 @@ class Game {
         
         // Create level completion flag
         this.createFlag();
+        if (this.testMode && !this.initialTestRoomState) {
+            this.captureInitialTestRoomState();
+        }
         
         // Create background layers
+        this.createBackground();
+    }
+
+    /**
+     * Record the pristine test room layout so resets can rebuild it exactly
+     */
+    captureInitialTestRoomState() {
+        if (!this.testMode || this.initialTestRoomState) return;
+
+        const chestBlueprints = (this.chests || []).map(chest => ({
+            x: chest.x,
+            y: chest.y,
+            displayName: chest.displayName,
+            contents: (chest.contents || []).map(entry => ({ ...entry, taken: false }))
+        }));
+
+        const npcBlueprints = [];
+        if (this.shopGhost) {
+            npcBlueprints.push({ type: 'shopGhost', x: this.shopGhost.x, y: this.shopGhost.y });
+        }
+        if (this.princess) {
+            npcBlueprints.push({
+                type: 'princess',
+                x: this.princess.x,
+                y: this.princess.y,
+                dialogueLines: [...(this.princess.dialogueLines || [])]
+            });
+        }
+
+        const enemyBlueprints = (this.enemies || []).map(enemy => {
+            if (enemy instanceof Slime) {
+                return {
+                    type: 'slime',
+                    x: enemy.x,
+                    y: enemy.y,
+                    patrol: enemy.simplePatrol ? {
+                        left: enemy.simplePatrol.left,
+                        right: enemy.simplePatrol.right,
+                        speed: enemy.simplePatrol.speed,
+                        groundY: enemy.simplePatrol.groundY
+                    } : null
+                };
+            }
+            return null;
+        }).filter(Boolean);
+
+        const itemBlueprints = (this.items || []).map(item => {
+            if (item instanceof HealthPotion) {
+                return { type: 'health_potion', x: item.x, y: item.y, healAmount: item.healAmount };
+            }
+            if (item instanceof CoffeeItem) {
+                return { type: 'coffee', x: item.x, y: item.y };
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.initialTestRoomState = {
+            level: { ...(this.level || {}) },
+            testGroundY: this.testGroundY,
+            platforms: (this.platforms || []).map(p => ({
+                x: p.x,
+                y: p.y,
+                width: p.width,
+                height: p.height,
+                type: p.type
+            })),
+            enemies: enemyBlueprints,
+            items: itemBlueprints,
+            chests: chestBlueprints,
+            npcs: npcBlueprints,
+            signBoard: this.signBoard ? {
+                x: this.signBoard.x,
+                y: this.signBoard.y,
+                spriteSrc: this.signBoard.sprite?.src
+            } : null,
+            flag: this.flag ? { x: this.flag.x, y: this.flag.y } : null
+        };
+    }
+
+    /**
+     * Rebuild the test room exactly as it first loaded
+     */
+    restoreInitialTestRoomState() {
+        const blueprint = this.initialTestRoomState;
+        if (!blueprint) {
+            this.createLevel();
+            return;
+        }
+
+        this.testMode = true;
+        this.level = { ...(blueprint.level || {}) };
+        this.testGroundY = blueprint.testGroundY;
+
+        this.platforms = (blueprint.platforms || []).map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
+
+        this.enemies = (blueprint.enemies || []).map(def => {
+            if (def.type === 'slime') {
+                const slime = new Slime(def.x, def.y);
+                slime.game = this;
+                slime.y = def.y;
+                if (def.patrol) {
+                    slime.setSimplePatrol(def.patrol.left, def.patrol.right, def.patrol.speed, def.patrol.groundY);
+                }
+                return slime;
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.items = (blueprint.items || []).map(def => {
+            if (def.type === 'health_potion') {
+                const potion = new HealthPotion(def.x, def.y, def.healAmount);
+                potion.game = this;
+                return potion;
+            }
+            if (def.type === 'coffee') {
+                const coffee = new CoffeeItem(def.x, def.y);
+                coffee.game = this;
+                return coffee;
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.chests = (blueprint.chests || []).map(def => {
+            const chest = new Chest(def.x, def.y);
+            chest.displayName = def.displayName;
+            chest.contents = (def.contents || []).map(entry => ({ ...entry, taken: false }));
+            chest.game = this;
+            return chest;
+        });
+
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        (blueprint.npcs || []).forEach(def => {
+            if (def.type === 'shopGhost') {
+                const ghost = new ShopGhost(def.x, def.y);
+                ghost.game = this;
+                this.shopGhost = ghost;
+                this.npcs.push(ghost);
+            } else if (def.type === 'princess') {
+                const princess = new PrincessNPC(def.x, def.y);
+                princess.game = this;
+                princess.dialogueLines = [...(def.dialogueLines || [])];
+                this.princess = princess;
+                this.npcs.push(princess);
+            }
+        });
+
+        this.signBoard = blueprint.signBoard
+            ? new Sign(blueprint.signBoard.x, blueprint.signBoard.y, blueprint.signBoard.spriteSrc)
+            : null;
+
+        this.flag = blueprint.flag ? Flag.create(blueprint.flag.x, blueprint.flag.y) : null;
+        if (this.flag) {
+            this.flag.game = this;
+        }
+
         this.createBackground();
     }
 
@@ -2877,7 +3038,11 @@ class Game {
         this.palmTreeManager.reset();
         
         // Rebuild level content (platforms, enemies, items, flag, background)
-        this.createLevel();
+        if (this.initialTestRoomState) {
+            this.restoreInitialTestRoomState();
+        } else {
+            this.createLevel();
+        }
     }
 
     /**
