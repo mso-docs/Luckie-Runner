@@ -2057,7 +2057,7 @@ class Game {
         this.hazards.forEach(hazard => {
             hazard.render(this.ctx, this.camera);
         });
-        
+
         // Render items
         this.items.forEach(item => {
             item.render(this.ctx, this.camera);
@@ -2090,6 +2090,92 @@ class Game {
 
         // Update NPC hint bubble position
         this.updateShopGhostBubble();
+
+        // Debug overlay
+        if (this.debug) {
+            this.renderDebugOverlay();
+        }
+    }
+
+    /**
+     * Render debug hitboxes for all entities
+     */
+    renderDebugOverlay() {
+        const ctx = this.ctx;
+        const cam = this.camera || { x: 0, y: 0 };
+        const drawRect = (x, y, w, h, color = 'rgba(0,255,0,0.35)', stroke = '#00ff00') => {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            ctx.fillRect(x, y, w, h);
+            ctx.globalAlpha = 1;
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        };
+
+        const rectForEntity = (e) => ({
+            x: (e.x + (e.collisionOffset?.x || 0)) - cam.x,
+            y: (e.y + (e.collisionOffset?.y || 0)) - cam.y,
+            w: e.collisionWidth || e.width || 0,
+            h: e.collisionHeight || e.height || 0
+        });
+
+        // Player
+        if (this.player) {
+            const r = rectForEntity(this.player);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,0,0.25)', '#00ff00');
+        }
+
+        // Enemies
+        this.enemies.forEach(enemy => {
+            if (!enemy) return;
+            const r = rectForEntity(enemy);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,0,0.25)', '#ff0000');
+        });
+
+        // Items
+        this.items.forEach(item => {
+            if (!item) return;
+            const r = rectForEntity(item);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,215,0,0.25)', '#ffd700');
+        });
+
+        // Projectiles
+        this.projectiles.forEach(p => {
+            if (!p) return;
+            const r = rectForEntity(p);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,255,0.25)', '#00ffff');
+        });
+
+        // Hazards
+        this.hazards.forEach(h => {
+            if (!h) return;
+            const r = rectForEntity(h);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,255,0.25)', '#ff00ff');
+        });
+
+        // Chests
+        this.chests.forEach(ch => {
+            if (!ch) return;
+            const r = rectForEntity(ch);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
+        });
+
+        // Platforms (not entities)
+        this.platforms.forEach(p => {
+            if (!p) return;
+            const x = p.x - cam.x;
+            const y = p.y - cam.y;
+            drawRect(x, y, p.width, p.height, 'rgba(128,128,128,0.2)', '#808080');
+        });
+
+        // Sign
+        if (this.signBoard) {
+            const r = rectForEntity(this.signBoard);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
+        }
     }
 
     /**
