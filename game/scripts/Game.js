@@ -401,9 +401,10 @@ class Game {
         this.signDialogue.textEl = textEl;
         this.signDialogue.hint = hint;
         this.signDialogue.defaultMessages = [
-            '<<<~AAAAAAAAAAAAAAAAAAAAAA~>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-            'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
-            '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
+            '<<<~HOWDY!~>>> It is I, your #friendly# neighborhood signboard. I am here to provide you with %important% information as you embark on your adventure.',
+            'You _may_ find me scattered throughout the land, offering guidance, tips, and <<maybe>> even a joke or two to ^lighten^ your journey.',
+            'You also may find me in places where you %least% expect it, so keep your eyes #peeled#. Safe travels, ^adventurer^!',
+            'Also, you may want to #throw# some rocks at those ^slimes^. Just saying.'
         ];
         this.signDialogue.messages = [...this.signDialogue.defaultMessages];
     }
@@ -3368,7 +3369,7 @@ class Game {
         // Post-parkour sign with placeholder dialogue
         const postSignPlatform = balloonParkour[balloonParkour.length - 1];
         const postSignX = postSignPlatform.x + postSignPlatform.width - 48;
-        const postSignY = postSignPlatform.y - 52;
+        const postSignY = groundY - 52; // place on ground beneath the parkour perch
         const postSign = new Sign(postSignX, postSignY, 'art/items/sign.png');
         postSign.dialogueLines = [
             'Coming soon: a real message for champions.',
