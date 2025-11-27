@@ -186,13 +186,53 @@ class Slime extends Enemy {
             this.patrolSoundCooldown -= deltaSeconds;
         }
 
-        // Only play when actually sliding along the ground
-        if (Math.abs(this.velocity.x) <= 1) return;
         if (!this.game || !this.game.audioManager) return;
 
         if (this.patrolSoundCooldown <= 0) {
-            this.game.audioManager.playSound('slime_patrol', 0.5);
+            const player = this.game.player;
+            if (!player) return;
+
+            // Volume falls off with distance; silent beyond 60px
+            const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
+            const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
+            const dist = Math.hypot(dx, dy);
+            const maxHearDistance = 200;
+            if (dist > maxHearDistance) return;
+
+            const proximity = 1 - (dist / maxHearDistance);
+            const minAudible = 0.4; // keep faint sound when very close to the cutoff
+            const volume = 0.9 * Math.max(minAudible, proximity);
+            this.game.audioManager.playSound('slime_patrol', volume);
             this.patrolSoundCooldown = this.patrolSoundInterval;
         }
+    }
+
+    /**
+     * Render with a squish effect during death instead of normal frames
+     */
+    render(ctx, camera = { x: 0, y: 0 }) {
+        let originalScaleX = this.scale.x;
+        let originalScaleY = this.scale.y;
+        let originalY = this.y;
+
+        if (this.state === 'death') {
+            const t = Math.min(1, (this.stateTime || 0) / 400); // ease over first 400ms
+            const squishY = Math.max(0.25, 1 - 0.6 * t); // flatten downward
+            const stretchX = 1 + 0.6 * t; // widen
+
+            // Anchor feet to ground while squishing
+            const yShift = (this.height / 2) * (1 - squishY);
+            this.y = originalY + yShift;
+
+            this.scale.x = stretchX;
+            this.scale.y = squishY;
+        }
+
+        super.render(ctx, camera);
+
+        // Restore transforms after render
+        this.scale.x = originalScaleX;
+        this.scale.y = originalScaleY;
+        this.y = originalY;
     }
 }

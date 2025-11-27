@@ -20,6 +20,7 @@ class Game {
         this.audioManager = new AudioManager();
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
+        this.badgeUI = null;
         
         // Game entities
         this.player = null;
@@ -28,6 +29,7 @@ class Game {
         this.projectiles = [];
         this.hazards = [];
         this.platforms = [];
+        this.chests = [];
         this.flag = null;
         
         // Camera system
@@ -46,6 +48,7 @@ class Game {
         
         // Background layers for parallax
         this.backgroundLayers = [];
+        this.initialTestRoomState = null;
         
         // Game timing
         this.lastTime = 0;
@@ -65,13 +68,58 @@ class Game {
             index: 0,
             active: false,
             dismissing: false,
-            hideTimeout: null
+            hideTimeout: null,
+            speaker: null,
+            anchor: null,
+            onClose: null
         };
         this.speechBubble = {
             container: null,
             text: null,
             hint: null
         };
+
+        // Inventory overlay UI state
+        this.inventoryUI = {
+            overlay: null,
+            isOpen: false
+        };
+
+        // Chest overlay UI state
+        this.chestUI = {
+            overlay: null,
+            isOpen: false,
+            list: null,
+            title: null,
+            takeAllButton: null,
+            emptyState: null,
+            currentChest: null
+        };
+
+        // Shop UI state and NPCs
+        this.shopUI = {
+            overlay: null,
+            isOpen: false
+        };
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        this.signBoard = null;
+        this.signBoards = [];
+        this.signCallout = null;
+        this.signDialogue = {
+            container: null,
+            bubble: null,
+            hint: null,
+            active: false,
+            target: null,
+            messages: [],
+            defaultMessages: [],
+            index: 0
+        };
+        this.signSprite = new Image();
+        this.signSprite.src = 'art/items/sign.png';
         
         // Game statistics
         this.stats = {
@@ -83,6 +131,34 @@ class Game {
         
         // Initialize game
         this.init();
+    }
+
+    /**
+     * Save a snapshot of pristine game state for future resets
+     */
+    saveInitialStateTemplate() {
+        this.initialStateTemplate = {
+            timeScale: this.timeScale,
+            testMode: this.testMode,
+            level: { ...(this.level || {}) },
+            stats: {
+                enemiesDefeated: 0,
+                coinsCollected: 0,
+                distanceTraveled: 0,
+                timeElapsed: 0
+            },
+            camera: { x: 0, y: 0 },
+            dialogue: {
+                messages: [],
+                index: 0,
+                active: false,
+                dismissing: false,
+                hideTimeout: null,
+                speaker: null,
+                anchor: null,
+                onClose: null
+            }
+        };
     }
 
     /**
@@ -98,6 +174,11 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
+        this.setupSignDialogueUI();
+        this.setupInventoryUI();
+        this.badgeUI = new BadgeUI(this);
+        this.setupChestUI();
+        this.setupShopUI();
         
         // Create initial level
         this.createLevel();
@@ -109,6 +190,9 @@ class Game {
         this.playTitleMusic();
         
         // Game initialized
+
+        // Capture pristine defaults for reliable resets
+        this.saveInitialStateTemplate();
     }
     
 
@@ -118,20 +202,31 @@ class Game {
      */
     playTitleMusic() {
         if (this.audioManager && this.audioManager.music['title']) {
-            this.audioManager.playMusic('title', 0.6).catch(error => {
-                // Title music blocked by autoplay policy. Will start on user interaction.
-                
-                // Add one-time listener for first user interaction
+            const targetVolume = 0.8; // match main level loudness
+
+            // If already playing, just ensure volume is correct and return
+            if (this.audioManager.isMusicPlaying('title')) {
+                const music = this.audioManager.music['title'];
+                music.volume = this.audioManager.masterVolume * this.audioManager.musicVolume * targetVolume;
+                return;
+            }
+
+            this.audioManager.playMusic('title', targetVolume).catch(() => {
+                // Title music blocked by autoplay policy. Will start on first user interaction.
                 const startMusicOnInteraction = () => {
-                    if (this.stateManager.isInMenu()) {
-                        this.audioManager.playMusic('title', 0.6);
+                    if (this.stateManager.isInMenu() && !this.audioManager.isMuted()) {
+                        this.audioManager.playMusic('title', targetVolume).catch(() => {});
                     }
                     document.removeEventListener('click', startMusicOnInteraction);
                     document.removeEventListener('keydown', startMusicOnInteraction);
+                    document.removeEventListener('pointerdown', startMusicOnInteraction);
+                    document.removeEventListener('touchstart', startMusicOnInteraction);
                 };
                 
                 document.addEventListener('click', startMusicOnInteraction, { once: true });
                 document.addEventListener('keydown', startMusicOnInteraction, { once: true });
+                document.addEventListener('pointerdown', startMusicOnInteraction, { once: true });
+                document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             });
         }
     }
@@ -145,7 +240,7 @@ class Game {
             const titleMusic = this.audioManager.music['title'];
             if (titleMusic && titleMusic.paused && titleMusic.readyState >= 2) {
                 // Only try to play if the music is paused and ready
-                this.audioManager.playMusic('title', 0.6).catch(() => {
+                this.audioManager.playMusic('title', 0.8).catch(() => {
                     // Audio play failed - silently ignore
                 });
             }
@@ -223,6 +318,14 @@ class Game {
         document.getElementById('sfxVolume').addEventListener('input', (e) => {
             this.setSfxVolume(parseInt(e.target.value));
         });
+
+        // Play button sound for any menu buttons
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (btn) {
+                this.playButtonSound();
+            }
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -243,6 +346,11 @@ class Game {
                 case 'M':
                     this.toggleMute();
                     break;
+                case 'i':
+                case 'I':
+                    this.toggleInventoryOverlay();
+                    e.preventDefault();
+                    break;
             }
         });
     }
@@ -255,6 +363,703 @@ class Game {
         this.speechBubble.text = document.getElementById('speechText');
         this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
         this.hideSpeechBubble(true);
+    }
+
+    /**
+     * Prepare simple sign dialogue UI (3 stacked bubbles)
+     */
+    setupSignDialogueUI() {
+        const container = document.createElement('div');
+        container.id = 'signDialogueContainer';
+        container.className = 'speech-bubble sign-speech-bubble';
+        container.setAttribute('aria-hidden', 'true');
+        container.style.position = 'absolute';
+        container.style.pointerEvents = 'none';
+        container.style.display = 'none';
+        const bubble = document.createElement('div');
+        bubble.className = 'dialog-bubble sign-dialogue-bubble';
+        bubble.style.marginBottom = '6px';
+
+        const textEl = document.createElement('p');
+        textEl.className = 'sign-dialogue-text';
+        textEl.style.margin = '0';
+        textEl.textContent = '';
+
+        const hint = document.createElement('div');
+        hint.className = 'speech-bubble__hint';
+        hint.textContent = 'Press Enter';
+
+        bubble.appendChild(textEl);
+        bubble.appendChild(hint);
+
+        container.appendChild(bubble);
+        const gameContainer = document.getElementById('gameContainer');
+        if (gameContainer) {
+            gameContainer.appendChild(container);
+            this.signDialogue.container = container;
+            this.signDialogue.bubble = bubble;
+        this.signDialogue.textEl = textEl;
+        this.signDialogue.hint = hint;
+        this.signDialogue.defaultMessages = [
+            '<<<~HOWDY!~>>> It is I, your #friendly# neighborhood signboard. I am here to provide you with %important% information as you embark on your adventure.',
+            'You _may_ find me scattered throughout the land, offering guidance, tips, and <<maybe>> even a joke or two to ^lighten^ your journey.',
+            'You also may find me in places where you %least% expect it, so keep your eyes #peeled#. Safe travels, ^adventurer^!',
+            'Also, you may want to #throw# some rocks at those ^slimes^. Just saying.'
+        ];
+        this.signDialogue.messages = [...this.signDialogue.defaultMessages];
+    }
+    }
+
+    /**
+     * Prepare the inventory overlay UI state
+     */
+    setupInventoryUI() {
+        this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
+        this.inventoryUI.list = document.getElementById('inventoryItems');
+        this.inventoryUI.statsList = document.getElementById('inventoryStats');
+        this.inventoryUI.badgesList = document.getElementById('inventoryBadges');
+        this.inventoryUI.badgesEmpty = document.getElementById('badgeEmptyState');
+        this.inventoryUI.itemCache = [];
+        this.inventoryUI.modal = {
+            container: document.getElementById('inventoryItemModal'),
+            icon: document.getElementById('itemModalIcon'),
+            title: document.getElementById('itemModalName'),
+            description: document.getElementById('itemModalDescription'),
+            useBtn: document.getElementById('itemModalUse'),
+            exitBtn: document.getElementById('itemModalExit')
+        };
+        this.inventoryUI.tabs = Array.from(document.querySelectorAll('.inventory-tab'));
+        this.inventoryUI.panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+
+        // Wire tab switching
+        this.inventoryUI.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.getAttribute('data-tab-target');
+                this.switchInventoryTab(target);
+            });
+        });
+
+        // Default tab
+        this.switchInventoryTab('stats', true);
+        this.hideInventoryOverlay(true);
+
+        // Modal exit handlers
+        if (this.inventoryUI.modal.exitBtn) {
+            this.inventoryUI.modal.exitBtn.addEventListener('click', () => this.hideInventoryItemModal());
+        }
+        if (this.inventoryUI.modal.container) {
+            this.inventoryUI.modal.container.addEventListener('click', (e) => {
+                if (e.target === this.inventoryUI.modal.container) {
+                    this.hideInventoryItemModal();
+                }
+            });
+        }
+
+        // Keyboard navigation for the inventory item list (W/S or Arrow keys)
+        document.addEventListener('keydown', (e) => {
+            this.handleInventoryListNavigation(e);
+        });
+
+        if (this.badgeUI) {
+            this.badgeUI.cacheInventoryRefs();
+        }
+    }
+
+    /**
+     * Switch inventory tabs
+     * @param {string} tabName
+     * @param {boolean} silent - avoid sounds when true
+     */
+    switchInventoryTab(tabName = 'stats', silent = false) {
+        if (!this.inventoryUI) return;
+
+        const tabs = this.inventoryUI.tabs || [];
+        const panels = this.inventoryUI.panels || [];
+
+        tabs.forEach(tab => {
+            const isActive = tab.getAttribute('data-tab-target') === tabName;
+            tab.classList.toggle('is-active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panels.forEach(panel => {
+            const isActive = panel.getAttribute('data-tab-panel') === tabName;
+            panel.classList.toggle('active', isActive);
+            panel.classList.toggle('hidden', !isActive);
+        });
+
+        if (!silent && this.audioManager) {
+            this.playButtonSound();
+        }
+    }
+
+    /**
+     * Populate the inventory overlay with live player stats/items
+     */
+    updateInventoryOverlay() {
+        const list = this.inventoryUI?.list;
+        const statsList = this.inventoryUI?.statsList;
+        if (!list || !statsList) return;
+
+        const player = this.player;
+        const stats = this.stats;
+        const statEntries = [];
+        const itemEntries = [];
+
+        if (player) {
+            // Stats panel
+            statEntries.push({
+                name: 'Score',
+                value: player.score ?? 0
+            });
+            statEntries.push({
+                name: 'HP',
+                value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
+            });
+            if (stats && typeof stats.timeElapsed === 'number') {
+                const totalSeconds = Math.floor(stats.timeElapsed / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                statEntries.push({
+                    name: 'Time',
+                    value: timeString
+                });
+            }
+            statEntries.push({
+                name: 'Coins',
+                value: player.coins ?? 0
+            });
+
+            // Items panel
+            itemEntries.push({
+                name: 'Rocks',
+                value: player.rocks ?? 0,
+                description: 'Ammo used for throwing. Found scattered along the course.',
+                icon: 'art/items/rock-item.png',
+                key: 'rocks',
+                consumable: false
+            });
+            itemEntries.push({
+                name: 'Health Potions',
+                value: player.healthPotions ?? 0,
+                description: 'A small health potion that restores 25 HP.',
+                icon: 'art/sprites/health-pot.png',
+                key: 'health_potion',
+                consumable: true
+            });
+            itemEntries.push({
+                name: 'Coffee',
+                value: player.coffeeDrinks ?? 0,
+                description: 'Gives a speed boost for a short time.',
+                icon: 'art/items/coffee.png',
+                key: 'coffee',
+                consumable: true
+            });
+        } else if (stats && typeof stats.timeElapsed === 'number') {
+            const totalSeconds = Math.floor(stats.timeElapsed / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            statEntries.push({
+                name: 'Time',
+                value: timeString
+            });
+        }
+
+        const renderList = (target, entries, isItemList = false) => {
+            target.innerHTML = '';
+            if (isItemList) {
+                this.inventoryUI.itemCache = entries.slice();
+            }
+            entries.forEach(item => {
+                const row = document.createElement('button');
+                row.className = 'inventory-item';
+                row.type = 'button';
+                row.innerHTML = `
+                    <span class="inventory-item__name">${item.name}</span>
+                    <span class="inventory-item__value">${item.value}</span>
+                `;
+                if (isItemList) {
+                    row.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('[inventory] item clicked', item.name || item.key || item);
+                        this.showInventoryItemModal(item);
+                    });
+                }
+                target.appendChild(row);
+            });
+        };
+
+        renderList(statsList, statEntries, false);
+        renderList(list, itemEntries, true);
+        if (this.badgeUI) {
+            this.badgeUI.renderInventory();
+        }
+    }
+
+    /**
+     * Keyboard navigation for inventory items (W/S or ArrowUp/ArrowDown)
+     */
+    handleInventoryListNavigation(e) {
+        if (!this.inventoryUI?.isOpen) return;
+        if (!this.inventoryUI.list) return;
+
+        const key = e.key;
+        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
+        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
+        if (!isDown && !isUp) return;
+
+        const buttons = Array.from(this.inventoryUI.list.querySelectorAll('.inventory-item'));
+        if (!buttons.length) return;
+
+        const activeEl = document.activeElement;
+        let currentIndex = buttons.indexOf(activeEl);
+
+        if (currentIndex === -1) {
+            currentIndex = isDown ? -1 : 0; // start at first on up, before first on down
+        }
+
+        const delta = isDown ? 1 : -1;
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) nextIndex = buttons.length - 1;
+        if (nextIndex >= buttons.length) nextIndex = 0;
+
+        buttons[nextIndex].focus();
+        e.preventDefault();
+    }
+
+    /**
+     * Show modal for an inventory item
+     * @param {Object} item
+     */
+    showInventoryItemModal(item) {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+
+        // Ensure overlay is visible so the modal can render
+        if (this.inventoryUI.overlay) {
+            this.inventoryUI.overlay.classList.remove('hidden');
+            this.inventoryUI.overlay.classList.add('active');
+            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
+            this.inventoryUI.isOpen = true;
+        }
+
+        const nameEl = modal.title;
+        const descEl = modal.description;
+        const iconEl = modal.icon;
+        const useBtn = modal.useBtn;
+
+        if (nameEl) nameEl.textContent = item.name || 'Item';
+        if (descEl) descEl.textContent = item.description || '';
+        if (iconEl) {
+            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
+        }
+
+        if (useBtn) {
+            useBtn.disabled = !item.consumable || (item.value <= 0);
+            useBtn.onclick = () => {
+                const used = this.consumeInventoryItem(item);
+                if (used) {
+                    this.hideInventoryItemModal();
+                    this.updateInventoryOverlay();
+                }
+            };
+        }
+
+        // Force visibility even if a lingering hidden class exists
+        modal.container.classList.remove('hidden');
+        modal.container.classList.remove('hidden');
+        modal.container.classList.add('active');
+        modal.container.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Hide inventory item modal
+     */
+    hideInventoryItemModal() {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+        modal.container.classList.remove('active');
+        modal.container.classList.add('hidden');
+        modal.container.setAttribute('aria-hidden', 'true');
+    }
+
+    /**
+     * Consume an inventory item and apply its effect
+     * @param {Object} item
+     * @returns {boolean}
+     */
+    consumeInventoryItem(item) {
+        if (!item || !item.key || !this.player) return false;
+        switch (item.key) {
+            case 'health_potion':
+                if (this.player.healthPotions <= 0) return false;
+                return this.player.consumeHealthPotion(25);
+            case 'coffee':
+                if (this.player.coffeeDrinks <= 0) return false;
+                this.player.coffeeDrinks = Math.max(0, this.player.coffeeDrinks - 1);
+                if (typeof this.player.applyCoffeeBuff === 'function') {
+                    this.player.applyCoffeeBuff(2, 120000);
+                }
+                if (typeof this.player.updateUI === 'function') {
+                    this.player.updateUI();
+                }
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Prepare the chest overlay UI
+     */
+    setupChestUI() {
+        const overlay = document.getElementById('chestOverlay');
+        this.chestUI.overlay = overlay;
+        this.chestUI.list = overlay ? overlay.querySelector('.chest-items') : null;
+        this.chestUI.title = overlay ? overlay.querySelector('.chest-title') : null;
+        this.chestUI.takeAllButton = overlay ? overlay.querySelector('[data-action="take-all"]') : null;
+        this.chestUI.emptyState = overlay ? overlay.querySelector('.chest-empty') : null;
+
+        if (overlay) {
+            const closeButton = overlay.querySelector('[data-action="close-chest"]');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => this.hideChestOverlay());
+            }
+        }
+
+        if (this.chestUI.takeAllButton) {
+            this.chestUI.takeAllButton.addEventListener('click', () => {
+                if (!this.chestUI.currentChest || !this.player) return;
+                const chest = this.chestUI.currentChest;
+                const tookAny = chest.takeAll(this.player);
+                this.populateChestOverlay(chest);
+                if (tookAny) this.playMenuEnterSound();
+            });
+        }
+
+        this.hideChestOverlay(true);
+    }
+
+    /**
+     * Prepare shop UI state
+     */
+    setupShopUI() {
+        this.shopUI.overlay = document.getElementById('shopOverlay');
+        this.shopUI.isOpen = false;
+        this.shopUI.list = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopItemList') : null;
+        this.shopUI.coinValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopCoinValue') : null;
+        this.shopUI.hpValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopHPValue') : null;
+        this.shopUI.rockValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopRockValue') : null;
+        this.shopUI.levelValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopLevelValue') : null;
+        this.shopUI.items = [
+            {
+                id: 'rock_bag',
+                name: 'Bag of Rocks',
+                price: 10,
+                iconClass: 'icon-rockbag',
+                grant: (player) => player?.addRocks && player.addRocks(10)
+            },
+            {
+                id: 'health_potion',
+                name: 'Health Potion',
+                price: 25,
+                iconClass: 'icon-healthpotion',
+                grant: (player) => player?.addHealthPotion && player.addHealthPotion(1)
+            },
+            {
+                id: 'coffee',
+                name: 'Coffee',
+                price: 10,
+                iconClass: 'icon-coffee',
+                grant: (player) => player?.addCoffee && player.addCoffee(1)
+            }
+        ];
+        this.hideShopOverlay(true);
+        this.shopGhostBubble = document.getElementById('shopGhostBubble');
+
+        // Keyboard navigation for shop list (W/S or Arrow keys)
+        document.addEventListener('keydown', (e) => {
+            this.handleShopListNavigation(e);
+        });
+    }
+
+    /**
+     * Show the inventory overlay
+     */
+    showInventoryOverlay() {
+        const overlay = this.inventoryUI.overlay;
+        if (!overlay) return;
+
+        overlay.classList.add('active');
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        this.inventoryUI.isOpen = true;
+        this.playMenuEnterSound();
+    }
+
+    /**
+     * Hide the inventory overlay
+     * @param {boolean} immediate - Included for API symmetry; no animation currently
+     */
+    hideInventoryOverlay(immediate = false) {
+        const overlay = this.inventoryUI.overlay;
+        if (!overlay) return;
+
+        const wasOpen = this.inventoryUI.isOpen;
+        overlay.classList.remove('active');
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        this.inventoryUI.isOpen = false;
+        if (wasOpen) {
+            this.playMenuExitSound();
+        }
+    }
+
+    /**
+     * Show the chest overlay
+     */
+    showChestOverlay(chest) {
+        const ui = this.chestUI;
+        if (!ui.overlay || !chest) return;
+
+        ui.currentChest = chest;
+        ui.isOpen = true;
+        if (ui.title) {
+            ui.title.textContent = chest.displayName || 'Chest';
+        }
+        ui.overlay.classList.add('active');
+        ui.overlay.classList.remove('hidden');
+        ui.overlay.setAttribute('aria-hidden', 'false');
+        this.populateChestOverlay(chest);
+        this.playMenuEnterSound();
+    }
+
+    /**
+     * Hide the chest overlay
+     */
+    hideChestOverlay(immediate = false) {
+        const ui = this.chestUI;
+        if (!ui.overlay) return;
+
+        const wasOpen = ui.isOpen;
+        ui.overlay.classList.remove('active');
+        ui.overlay.classList.add('hidden');
+        ui.overlay.setAttribute('aria-hidden', 'true');
+        ui.isOpen = false;
+        ui.currentChest = null;
+        if (wasOpen && !immediate) {
+            this.playMenuExitSound();
+        }
+    }
+
+    /**
+     * Populate the chest overlay with loot buttons
+     * @param {Chest} chest
+     */
+    populateChestOverlay(chest) {
+        const ui = this.chestUI;
+        if (!ui.list || !chest) return;
+
+        ui.list.innerHTML = '';
+        const items = chest.getAvailableItems();
+
+        if (ui.emptyState) {
+            ui.emptyState.classList.toggle('hidden', items.length > 0);
+        }
+        if (ui.takeAllButton) {
+            ui.takeAllButton.disabled = items.length === 0;
+        }
+
+        items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'chest-item';
+
+            const info = document.createElement('div');
+            info.className = 'chest-item__info';
+            const name = document.createElement('div');
+            name.className = 'chest-item__name';
+            name.textContent = item.name;
+            const desc = document.createElement('div');
+            desc.className = 'chest-item__desc';
+            desc.textContent = item.description || '';
+            info.appendChild(name);
+            info.appendChild(desc);
+
+            const takeBtn = document.createElement('button');
+            takeBtn.type = 'button';
+            takeBtn.className = 'chest-item__take';
+            takeBtn.textContent = 'Take';
+            takeBtn.addEventListener('click', () => {
+                const success = chest.takeItem(item.id, this.player);
+                if (success) {
+                    this.populateChestOverlay(chest);
+                    this.playMenuEnterSound();
+                }
+            });
+
+            row.appendChild(info);
+            row.appendChild(takeBtn);
+            ui.list.appendChild(row);
+        });
+    }
+
+    /**
+     * Show the shop overlay
+     */
+    showShopOverlay() {
+        const overlay = this.shopUI.overlay;
+        if (!overlay) return;
+
+        this.updateShopDisplay();
+        overlay.classList.add('active');
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        this.shopUI.isOpen = true;
+        this.playMenuEnterSound();
+
+        // Focus first shop item for keyboard navigation
+        const firstItem = this.shopUI.list ? this.shopUI.list.querySelector('.shop-item') : null;
+        if (firstItem) {
+            firstItem.focus();
+        }
+    }
+
+    /**
+     * Hide the shop overlay
+     * @param {boolean} immediate - provided for API symmetry
+     */
+    hideShopOverlay(immediate = false) {
+        const overlay = this.shopUI.overlay;
+        if (!overlay) return;
+
+        const wasOpen = this.shopUI.isOpen;
+        overlay.classList.remove('active');
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        this.shopUI.isOpen = false;
+        if (wasOpen) {
+            this.playMenuExitSound();
+        }
+    }
+
+    /**
+     * Render shop items and currency
+     */
+    updateShopDisplay() {
+        const ui = this.shopUI;
+        if (!ui.list || !Array.isArray(ui.items)) return;
+
+        const player = this.player;
+        if (ui.coinValue && player) {
+            ui.coinValue.textContent = player.coins ?? 0;
+        }
+        if (ui.hpValue && player) {
+            const current = Math.max(0, Math.floor(player.health));
+            const max = Math.max(1, Math.floor(player.maxHealth));
+            ui.hpValue.textContent = `${current}/${max}`;
+        }
+        if (ui.rockValue && player) {
+            ui.rockValue.textContent = player.rocks ?? 0;
+        }
+        if (ui.levelValue && player) {
+            ui.levelValue.textContent = player.level ?? 1;
+        }
+
+        ui.list.innerHTML = '';
+        ui.items.forEach(item => {
+            const affordable = player ? (player.coins ?? 0) >= item.price : false;
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'shop-item';
+            row.innerHTML = `
+                <span class="shop-item-icon ${item.iconClass}" aria-hidden="true"></span>
+                <span class="shop-item-name">${item.name}</span>
+                <span class="shop-item-price">${item.price} coins</span>
+            `;
+            row.disabled = !affordable;
+            row.addEventListener('click', () => {
+                this.purchaseShopItem(item);
+            });
+            ui.list.appendChild(row);
+        });
+    }
+
+    /**
+     * Attempt to purchase a shop item
+     * @param {Object} item
+     */
+    purchaseShopItem(item) {
+        if (!item || !this.player) return false;
+        const player = this.player;
+        const coins = player.coins ?? 0;
+        if (coins < item.price) {
+            if (this.audioManager) {
+                this.audioManager.playSound('error', 0.8);
+            }
+            return false;
+        }
+
+        player.coins = coins - item.price;
+        if (typeof player.updateUI === 'function') {
+            player.updateUI();
+        }
+        if (typeof item.grant === 'function') {
+            item.grant(player);
+        }
+        if (this.audioManager) {
+            this.audioManager.playSound('menu_enter', 0.8);
+        }
+        this.updateShopDisplay();
+        return true;
+    }
+
+    /**
+     * Keyboard navigation for shop items (W/S or ArrowUp/ArrowDown)
+     */
+    handleShopListNavigation(e) {
+        if (!this.shopUI?.isOpen) return;
+        if (!this.shopUI.list) return;
+
+        const key = e.key;
+        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
+        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
+        if (!isDown && !isUp) return;
+
+        const buttons = Array.from(this.shopUI.list.querySelectorAll('.shop-item'));
+        if (!buttons.length) return;
+
+        const activeEl = document.activeElement;
+        let currentIndex = buttons.indexOf(activeEl);
+
+        if (currentIndex === -1) {
+            currentIndex = isDown ? -1 : 0; // start before first on down, first on up
+        }
+
+        const delta = isDown ? 1 : -1;
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) nextIndex = buttons.length - 1;
+        if (nextIndex >= buttons.length) nextIndex = 0;
+
+        buttons[nextIndex].focus();
+        e.preventDefault();
+    }
+
+    /**
+     * Toggle inventory overlay with the I key
+     */
+    toggleInventoryOverlay() {
+        // Only allow while playing or paused so it doesn't overlap start/game over menus
+        if (!this.stateManager) return;
+        if (!this.stateManager.isPlaying() && !this.stateManager.isPaused()) return;
+
+        if (this.inventoryUI.isOpen) {
+            this.hideInventoryOverlay();
+        } else {
+            this.showInventoryOverlay();
+        }
     }
 
     /**
@@ -273,6 +1078,9 @@ class Game {
         this.dialogueState.index = 0;
         this.dialogueState.active = true;
         this.dialogueState.dismissing = false;
+        this.dialogueState.speaker = null;
+        this.dialogueState.anchor = null;
+        this.dialogueState.onClose = null;
         this.showSpeechBubble(this.dialogueState.messages[0]);
     }
 
@@ -285,6 +1093,162 @@ class Game {
         if (this.input.consumeKeyPress('enter') || this.input.consumeKeyPress('numpadenter')) {
             this.advanceSpeechBubble();
         }
+    }
+
+    /**
+     * Handle player interaction input (E/Enter) for chests
+     */
+    handleChestInput() {
+        if (!this.player || !this.input) return;
+
+        if (this.input.consumeInteractPress()) {
+            if (this.chestUI.isOpen) {
+                this.hideChestOverlay();
+                return;
+            }
+
+            const talker = this.getNearbyTalkableNpc();
+            if (talker) {
+                this.startNpcDialogue(talker);
+                return;
+            }
+
+            // Sign interaction takes priority over chests
+            const nearbySign = this.getNearbySign();
+            if (nearbySign) {
+                this.signDialogue.target = nearbySign;
+                this.signDialogue.messages = (nearbySign.dialogueLines && nearbySign.dialogueLines.length)
+                    ? [...nearbySign.dialogueLines]
+                    : [...this.signDialogue.defaultMessages];
+                if (this.signDialogue.active) {
+                    this.advanceSignDialogue();
+                } else {
+                    this.showSignDialogue();
+                }
+                return;
+            }
+
+            const chest = this.getNearbyChest();
+            if (chest) {
+                chest.open();
+                this.showChestOverlay(chest);
+            }
+        }
+    }
+
+    /**
+     * Handle player interaction input (Z key)
+     * Delegates to player if an interaction handler exists
+     */
+    handleInteractionInput() {
+        if (!this.player || !this.input) return;
+
+        if (this.input.consumeActionPress()) {
+            // Close shop if open
+            if (this.shopUI.isOpen) {
+                this.hideShopOverlay();
+                if (this.shopGhost) this.shopGhost.toggleFrame();
+                return;
+            }
+
+            // Open shop if near the ghost
+            const ghost = this.getNearbyShopGhost();
+            if (ghost) {
+                ghost.toggleFrame();
+                this.showShopOverlay();
+                return;
+            }
+
+            // Fallback to player interaction
+            if (typeof this.player.handleInteraction === 'function') {
+                this.player.handleInteraction();
+            }
+        }
+    }
+
+    /**
+     * Find the shop ghost if player is in range
+     * @returns {ShopGhost|null}
+     */
+    getNearbyShopGhost() {
+        if (this.shopGhost && this.player && this.shopGhost.isPlayerNearby(this.player)) {
+            return this.shopGhost;
+        }
+        return null;
+    }
+
+    /**
+     * Locate a talkable NPC in range (Enter key interactions)
+     * @returns {Entity|null}
+     */
+    getNearbyTalkableNpc() {
+        if (!this.player || !Array.isArray(this.npcs)) return null;
+        return this.npcs.find(npc =>
+            npc &&
+            npc.canTalk &&
+            typeof npc.isPlayerNearby === 'function' &&
+            npc.isPlayerNearby(this.player, npc.interactRadius || 120)
+        ) || null;
+    }
+
+    /**
+     * Find a chest if the player is close enough
+     * @returns {Chest|null}
+     */
+    getNearbyChest() {
+        if (!this.player || !this.chests) return null;
+        return this.chests.find(chest => chest.isPlayerNearby(this.player)) || null;
+    }
+
+    /**
+     * Audio helpers for menus and UI
+     */
+    playMenuEnterSound() {
+        if (this.audioManager) {
+            this.audioManager.playSound('menu_enter', 1);
+        }
+    }
+
+    playMenuExitSound() {
+        if (this.audioManager) {
+            this.audioManager.playSound('menu_exit', 1);
+        }
+    }
+
+    playButtonSound() {
+        if (this.audioManager) {
+            this.audioManager.playSound('button', 1);
+        }
+    }
+
+    playPurchaseSound() {
+        if (this.audioManager) {
+            this.audioManager.playSound('purchase', 1);
+        }
+    }
+
+    /**
+     * Start a dialogue with an NPC using the global speech bubble
+     * @param {Entity} npc
+     */
+    startNpcDialogue(npc) {
+        if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
+        if (this.dialogueState.active) return;
+
+        this.dialogueState.messages = npc.dialogueLines.slice();
+        this.dialogueState.index = 0;
+        this.dialogueState.speaker = npc;
+        this.dialogueState.anchor = npc;
+        this.dialogueState.onClose = () => {
+            if (typeof npc.onDialogueClosed === 'function') {
+                npc.onDialogueClosed();
+            }
+        };
+        this.dialogueState.dismissing = false;
+        if (typeof npc.setTalking === 'function') {
+            npc.setTalking(true);
+        }
+        this.showSpeechBubble(this.dialogueState.messages[0]);
     }
 
     /**
@@ -329,22 +1293,36 @@ class Game {
      */
     hideSpeechBubble(immediate = false) {
         const bubble = this.speechBubble.container;
+        const runCloseHook = () => {
+            if (typeof this.dialogueState.onClose === 'function') {
+                this.dialogueState.onClose();
+            } else if (this.dialogueState.speaker && typeof this.dialogueState.speaker.onDialogueClosed === 'function') {
+                this.dialogueState.speaker.onDialogueClosed();
+            }
+        };
+        const resetDialogueState = () => {
+            runCloseHook();
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            this.dialogueState.hideTimeout = null;
+            this.dialogueState.speaker = null;
+            this.dialogueState.anchor = null;
+            this.dialogueState.onClose = null;
+        };
         if (this.dialogueState.hideTimeout) {
             clearTimeout(this.dialogueState.hideTimeout);
             this.dialogueState.hideTimeout = null;
         }
 
         if (!bubble) {
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
+            resetDialogueState();
             return;
         }
 
         if (immediate) {
             bubble.classList.remove('show');
             bubble.setAttribute('aria-hidden', 'true');
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
+            resetDialogueState();
             return;
         }
 
@@ -352,24 +1330,35 @@ class Game {
         bubble.classList.remove('show');
         this.dialogueState.hideTimeout = setTimeout(() => {
             bubble.setAttribute('aria-hidden', 'true');
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
-            this.dialogueState.hideTimeout = null;
+            resetDialogueState();
         }, 250);
     }
 
     /**
-     * Keep the bubble anchored to the player's mouth horizontally
+     * Keep the bubble anchored to the active speaker (player or NPC)
      */
     updateSpeechBubblePosition() {
         const bubble = this.speechBubble.container;
         if (!bubble) return;
 
+        const camera = this.camera || { x: 0, y: 0 };
+        const anchor = this.dialogueState.anchor;
         let targetX = this.canvas.width / 2;
         let headY = this.canvas.height / 2;
-        if (this.player) {
-            targetX = this.player.x - this.camera.x + this.player.width / 2;
-            headY = this.player.y - this.camera.y;
+        let anchorWidth = 0;
+        let facingDir = 1;
+
+        if (anchor) {
+            const center = anchor.getCenter ? anchor.getCenter() : { x: anchor.x + (anchor.width || 0) / 2, y: anchor.y + (anchor.height || 0) / 2 };
+            targetX = center.x - camera.x;
+            headY = anchor.y - camera.y;
+            anchorWidth = anchor.width || 0;
+            facingDir = anchor.facing || 1;
+        } else if (this.player) {
+            targetX = this.player.x - camera.x + this.player.width / 2;
+            headY = this.player.y - camera.y;
+            anchorWidth = this.player.width;
+            facingDir = this.player.facing || 1;
         }
 
         bubble.style.left = `${targetX}px`;
@@ -381,8 +1370,48 @@ class Game {
 
         // Offset tail toward the player's mouth (slight bias toward facing direction)
         // Nudge tail 20px further right relative to previous anchor
-        const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
+        const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+    }
+
+    /**
+     * Update shop ghost hint bubble position and visibility
+     */
+    updateShopGhostBubble() {
+        const bubble = this.shopGhostBubble;
+        const ghost = this.shopGhost;
+
+        if (!bubble || !ghost || !this.player) {
+            if (bubble) bubble.classList.add('hidden');
+            return;
+        }
+
+        if (this.shopUI.isOpen || !ghost.isPlayerNearby(this.player)) {
+            bubble.classList.add('hidden');
+            bubble.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const screenX = ghost.x - this.camera.x + ghost.width / 2;
+        const screenY = ghost.y - this.camera.y + ghost.bobOffset;
+        bubble.style.left = `${screenX}px`;
+        const bottomFromCanvas = this.canvas.height - screenY + ghost.height + 6;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+        bubble.classList.remove('hidden');
+        bubble.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Update chests (UI + animation hooks)
+     * @param {number} deltaTime
+     */
+    updateChests(deltaTime) {
+        if (!Array.isArray(this.chests)) return;
+        this.chests.forEach(chest => {
+            if (chest && chest.update) {
+                chest.update(deltaTime);
+            }
+        });
     }
 
     /**
@@ -412,8 +1441,13 @@ class Game {
             safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
         };
 
+        // Size markers (escaped angle brackets)
+        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
+        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
+        apply(/&lt;(.+?)&gt;/g, 'speech-big');
+        apply(/_(.+?)_/g, 'speech-tiny');
+
         apply(/\*(.+?)\*/g, 'speech-bold');
-        apply(/_(.+?)_/g, 'speech-italic');
         apply(/%(.+?)%/g, 'speech-shake');
         apply(/~(.+?)~/g, 'speech-rainbow');
         apply(/\^(.+?)\^/g, 'speech-glow');
@@ -446,8 +1480,35 @@ class Game {
         this.enemies = [];
         this.items = [];
         this.hazards = [];
+        this.chests = [];
         this.flag = null;
+        this.signBoards = [];
+        this.signBoard = null;
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        this.signBoard = null;
+        this.signBoards = [];
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        this.signBoard = null;
         
+        // Determine player spawn
+        const getTestSpawn = () => {
+            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.canvas.height - 50);
+            const playerWidth = 45;
+            const playerHeight = 66;
+            const defaultX = 140; // aligns with test-room sign anchor
+            const signX = this.signBoard ? this.signBoard.x : defaultX + 40;
+            return {
+                x: signX - 20 - playerWidth,
+                y: groundY - playerHeight
+            };
+        };
+
         if (this.testMode) {
             this.createTestRoom();
         } else {
@@ -459,17 +1520,215 @@ class Game {
         }
         
         // Set level properties
+        const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
+
         this.level = {
-            width: this.canvas.width,
+            width: this.testMode ? 4600 : this.canvas.width,
             height: this.canvas.height,
-            spawnX: this.testMode ? (this.canvas.width / 2) - 22.5 : 100, // Center on platform
-            spawnY: this.testMode ? (this.canvas.height / 2) - 100 : this.canvas.height - 150 // Safely above platform
+            spawnX: spawn.x,
+            spawnY: spawn.y
         };
         
         // Create level completion flag
         this.createFlag();
+        if (this.testMode && !this.initialTestRoomState) {
+            this.captureInitialTestRoomState();
+        }
         
         // Create background layers
+        this.createBackground();
+    }
+
+    /**
+     * Record the pristine test room layout so resets can rebuild it exactly
+     */
+    captureInitialTestRoomState() {
+        if (!this.testMode || this.initialTestRoomState) return;
+
+        const chestBlueprints = (this.chests || []).map(chest => ({
+            x: chest.x,
+            y: chest.y,
+            displayName: chest.displayName,
+            contents: (chest.contents || []).map(entry => ({ ...entry, taken: false }))
+        }));
+
+        const npcBlueprints = [];
+        if (this.shopGhost) {
+            npcBlueprints.push({ type: 'shopGhost', x: this.shopGhost.x, y: this.shopGhost.y });
+        }
+        if (this.princess) {
+            npcBlueprints.push({
+                type: 'princess',
+                x: this.princess.x,
+                y: this.princess.y,
+                dialogueLines: [...(this.princess.dialogueLines || [])]
+            });
+        }
+        if (this.balloonFan) {
+            npcBlueprints.push({
+                type: 'balloonFan',
+                x: this.balloonFan.x,
+                y: this.balloonFan.baseY ?? this.balloonFan.y,
+                dialogueLines: [...(this.balloonFan.dialogueLines || [])]
+            });
+        }
+
+        const enemyBlueprints = (this.enemies || []).map(enemy => {
+            if (enemy instanceof Slime) {
+                return {
+                    type: 'slime',
+                    x: enemy.x,
+                    y: enemy.y,
+                    patrol: enemy.simplePatrol ? {
+                        left: enemy.simplePatrol.left,
+                        right: enemy.simplePatrol.right,
+                        speed: enemy.simplePatrol.speed,
+                        groundY: enemy.simplePatrol.groundY
+                    } : null
+                };
+            }
+            return null;
+        }).filter(Boolean);
+
+        const itemBlueprints = (this.items || []).map(item => {
+            if (item instanceof HealthPotion) {
+                return { type: 'health_potion', x: item.x, y: item.y, healAmount: item.healAmount };
+            }
+            if (item instanceof CoffeeItem) {
+                return { type: 'coffee', x: item.x, y: item.y };
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.initialTestRoomState = {
+            level: { ...(this.level || {}) },
+            testGroundY: this.testGroundY,
+            platforms: (this.platforms || []).map(p => ({
+                x: p.x,
+                y: p.y,
+                width: p.width,
+                height: p.height,
+                type: p.type
+            })),
+            enemies: enemyBlueprints,
+            items: itemBlueprints,
+            chests: chestBlueprints,
+            npcs: npcBlueprints,
+            signBoard: this.signBoard ? {
+                x: this.signBoard.x,
+                y: this.signBoard.y,
+                spriteSrc: this.signBoard.sprite?.src
+            } : null,
+            signBoards: (this.signBoards || []).map(sign => ({
+                x: sign.x,
+                y: sign.y,
+                spriteSrc: sign.sprite?.src,
+                dialogueLines: sign.dialogueLines ? [...sign.dialogueLines] : null
+            })),
+            flag: this.flag ? { x: this.flag.x, y: this.flag.y } : null
+        };
+    }
+
+    /**
+     * Rebuild the test room exactly as it first loaded
+     */
+    restoreInitialTestRoomState() {
+        const blueprint = this.initialTestRoomState;
+        if (!blueprint) {
+            this.createLevel();
+            return;
+        }
+
+        this.testMode = true;
+        this.level = { ...(blueprint.level || {}) };
+        this.testGroundY = blueprint.testGroundY;
+
+        this.platforms = (blueprint.platforms || []).map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
+
+        this.enemies = (blueprint.enemies || []).map(def => {
+            if (def.type === 'slime') {
+                const slime = new Slime(def.x, def.y);
+                slime.game = this;
+                slime.y = def.y;
+                if (def.patrol) {
+                    slime.setSimplePatrol(def.patrol.left, def.patrol.right, def.patrol.speed, def.patrol.groundY);
+                }
+                return slime;
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.items = (blueprint.items || []).map(def => {
+            if (def.type === 'health_potion') {
+                const potion = new HealthPotion(def.x, def.y, def.healAmount);
+                potion.game = this;
+                return potion;
+            }
+            if (def.type === 'coffee') {
+                const coffee = new CoffeeItem(def.x, def.y);
+                coffee.game = this;
+                return coffee;
+            }
+            return null;
+        }).filter(Boolean);
+
+        this.chests = (blueprint.chests || []).map(def => {
+            const chest = new Chest(def.x, def.y);
+            chest.displayName = def.displayName;
+            chest.contents = (def.contents || []).map(entry => ({ ...entry, taken: false }));
+            chest.game = this;
+            return chest;
+        });
+
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        (blueprint.npcs || []).forEach(def => {
+            if (def.type === 'shopGhost') {
+                const ghost = new ShopGhost(def.x, def.y);
+                ghost.game = this;
+                this.shopGhost = ghost;
+                this.npcs.push(ghost);
+            } else if (def.type === 'princess') {
+                const princess = new PrincessNPC(def.x, def.y);
+                princess.game = this;
+                princess.dialogueLines = [...(def.dialogueLines || [])];
+                this.princess = princess;
+                this.npcs.push(princess);
+            } else if (def.type === 'balloonFan') {
+                const balloonFan = new BalloonNPC(def.x, def.y);
+                balloonFan.game = this;
+                balloonFan.baseY = def.y;
+                balloonFan.dialogueLines = [...(def.dialogueLines || [])];
+                this.balloonFan = balloonFan;
+                this.npcs.push(balloonFan);
+            }
+        });
+
+        this.signBoard = blueprint.signBoard
+            ? new Sign(blueprint.signBoard.x, blueprint.signBoard.y, blueprint.signBoard.spriteSrc)
+            : null;
+        this.signBoards = (blueprint.signBoards || []).map(def => {
+            const sign = new Sign(def.x, def.y, def.spriteSrc);
+            if (def.dialogueLines) sign.dialogueLines = [...def.dialogueLines];
+            return sign;
+        });
+        if (this.signBoard) {
+            const alreadyIncluded = this.signBoards.some(sign => sign && sign.x === this.signBoard.x && sign.y === this.signBoard.y);
+            if (!alreadyIncluded) {
+                this.signBoards.unshift(this.signBoard);
+            }
+        }
+        if (!this.signBoard && this.signBoards.length > 0) {
+            this.signBoard = this.signBoards[0];
+        }
+
+        this.flag = blueprint.flag ? Flag.create(blueprint.flag.x, blueprint.flag.y) : null;
+        if (this.flag) {
+            this.flag.game = this;
+        }
+
         this.createBackground();
     }
 
@@ -587,6 +1846,16 @@ class Game {
                 this.items.push(rock);
             });
         });
+
+        // Coffee speed buff pickups
+        const coffeeSpawns = [
+            { x: 1550, y: 360 }
+        ];
+        coffeeSpawns.forEach(spawn => {
+            const coffee = new CoffeeItem(spawn.x, spawn.y);
+            coffee.game = this;
+            this.items.push(coffee);
+        });
     }
 
     /**
@@ -594,8 +1863,16 @@ class Game {
      */
     createFlag() {
         // Position the flag near the end of the level, but not at the very edge
-        const flagX = this.level.width - 300;
-        const flagY = this.level.height - 120; // Position above ground
+        const flagHeight = 128;
+        const groundHeight = 40;
+        let flagX = this.level.width - 300;
+        let flagY = (this.level.height - groundHeight) - flagHeight; // Sit on ground
+
+        if (this.testMode) {
+            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.level.height - 50);
+            flagY = groundY - flagHeight; // sit on top of ground
+            flagX = 3880; // at the far/right base of the extended mountain path
+        }
         
         this.flag = Flag.create(flagX, flagY);
         this.flag.game = this;
@@ -724,11 +2001,28 @@ class Game {
             this.input.mouse.clicked = false;
             this.input.mouse.pressed = false;
         }
+
+        // Hide overlays on fresh start
+        this.hideInventoryOverlay(true);
+        this.hideChestOverlay(true);
+        this.hideShopOverlay(true);
         
         // Create player
         this.player = new Player(this.level.spawnX, this.level.spawnY);
         this.player.game = this;
+        // Ensure fresh player state (buffs/items/health/UI)
+        if (typeof this.player.reset === 'function') {
+            this.player.reset();
+        }
         // Player uses default gravity from Entity class
+        if (typeof this.player.updateHealthUI === 'function') {
+            this.player.updateHealthUI();
+        }
+        if (this.badgeUI) {
+            this.badgeUI.reapplyAllModifiers(this.player);
+        }
+
+        this.updateInventoryOverlay();
         
         // Reset game stats
         this.stats = {
@@ -771,6 +2065,21 @@ class Game {
         // Update input
         this.input.update();
         this.handleSpeechBubbleInput();
+        this.handleChestInput();
+        this.handleInteractionInput();
+
+        // Pause world updates while overlays are open
+        const overlayBlocking = (this.inventoryUI?.isOpen) || (this.shopUI?.isOpen);
+        if (overlayBlocking) {
+            return;
+        }
+
+        // Update NPCs
+        this.npcs.forEach(npc => {
+            if (npc.update) {
+                npc.update(deltaTime);
+            }
+        });
         
         // Update player
         if (this.player) {
@@ -778,6 +2087,11 @@ class Game {
             this.updateCamera();
             this.checkPlayerCollisions();
         }
+
+        // Update chests (callouts + glow)
+        this.updateChests(deltaTime);
+        this.updateSignCallout();
+        this.updateSignDialoguePosition();
         
         // Update all background layers
         this.backgroundLayers.forEach(layer => {
@@ -797,7 +2111,7 @@ class Game {
                 return true;
             } else {
                 // Enemy defeated
-                this.stats.enemiesDefeated++;
+                this.handleEnemyRemoved(enemy);
                 return false;
             }
         });
@@ -841,16 +2155,16 @@ class Game {
         // Update flag
         if (this.flag) {
             this.flag.update(deltaTime);
-            
-            // Check flag collision with player (disabled in test mode)
-            if (!this.testMode && this.player && this.flag.checkCollision(this.player)) {
-                // Player collided with flag
+
+            // Check flag collision with player (always enabled)
+            if (this.player && this.flag.checkCollision(this.player)) {
                 this.flag.collect(this.player);
             }
         }
         
         // Update statistics
         this.updateGameStats(deltaTime);
+        this.updateInventoryOverlay();
         
         // Check game over conditions
         this.checkGameOver();
@@ -895,6 +2209,9 @@ class Game {
                 this.resolvePlayerPlatformCollision(platform);
             }
         });
+
+        // NPC collisions (solid talkers/shopkeepers)
+        this.handleNpcCollisions();
         
         // Enemy collisions (disabled in test mode)
         if (!this.testMode) {
@@ -967,6 +2284,64 @@ class Game {
             } else {
                 // Hit from below
                 this.player.y = platform.y + platform.height;
+                this.player.velocity.y = Math.max(0, this.player.velocity.y);
+            }
+        }
+    }
+
+    /**
+     * Resolve collisions between the player and solid NPCs
+     */
+    handleNpcCollisions() {
+        if (!this.player || !Array.isArray(this.npcs)) return;
+        this.npcs.forEach(npc => {
+            if (!npc || npc.solid === false) return;
+            if (CollisionDetection.entityCollision(this.player, npc)) {
+                this.resolvePlayerEntityCollision(npc);
+            }
+        });
+    }
+
+    /**
+     * Push the player out of an NPC hitbox
+     * @param {Entity} entity
+     */
+    resolvePlayerEntityCollision(entity) {
+        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const entityBounds = CollisionDetection.getCollisionBounds(entity);
+        const offsetX = this.player.collisionOffset?.x || 0;
+        const offsetY = this.player.collisionOffset?.y || 0;
+
+        const overlapX = Math.min(
+            playerBounds.x + playerBounds.width - entityBounds.x,
+            entityBounds.x + entityBounds.width - playerBounds.x
+        );
+        const overlapY = Math.min(
+            playerBounds.y + playerBounds.height - entityBounds.y,
+            entityBounds.y + entityBounds.height - playerBounds.y
+        );
+
+        if (overlapX < overlapY) {
+            // Horizontal collision
+            if (playerBounds.x < entityBounds.x) {
+                // Hit from left
+                this.player.x = entityBounds.x - playerBounds.width - offsetX;
+                this.player.velocity.x = Math.min(0, this.player.velocity.x);
+            } else {
+                // Hit from right
+                this.player.x = entityBounds.x + entityBounds.width - offsetX;
+                this.player.velocity.x = Math.max(0, this.player.velocity.x);
+            }
+        } else {
+            // Vertical collision
+            if (playerBounds.y < entityBounds.y) {
+                // Landing on top
+                this.player.y = entityBounds.y - playerBounds.height - offsetY;
+                this.player.velocity.y = Math.min(0, this.player.velocity.y);
+                this.player.onGround = true;
+            } else {
+                // Hit from below
+                this.player.y = entityBounds.y + entityBounds.height - offsetY;
                 this.player.velocity.y = Math.max(0, this.player.velocity.y);
             }
         }
@@ -1062,6 +2437,17 @@ class Game {
     }
 
     /**
+     * Handle bookkeeping when an enemy is removed from play
+     * @param {Enemy} enemy
+     */
+    handleEnemyRemoved(enemy) {
+        this.stats.enemiesDefeated++;
+        if (this.badgeUI) {
+            this.badgeUI.handleEnemyDefeated(enemy);
+        }
+    }
+
+    /**
      * Update game statistics
      * @param {number} deltaTime - Time since last frame
      */
@@ -1098,12 +2484,21 @@ class Game {
         
         // Render platforms
         this.renderPlatforms();
-        
+
+        // Render signs
+        this.renderSigns();
+
+        // Render NPCs
+        this.renderNPCs();
+
+        // Render chests
+        this.renderChests();
+
         // Render hazards
         this.hazards.forEach(hazard => {
             hazard.render(this.ctx, this.camera);
         });
-        
+
         // Render items
         this.items.forEach(item => {
             item.render(this.ctx, this.camera);
@@ -1132,6 +2527,98 @@ class Game {
         // Keep speech bubble following player
         if (this.dialogueState.active) {
             this.updateSpeechBubblePosition();
+        }
+
+        // Update NPC hint bubble position
+        this.updateShopGhostBubble();
+
+        // Debug overlay
+        if (this.debug) {
+            this.renderDebugOverlay();
+        }
+    }
+
+    /**
+     * Render debug hitboxes for all entities
+     */
+    renderDebugOverlay() {
+        const ctx = this.ctx;
+        const cam = this.camera || { x: 0, y: 0 };
+        const drawRect = (x, y, w, h, color = 'rgba(0,255,0,0.35)', stroke = '#00ff00') => {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.6;
+            ctx.fillRect(x, y, w, h);
+            ctx.globalAlpha = 1;
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        };
+
+        const rectForEntity = (e) => ({
+            x: (e.x + (e.collisionOffset?.x || 0)) - cam.x,
+            y: (e.y + (e.collisionOffset?.y || 0)) - cam.y,
+            w: e.collisionWidth || e.width || 0,
+            h: e.collisionHeight || e.height || 0
+        });
+
+        // Player
+        if (this.player) {
+            const r = rectForEntity(this.player);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,0,0.25)', '#00ff00');
+        }
+
+        // Enemies
+        this.enemies.forEach(enemy => {
+            if (!enemy) return;
+            const r = rectForEntity(enemy);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,0,0.25)', '#ff0000');
+        });
+
+        // Items
+        this.items.forEach(item => {
+            if (!item) return;
+            const r = rectForEntity(item);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,215,0,0.25)', '#ffd700');
+        });
+
+        // Projectiles
+        this.projectiles.forEach(p => {
+            if (!p) return;
+            const r = rectForEntity(p);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,255,0.25)', '#00ffff');
+        });
+
+        // Hazards
+        this.hazards.forEach(h => {
+            if (!h) return;
+            const r = rectForEntity(h);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,255,0.25)', '#ff00ff');
+        });
+
+        // Chests
+        this.chests.forEach(ch => {
+            if (!ch) return;
+            const r = rectForEntity(ch);
+            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
+        });
+
+        // Platforms (not entities)
+        this.platforms.forEach(p => {
+            if (!p) return;
+            const x = p.x - cam.x;
+            const y = p.y - cam.y;
+            drawRect(x, y, p.width, p.height, 'rgba(128,128,128,0.2)', '#808080');
+        });
+
+        // Signs
+        if (Array.isArray(this.signBoards)) {
+            this.signBoards.forEach(sign => {
+                if (!sign) return;
+                const r = rectForEntity(sign);
+                drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
+            });
         }
     }
 
@@ -1248,6 +2735,209 @@ class Game {
     renderPlatforms() {
         this.platforms.forEach(platform => {
             StylizedPlatform.renderPlatform(this.ctx, platform, this.camera);
+        });
+    }
+
+    /**
+     * Render NPCs (currently only the shop ghost)
+     */
+    renderNPCs() {
+        this.npcs.forEach(npc => {
+            if (npc.render) {
+                npc.render(this.ctx, this.camera);
+            }
+        });
+    }
+
+    /**
+     * Render all placed chests
+     */
+    renderChests() {
+        this.chests.forEach(chest => {
+            if (chest && chest.render) {
+                chest.render(this.ctx, this.camera);
+            }
+        });
+    }
+
+    /**
+     * Check if player is near the sign
+     */
+    isPlayerNearSign(sign) {
+        if (!sign || !this.player) return false;
+        const px = this.player.x + this.player.width / 2;
+        const py = this.player.y + this.player.height / 2;
+        const sx = sign.x;
+        const sy = sign.y;
+        const dx = px - sx;
+        const dy = py - sy;
+        return Math.hypot(dx, dy) <= 120;
+    }
+
+    /**
+     * Find a nearby sign to interact with
+     */
+    getNearbySign() {
+        if (!this.player || !Array.isArray(this.signBoards)) return null;
+        return this.signBoards.find(sign => this.isPlayerNearSign(sign)) || null;
+    }
+
+    /**
+     * Toggle the sign dialogue bubble set
+     */
+    toggleSignDialogue() {
+        if (this.signDialogue.active) {
+            this.hideSignDialogue();
+        } else {
+            this.showSignDialogue();
+        }
+    }
+
+    /**
+     * Show the sign dialogue bubbles
+     */
+    showSignDialogue() {
+        const dlg = this.signDialogue;
+        if (!dlg.container) return;
+        if (!dlg.target) {
+            dlg.target = this.getNearbySign();
+        }
+        if (!dlg.target) return;
+        if (!dlg.messages || dlg.messages.length === 0) {
+            dlg.messages = dlg.defaultMessages ? [...dlg.defaultMessages] : [];
+        }
+        dlg.active = true;
+        dlg.index = 0;
+        dlg.container.style.display = 'block';
+        dlg.container.setAttribute('aria-hidden', 'false');
+        dlg.container.classList.add('show');
+        // Target the sign itself for positioning
+        this.setSignBubbleText(dlg.messages[dlg.index] || '');
+        this.updateSignDialoguePosition();
+
+        // Keep the hint visible inside the bubble
+        if (dlg.hint) {
+            dlg.hint.style.display = 'block';
+        }
+    }
+
+    /**
+     * Hide the sign dialogue bubbles
+     */
+    hideSignDialogue(immediate = false) {
+        const dlg = this.signDialogue;
+        if (!dlg.container) return;
+        dlg.active = false;
+        dlg.index = 0;
+        dlg.container.style.display = 'none';
+        dlg.container.setAttribute('aria-hidden', 'true');
+        dlg.container.classList.remove('show');
+
+        if (dlg.hint) {
+            dlg.hint.style.display = 'none';
+        }
+    }
+
+    /**
+     * Advance through sign dialogue messages
+     */
+    advanceSignDialogue() {
+        const dlg = this.signDialogue;
+        if (!dlg.active) return;
+        dlg.index++;
+        if (dlg.index >= dlg.messages.length) {
+            this.hideSignDialogue();
+            return;
+        }
+        this.setSignBubbleText(dlg.messages[dlg.index] || '');
+        this.updateSignDialoguePosition();
+    }
+
+    /**
+    * Set bubble text
+    */
+    setSignBubbleText(text) {
+        const textEl = this.signDialogue.textEl;
+        if (textEl) textEl.innerHTML = this.formatSpeechText(text ?? '');
+    }
+
+    /**
+     * Ensure callout exists
+     */
+    ensureSignCallout() {
+        if (this.signCallout) return;
+        const container = document.getElementById('gameContainer');
+        if (!container) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'sign-callout hidden';
+        bubble.textContent = 'Press Enter to talk to me!';
+        bubble.setAttribute('aria-hidden', 'true');
+        container.appendChild(bubble);
+        this.signCallout = bubble;
+    }
+
+    /**
+     * Update sign callout visibility and position
+     */
+    updateSignCallout() {
+        this.ensureSignCallout();
+        if (!this.signCallout) return;
+
+        const nearbySign = this.getNearbySign();
+        const shouldShow = !this.signDialogue.active && nearbySign;
+        if (!shouldShow) {
+            this.signCallout.classList.add('hidden');
+            this.signCallout.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const sign = nearbySign;
+        const camera = this.camera || { x: 0, y: 0 };
+        const screenX = sign.x - camera.x + sign.width / 2;
+        const screenY = sign.y - camera.y;
+        const bottomFromCanvas = this.canvas.height - screenY + 44;
+
+        this.signCallout.style.left = `${screenX}px`;
+        this.signCallout.style.bottom = `${bottomFromCanvas}px`;
+        this.signCallout.classList.remove('hidden');
+        this.signCallout.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Update dialogue bubble position
+     */
+    updateSignDialoguePosition() {
+        const dlg = this.signDialogue;
+        if (!dlg.active || !dlg.container) return;
+        const target = dlg.target;
+        if (!target) return;
+        let tx = target.x || 0;
+        let ty = target.y || 0;
+        let h = target.height || 0;
+        // If target is Entity, adjust to center
+        if (target.getCenter) {
+            const c = target.getCenter();
+            tx = c.x;
+            ty = c.y;
+            h = target.height || 0;
+        }
+        const camera = this.camera || { x: 0, y: 0 };
+        const screenX = tx - camera.x;
+        const screenY = ty - camera.y - h;
+        dlg.container.style.left = `${screenX}px`;
+        dlg.container.style.bottom = `${this.canvas.height - screenY}px`;
+        dlg.container.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Render all placed signs
+     */
+    renderSigns() {
+        if (!Array.isArray(this.signBoards)) return;
+        this.signBoards.forEach(sign => {
+            if (sign && typeof sign.render === 'function') {
+                sign.render(this.ctx, this.camera);
+            }
         });
     }
     
@@ -1371,21 +3061,74 @@ class Game {
      * Reset game entities and state (used by GameStateManager)
      */
     resetGame() {
+        // Ensure we have a baseline snapshot to restore from
+        if (!this.initialStateTemplate) {
+            this.saveInitialStateTemplate();
+        }
+
+        // Restore primitive state from the initial template
+        if (this.initialStateTemplate) {
+            this.timeScale = this.initialStateTemplate.timeScale;
+            this.testMode = this.initialStateTemplate.testMode;
+            this.level = { ...this.initialStateTemplate.level };
+            this.stats = { ...this.initialStateTemplate.stats };
+            this.camera = { ...this.initialStateTemplate.camera };
+            this.dialogueState = { ...this.initialStateTemplate.dialogue };
+            this.gameTime = 0;
+            this.frameCount = 0;
+            this.lastTime = 0;
+        }
+
         // Clear transient state before rebuilding
         this.player = null;
         this.projectiles = [];
+        this.enemies = [];
+        this.items = [];
+        this.platforms = [];
         this.hazards = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
         this.hideSpeechBubble(true);
+        this.hideInventoryOverlay(true);
+        this.hideChestOverlay(true);
+        this.hideShopOverlay(true);
+        this.hideSignDialogue(true);
+        if (this.signCallout && this.signCallout.parentNode) {
+            this.signCallout.parentNode.removeChild(this.signCallout);
+        }
+        this.signCallout = null;
+        const buffPanel = document.getElementById('buffPanel');
+        const coffeeTimer = document.getElementById('coffeeTimer');
+        if (buffPanel) buffPanel.classList.add('hidden');
+        if (coffeeTimer) coffeeTimer.textContent = '--:--';
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
+        this.dialogueState.speaker = null;
+        this.dialogueState.anchor = null;
+        this.dialogueState.onClose = null;
+        this.testGroundY = null;
+        this.signBoard = null;
+        this.signBoards = [];
         
+        this.npcs = [];
+        this.shopGhost = null;
+        this.balloonFan = null;
+        if (Array.isArray(this.chests)) {
+            this.chests.forEach(chest => chest.destroy && chest.destroy());
+        }
+        this.chests = [];
+        this.chestUI.currentChest = null;
+        this.flag = null;
+
         // Reset managers
         this.palmTreeManager.reset();
         
         // Rebuild level content (platforms, enemies, items, flag, background)
-        this.createLevel();
+        if (this.initialTestRoomState) {
+            this.restoreInitialTestRoomState();
+        } else {
+            this.createLevel();
+        }
     }
 
     /**
@@ -1399,9 +3142,9 @@ class Game {
             // Restart appropriate music when unmuting
             if (wasMuted && !this.audioManager.isMuted()) {
                 if (this.stateManager.isPlaying()) {
-                    this.audioManager.playMusic('level1', 0.6);
+                    this.audioManager.playMusic('level1', 0.8);
                 } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
-                    this.audioManager.playMusic('title', 0.6);
+                    this.audioManager.playMusic('title', 0.8);
                 }
             }
             
@@ -1494,6 +3237,8 @@ class Game {
         // Create an infinite ground platform
         const groundHeight = 50;
         const groundY = this.canvas.height - groundHeight;
+        this.testGroundY = groundY;
+        const spawnAnchorX = 140;
         
         // Create multiple ground segments for infinite running
         // Each segment is 2000px wide, create 10 segments = 20000px of ground
@@ -1525,6 +3270,40 @@ class Game {
             this.platforms.push(new Platform(p.x, p.y, p.width, 12));
         });
 
+        // Blocky mountain climb to the right of the parkour section, then down the other side
+        const mountainSteps = [
+            // Ascent
+            { x: 2050, y: groundY - 32, width: 180, height: 32 },
+            { x: 2220, y: groundY - 80, width: 150, height: 32 },
+            { x: 2360, y: groundY - 132, width: 140, height: 32 },
+            { x: 2485, y: groundY - 184, width: 120, height: 32 },
+            { x: 2605, y: groundY - 236, width: 120, height: 32 },
+            { x: 2725, y: groundY - 288, width: 110, height: 32 },
+            { x: 2840, y: groundY - 340, width: 170, height: 32 },
+            // Descent
+            { x: 2980, y: groundY - 300, width: 150, height: 32 },
+            { x: 3120, y: groundY - 240, width: 150, height: 32 },
+            { x: 3260, y: groundY - 180, width: 150, height: 32 },
+            { x: 3400, y: groundY - 120, width: 150, height: 32 },
+            { x: 3540, y: groundY - 70, width: 150, height: 32 },
+            { x: 3680, y: groundY - 32, width: 180, height: 32 }
+        ];
+        mountainSteps.forEach(step => {
+            this.platforms.push(new Platform(step.x, step.y, step.width, step.height));
+        });
+
+        // Compact post-flag parkour path leading to a perch
+        const balloonParkour = [
+            { x: 3960, y: groundY - 90, width: 110 },
+            { x: 4080, y: groundY - 150, width: 100 },
+            { x: 4220, y: groundY - 205, width: 90 },
+            { x: 4340, y: groundY - 255, width: 110 },
+            { x: 4420, y: groundY - 245, width: 140 }
+        ];
+        balloonParkour.forEach(p => {
+            this.platforms.push(new Platform(p.x, p.y, p.width, 14));
+        });
+
         // Quick test spawns
         const slime = new Slime(300, groundY);
         slime.game = this;
@@ -1533,9 +3312,125 @@ class Game {
         slime.setSimplePatrol(200, 800, 90, slimeGroundY);
         this.enemies.push(slime);
 
+        // Slime near the mountain base to test badge modifiers
+        const mountainSlime = new Slime(1960, groundY);
+        mountainSlime.game = this;
+        const mountainSlimeGroundY = groundY - mountainSlime.height;
+        mountainSlime.y = mountainSlimeGroundY;
+        mountainSlime.setSimplePatrol(1880, 2100, 80, mountainSlimeGroundY);
+        this.enemies.push(mountainSlime);
+
         const potion = new HealthPotion(480, groundY - 40, 25);
         potion.game = this;
         this.items.push(potion);
+
+        const coffee = new CoffeeItem(860, groundY - 70);
+        coffee.game = this;
+        this.items.push(coffee);
+
+        // Shop ghost NPC near spawn
+        const ghostX = 680;
+        const ghostY = groundY - 64;
+        this.shopGhost = new ShopGhost(ghostX, ghostY);
+        this.shopGhost.game = this;
+        this.npcs.push(this.shopGhost);
+
+        // Princess NPC on the mountain peak
+        const mountainTop = mountainSteps[6]; // peak step
+        const princessX = mountainTop.x + (mountainTop.width / 2) - 24.5; // center on peak
+        const princessY = mountainTop.y - 64;
+        this.princess = new PrincessNPC(princessX, princessY);
+        this.princess.game = this;
+        this.princess.dialogueLines = [
+            'You actually made it up here? I promise I will have a real quest soon.',
+            'For now, enjoy this breeze and pretend the mountain is much taller.',
+            'Press Enter again if you want to hear me repeat myself. I am patient!'
+        ];
+        this.npcs.push(this.princess);
+
+        // Balloon fan NPC perched above the post-flag parkour
+        const balloonPerch = balloonParkour[balloonParkour.length - 1];
+        const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
+        const balloonFanY = balloonPerch.y - 63;
+        this.balloonFan = new BalloonNPC(balloonFanX, balloonFanY);
+        this.balloonFan.game = this;
+        this.balloonFan.baseY = balloonFanY;
+        this.npcs.push(this.balloonFan);
+
+        // Signboard near start (left of first parkour platform) as an Entity for shadow support
+        this.signBoard = new Sign(
+            spawnAnchorX + 40,
+            groundY - 52, // top aligned to ground like chests
+            'art/items/sign.png'
+        );
+        this.signBoard.dialogueLines = [...this.signDialogue.defaultMessages];
+        this.signBoards.push(this.signBoard);
+
+        // Post-parkour sign with placeholder dialogue
+        const postSignPlatform = balloonParkour[balloonParkour.length - 1];
+        const postSignX = postSignPlatform.x + postSignPlatform.width - 48;
+        const postSignY = groundY - 52; // place on ground beneath the parkour perch
+        const postSign = new Sign(postSignX, postSignY, 'art/items/sign.png');
+        postSign.dialogueLines = [
+            'Coming soon: a real message for champions.',
+            'Thanks for checking out the balloon parkour!'
+        ];
+        this.signBoards.push(postSign);
+
+        // Test coin chest near spawn (coins only)
+        const coinChestX = spawnAnchorX + 210;
+        const coinChestY = groundY - 64;
+        const coinChest = new Chest(coinChestX, coinChestY);
+        coinChest.displayName = 'Coin Test Chest';
+        coinChest.contents = [
+            {
+                id: 'coins_test',
+                name: '100 Coins',
+                description: 'A test stash of coins.',
+                take: (player) => player?.collectCoin && player.collectCoin(100)
+            }
+        ];
+        coinChest.game = this;
+        this.chests.push(coinChest);
+
+        // Reward chest at the end of the parkour run
+        const lastPlatform = parkour[parkour.length - 1];
+        const chestX = lastPlatform.x + lastPlatform.width - 64;
+        const chestY = lastPlatform.y - 64;
+        const parkourChest = new Chest(chestX, chestY);
+        parkourChest.displayName = 'Parkour Chest';
+        parkourChest.contents = [
+            {
+                id: 'climbing_shoes',
+                name: 'Climbing Shoes',
+                description: 'Sticky soles that let you double jump for 2 minutes.',
+                take: (player) => player?.applyClimbingBuff && player.applyClimbingBuff(120000, 1)
+            },
+            {
+                id: 'health_potion',
+                name: 'Health Potion',
+                description: 'Restores 25 HP (or stashes a potion if you are full).',
+                take: (player) => {
+                    if (!player) return;
+                    if (player.health >= player.maxHealth && typeof player.addHealthPotion === 'function') {
+                        player.addHealthPotion(1);
+                    } else if (typeof player.heal === 'function') {
+                        player.heal(25);
+                    } else {
+                        player.health = Math.min(player.maxHealth ?? player.health, player.health + 25);
+                    }
+                    player.updateHealthUI?.();
+                }
+            },
+            {
+                id: 'rock_bag',
+                name: 'Bag of Rocks',
+                description: "10 sturdy rocks for Luckie's throw.",
+                take: (player) => player?.addRocks && player.addRocks(10)
+            }
+        ];
+        parkourChest.game = this;
+        this.chests.push(parkourChest);
     }
     
     /**

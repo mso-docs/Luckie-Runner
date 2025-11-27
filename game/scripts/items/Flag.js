@@ -4,29 +4,16 @@
  */
 class Flag extends Entity {
     constructor(x, y) {
-        super(x, y, 32, 80); // Flag dimensions
-        
+        super(x, y, 64, 128); // Matches sprite frame size
+
         // Flag properties
         this.type = 'flag';
         this.active = true;
         this.collected = false;
-        
-        // Animation properties
-        this.animationTime = 0;
-        this.waveSpeed = 3;
-        this.waveAmplitude = 2;
-        
-        // Pole properties
-        this.poleWidth = 4;
-        this.poleHeight = 80;
-        this.flagWidth = 28;
-        this.flagHeight = 20;
-        
-        // Colors
-        this.poleColor = '#8B4513';
-        this.flagColor = '#FF6B6B';
-        this.flagAccentColor = '#FF4444';
-        
+
+        // Sprite sheet animation (two-frame wave)
+        this.loadTileSheet('art/items/flag.png', 64, 128, [0, 1], 260);
+
         // Completion effect
         this.completionTime = 0;
         this.isCompleting = false;
@@ -38,9 +25,10 @@ class Flag extends Entity {
      */
     update(deltaTime) {
         if (!this.active) return;
-        
-        this.animationTime += deltaTime / 1000;
-        
+
+        // Advance sprite animation frames (simple two-frame loop)
+        this.updateAnimation(deltaTime);
+
         if (this.isCompleting) {
             this.completionTime += deltaTime / 1000;
             
@@ -100,12 +88,12 @@ class Flag extends Entity {
             player.updateUI();
             // Added bonus points
         }
-        
+
         // Play completion sound
         if (this.game && this.game.audioManager) {
             this.game.audioManager.playSound('level', 0.8);
         }
-        
+
         // Level completed! Flag collected
         return true;
     }
@@ -117,82 +105,27 @@ class Flag extends Entity {
      */
     render(ctx, camera) {
         if (!this.active) return;
-        
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        
-        // Only render if on screen
-        if (screenX + this.width < 0 || screenX > ctx.canvas.width ||
-            screenY + this.height < 0 || screenY > ctx.canvas.height) {
-            return;
+
+        // Apply a subtle scale pulse on completion
+        const originalScaleX = this.scale.x;
+        const originalScaleY = this.scale.y;
+        if (this.isCompleting) {
+            const completionScale = 1 + Math.sin(this.completionTime * 10) * 0.08;
+            this.scale.x = completionScale;
+            this.scale.y = completionScale;
         }
-        
-        // Save context
-        ctx.save();
-        
-        // Render pole
-        ctx.fillStyle = this.poleColor;
-        ctx.fillRect(
-            screenX,
-            screenY,
-            this.poleWidth,
-            this.poleHeight
-        );
-        
-        // Add pole highlight
-        ctx.fillStyle = '#A0522D';
-        ctx.fillRect(
-            screenX,
-            screenY,
-            this.poleWidth - 1,
-            this.poleHeight
-        );
-        
-        // Calculate flag animation
-        const waveOffset = Math.sin(this.animationTime * this.waveSpeed) * this.waveAmplitude;
-        const completionScale = this.isCompleting ? 
-            1 + Math.sin(this.completionTime * 10) * 0.1 : 1;
-        
-        // Render flag
-        const flagX = screenX + this.poleWidth;
-        const flagY = screenY + 10 + waveOffset;
-        
-        ctx.save();
-        ctx.translate(flagX + this.flagWidth / 2, flagY + this.flagHeight / 2);
-        ctx.scale(completionScale, completionScale);
-        
-        // Flag background
-        ctx.fillStyle = this.flagColor;
-        ctx.fillRect(
-            -this.flagWidth / 2,
-            -this.flagHeight / 2,
-            this.flagWidth,
-            this.flagHeight
-        );
-        
-        // Flag stripe
-        ctx.fillStyle = this.flagAccentColor;
-        ctx.fillRect(
-            -this.flagWidth / 2,
-            -this.flagHeight / 2 + 5,
-            this.flagWidth,
-            3
-        );
-        
-        // Flag border
-        ctx.strokeStyle = '#CC0000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(
-            -this.flagWidth / 2,
-            -this.flagHeight / 2,
-            this.flagWidth,
-            this.flagHeight
-        );
-        
-        ctx.restore();
-        
+
+        // Draw sprite (includes shadow)
+        super.render(ctx, camera);
+
+        // Restore scale for future renders
+        this.scale.x = originalScaleX;
+        this.scale.y = originalScaleY;
+
         // Render completion glow effect
         if (this.isCompleting) {
+            const screenX = this.x - camera.x;
+            const screenY = this.y - camera.y;
             const glowAlpha = Math.abs(Math.sin(this.completionTime * 8)) * 0.5;
             ctx.shadowBlur = 20;
             ctx.shadowColor = `rgba(255, 107, 107, ${glowAlpha})`;
@@ -207,21 +140,6 @@ class Flag extends Entity {
             
             ctx.shadowBlur = 0;
         }
-        
-        // Debug rendering
-        if (this.game && this.game.debug) {
-            ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(screenX, screenY, this.width, this.height);
-            
-            // Show collection radius
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.3)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(screenX - 5, screenY - 5, this.width + 10, this.height + 10);
-        }
-        
-        // Restore context
-        ctx.restore();
     }
     
     /**

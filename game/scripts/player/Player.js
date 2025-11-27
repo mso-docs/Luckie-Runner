@@ -15,6 +15,27 @@ class Player extends Entity {
         this.jumpStrength = -700; // pixels/second - negative = up (increased to compensate for higher gravity)
         this.gravity = 1000; // pixels/second² - falling acceleration (increased by 25%)
         
+        this.maxAirJumps = 0; // extra jumps granted by buffs (e.g., climbing shoes)
+        this.remainingAirJumps = 0; // replenished when grounded
+        this.jumpHeld = false; // used to detect fresh jump presses for mid-air jumps
+        this.spaceJumpHeld = false; // tracks spacebar state for double-jump activation
+
+        this.baseMoveSpeed = this.moveSpeed;
+        this.baseAcceleration = this.acceleration;
+        this.baseDeceleration = this.deceleration;
+        this.baseAirDeceleration = this.airDeceleration;
+
+        // Temporary speed buff (coffee)
+        this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
+        this.buffHud = {
+            panel: document.getElementById('buffPanel'),
+            coffeeTimer: document.getElementById('coffeeTimer'),
+            coffeeRow: document.getElementById('coffeeBuffRow'),
+            climbTimer: document.getElementById('climbTimer'),
+            climbRow: document.getElementById('climbBuffRow')
+        };
+
         // Simple state
         this.facing = 1; // 1 = right, -1 = left
         this.canJump = false; // Can only jump when on ground
@@ -24,6 +45,10 @@ class Player extends Entity {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
+        this.healthPotions = 0;
+        this.coffeeDrinks = 0;
+        this.level = 1;
+        this.combatModifiers = { slimeAttack: 0, slimeDefense: 0 };
         
         // Rock throwing
         this.maxRocks = 10;
@@ -69,6 +94,10 @@ class Player extends Entity {
     onUpdate(deltaTime) {
         const dt = deltaTime / 1000; // Convert to seconds
         const input = this.game.input;
+
+        // Update timed buffs
+        this.updateCoffeeBuff(deltaTime);
+        this.updateClimbingBuff(deltaTime);
         
         // HORIZONTAL MOVEMENT - Smooth acceleration/deceleration
         const movingLeft = input.isMovingLeft();
@@ -102,10 +131,26 @@ class Player extends Entity {
         }
         
         // JUMPING - Only when on ground
-        if (input.isJumping() && this.onGround) {
+        if (this.onGround) {
+            // Refresh air jumps whenever grounded
+            this.remainingAirJumps = this.maxAirJumps;
+        }
+
+        const jumpPressed = input.isJumping();
+        const spacePressed = input.isSpaceJumping ? input.isSpaceJumping() : false;
+        const jumpJustPressed = jumpPressed && !this.jumpHeld;
+        const spaceJustPressed = spacePressed && !this.spaceJumpHeld;
+
+        if (jumpPressed && this.onGround) {
             this.velocity.y = this.jumpStrength;
             this.onGround = false;
+        } else if (spaceJustPressed && !this.onGround && this.remainingAirJumps > 0) {
+            // Mid-air jump granted by climbing shoes (spacebar only)
+            this.velocity.y = this.jumpStrength;
+            this.remainingAirJumps -= 1;
         }
+        this.jumpHeld = jumpPressed;
+        this.spaceJumpHeld = spacePressed;
         
         // ROCK THROWING - mouse click to toss toward cursor
         if (this.attackCooldown > 0) {
@@ -232,6 +277,41 @@ class Player extends Entity {
         const lerpSpeed = 0.12;
         this.game.camera.x += (targetX - this.game.camera.x) * lerpSpeed;
         this.game.camera.y += (targetY - this.game.camera.y) * lerpSpeed;
+    }
+
+    /**
+     * Apply badge-based mitigation before processing damage
+     * @param {number} amount
+     * @param {Entity|null} source
+     */
+    takeDamage(amount, source = null) {
+        let adjusted = amount;
+        const fromSlime = source && source.type === 'slime';
+        if (fromSlime && this.combatModifiers) {
+            const reduction = this.combatModifiers.slimeDefense || 0;
+            adjusted = Math.max(0, amount - reduction);
+        }
+
+        if (adjusted <= 0) {
+            return false;
+        }
+
+        return super.takeDamage(adjusted, source);
+    }
+
+    /**
+     * Adjust outgoing damage with badge bonuses
+     * @param {number} baseDamage
+     * @param {Entity|null} target
+     * @returns {number}
+     */
+    modifyOutgoingDamage(baseDamage, target = null) {
+        let damage = baseDamage;
+        const isSlimeTarget = target && target.type === 'slime';
+        if (isSlimeTarget && this.combatModifiers) {
+            damage += this.combatModifiers.slimeAttack || 0;
+        }
+        return Math.max(0, damage);
     }
 
     /**
@@ -510,6 +590,43 @@ class Player extends Entity {
     }
 
     /**
+     * Add coffee drinks to inventory (stored for use)
+     * @param {number} amount
+     */
+    addCoffee(amount = 1) {
+        this.coffeeDrinks = Math.max(0, this.coffeeDrinks + amount);
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('special', 0.7);
+        }
+        this.updateUI();
+    }
+
+    /**
+     * Add health potions to inventory (stored for later use)
+     * @param {number} amount
+     */
+    addHealthPotion(amount = 1) {
+        this.healthPotions = Math.max(0, this.healthPotions + amount);
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('health', 0.7);
+        }
+        this.updateUI();
+    }
+
+    /**
+     * Consume a health potion from inventory (heals and decrements count)
+     * @param {number} healAmount
+     * @returns {boolean} success
+     */
+    consumeHealthPotion(healAmount = 25) {
+        if (this.healthPotions <= 0) return false;
+        this.healthPotions = Math.max(0, this.healthPotions - 1);
+        this.heal(healAmount);
+        this.updateUI();
+        return true;
+    }
+
+    /**
      * Update UI elements
      */
     updateUI() {
@@ -518,6 +635,13 @@ class Player extends Entity {
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
         if (hudRocksElement) hudRocksElement.textContent = this.rocks;
+        if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
+            this.game.updateInventoryOverlay();
+        }
+        // Update shop coin display if open
+        if (this.game && typeof this.game.updateShopDisplay === 'function') {
+            this.game.updateShopDisplay();
+        }
     }
 
     /**
@@ -537,6 +661,140 @@ class Player extends Entity {
             }
             healthFill.style.backgroundColor = color;
         }
+        const hpFraction = document.getElementById('hudHPFraction');
+        if (hpFraction) {
+            const current = Math.max(0, Math.floor(this.health));
+            const clamped = Math.min(current, 100);
+            hpFraction.textContent = `${clamped}/100`;
+        }
+        if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
+            this.game.updateInventoryOverlay();
+        }
+    }
+
+    /**
+     * Apply a coffee speed buff
+     * @param {number} multiplier - Speed multiplier
+     * @param {number} durationMs - Duration in milliseconds
+     */
+    applyCoffeeBuff(multiplier = 2, durationMs = 120000) {
+        this.coffeeBuff = {
+            active: true,
+            remaining: durationMs,
+            multiplier: multiplier
+        };
+        this.updateMovementStatsFromBuff();
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Apply climbing shoes buff for double jumps
+     * @param {number} durationMs
+     * @param {number} extraJumps - number of additional jumps (1 = double jump)
+     */
+    applyClimbingBuff(durationMs = 120000, extraJumps = 1) {
+        this.climbingBuff = {
+            active: true,
+            remaining: durationMs,
+            extraJumps: extraJumps
+        };
+        this.maxAirJumps = extraJumps;
+        this.remainingAirJumps = this.maxAirJumps;
+        if (this.game?.audioManager) {
+            this.game.audioManager.playSound('coffee', 0.8);
+        }
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Tick coffee buff timer and clear when done
+     * @param {number} deltaTime
+     */
+    updateCoffeeBuff(deltaTime) {
+        if (!this.coffeeBuff.active) return;
+
+        this.coffeeBuff.remaining = Math.max(0, this.coffeeBuff.remaining - deltaTime);
+        if (this.coffeeBuff.remaining <= 0) {
+            this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+            this.updateMovementStatsFromBuff();
+        }
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Tick climbing shoes buff timer and clear when done
+     * @param {number} deltaTime
+     */
+    updateClimbingBuff(deltaTime) {
+        if (!this.climbingBuff.active) {
+            this.maxAirJumps = 0;
+            this.remainingAirJumps = Math.min(this.remainingAirJumps, this.maxAirJumps);
+            return;
+        }
+
+        this.climbingBuff.remaining = Math.max(0, this.climbingBuff.remaining - deltaTime);
+        if (this.climbingBuff.remaining <= 0) {
+            this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
+            this.maxAirJumps = 0;
+            this.remainingAirJumps = 0;
+        } else {
+            this.maxAirJumps = this.climbingBuff.extraJumps;
+            this.remainingAirJumps = Math.min(this.remainingAirJumps, this.maxAirJumps);
+        }
+        this.updateBuffHUD();
+    }
+
+    /**
+     * Recompute movement stats based on buff state
+     */
+    updateMovementStatsFromBuff() {
+        const mult = this.coffeeBuff.active ? this.coffeeBuff.multiplier : 1;
+        this.moveSpeed = this.baseMoveSpeed * mult;
+        this.acceleration = this.baseAcceleration * mult;
+        this.deceleration = this.baseDeceleration * mult;
+        this.airDeceleration = this.baseAirDeceleration * mult;
+    }
+
+    /**
+     * Update the HUD timers for active buffs
+     * @param {boolean} forceHide - hide regardless of state
+     */
+    updateBuffHUD(forceHide = false) {
+        const panel = this.buffHud?.panel || document.getElementById('buffPanel');
+        const coffeeTimer = this.buffHud?.coffeeTimer || document.getElementById('coffeeTimer');
+        const coffeeRow = this.buffHud?.coffeeRow || document.getElementById('coffeeBuffRow');
+        const climbTimer = this.buffHud?.climbTimer || document.getElementById('climbTimer');
+        const climbRow = this.buffHud?.climbRow || document.getElementById('climbBuffRow');
+
+        if (!panel) return;
+
+        const coffeeActive = this.coffeeBuff.active && !forceHide;
+        const climbActive = this.climbingBuff.active && !forceHide;
+
+        if (coffeeRow && coffeeTimer) {
+            coffeeRow.classList.toggle('hidden', !coffeeActive);
+            coffeeTimer.textContent = coffeeActive ? this.formatBuffTime(this.coffeeBuff.remaining) : '--:--';
+        }
+
+        if (climbRow && climbTimer) {
+            climbRow.classList.toggle('hidden', !climbActive);
+            climbTimer.textContent = climbActive ? this.formatBuffTime(this.climbingBuff.remaining) : '--:--';
+        }
+
+        const anyActive = coffeeActive || climbActive;
+        panel.classList.toggle('hidden', !anyActive);
+    }
+
+    /**
+     * Format remaining buff time as M:SS
+     * @param {number} remainingMs
+     * @returns {string}
+     */
+    formatBuffTime(remainingMs = 0) {
+        const totalSeconds = Math.ceil(Math.max(0, remainingMs) / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
     /**
@@ -547,6 +805,7 @@ class Player extends Entity {
         this.coins = 0;
         this.score = 0;
         this.rocks = this.maxRocks;
+        this.healthPotions = 0;
         this.attackCooldown = 0;
         this.velocity = { x: 0, y: 0 };
         this.facing = 1;
@@ -558,6 +817,18 @@ class Player extends Entity {
         this.hitRayDuration = 500;
         this.knockbackTiltTime = 0;
         this.rotation = 0;
+        this.jumpHeld = false;
+        this.maxAirJumps = 0;
+        this.remainingAirJumps = 0;
+        this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.climbingBuff = { active: false, remaining: 0, extraJumps: 0 };
+        this.spaceJumpHeld = false;
+        if (this.combatModifiers) {
+            this.combatModifiers.slimeAttack = 0;
+            this.combatModifiers.slimeDefense = 0;
+        }
+        this.updateMovementStatsFromBuff();
+        this.updateBuffHUD(true);
         this.updateUI();
         this.updateHealthUI();
     }

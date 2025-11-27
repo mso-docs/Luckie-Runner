@@ -18,6 +18,7 @@
                 <div id="healthBar">
                     <div id="healthFill"></div>
                 </div>
+                <span id="hudHPFraction" class="hud-value hud-hp-fraction" aria-live="polite">0/100</span>
             </div>
             
             <div id="inventoryPanel">
@@ -32,13 +33,252 @@
                     <span class="hud-value" id="hudRocks">10</span>
                 </div>
             </div>
+
+            <div id="buffPanel" class="buff-panel hidden" aria-live="polite">
+                <div class="buff-row" id="coffeeBuffRow">
+                    <div class="buff-icon coffee-icon" aria-hidden="true"></div>
+                    <div class="buff-text">
+                        <div class="buff-name">Coffee</div>
+                        <div class="buff-timer" id="coffeeTimer">--:--</div>
+                    </div>
+                </div>
+                <div class="buff-row hidden" id="climbBuffRow">
+                    <div class="buff-icon shoe-icon" aria-hidden="true"></div>
+                    <div class="buff-text">
+                        <div class="buff-name">Climbing Shoes</div>
+                        <div class="buff-timer" id="climbTimer">--:--</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Intro Speech Bubble -->
         <div id="speechBubble" class="speech-bubble" aria-live="polite" aria-hidden="true">
-            <div class="speech-bubble__body">
+            <div class="speech-bubble__body dialog-bubble">
                 <p id="speechText"></p>
                 <div class="speech-bubble__hint">Press Enter</div>
+            </div>
+        </div>
+
+        <!-- Shop Ghost hint bubble -->
+        <div id="shopGhostBubble" class="npc-bubble hidden" aria-hidden="true">
+            Press Z to interact with me!
+        </div>
+
+        <!-- Inventory Overlay (inlined) -->
+        <div id="inventoryContainer">
+            <div id="inventoryOverlay" class="inventory hidden" aria-hidden="true">
+                <div class="inventory-window" role="dialog" aria-labelledby="inventoryTitle">
+                    <div class="inventory-tabs" role="tablist" aria-label="Inventory categories">
+                        <button class="inventory-tab is-active" type="button" role="tab" data-tab-target="stats">Stats</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="items">Items</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="gear">Gear</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="badges">Badges</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="journal">Journal</button>
+                    </div>
+
+                    <div class="inventory-body">
+                        <section class="inventory-column profile">
+                            <header class="profile-card">
+                                <div class="profile-nameplate">
+                                    <div class="profile-name">
+                                        <span id="inventoryTitle">Luckie</span>
+                                        <span class="profile-level">Lvl. 07</span>
+                                    </div>
+                                    <span class="profile-rank">B-list Pup</span>
+                                </div>
+                                <div class="profile-bust" aria-hidden="true"></div>
+                                <div class="profile-actions">
+                                    <div class="profile-action action-hammer">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Paw Smash</span>
+                                    </div>
+                                    <div class="profile-action action-coin">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Coin Toss</span>
+                                    </div>
+                                    <div class="profile-action action-spin">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Shell Spin</span>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <div class="stat-cards">
+                                <div class="stat-card stat-heart">
+                                    <span class="stat-label">HP</span>
+                                    <span class="stat-value">34/35</span>
+                                </div>
+                                <div class="stat-card stat-flower">
+                                    <span class="stat-label">Stamina</span>
+                                    <span class="stat-value">25/25</span>
+                                </div>
+                                <div class="stat-card stat-badge">
+                                    <span class="stat-label">Badge Pts</span>
+                                    <span class="stat-value">15</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="inventory-column details">
+                            <div class="inventory-panels">
+                                <div class="inventory-panel active" data-tab-panel="stats">
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Stats</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="inventory-stats" id="inventoryStats"></div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="items">
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Items</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="inventory-items" id="inventoryItems"></div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="gear">
+                                    <div class="inventory-placeholder">
+                                        <h3>Gear Loadout</h3>
+                                        <p>Assign gear to boost stats.</p>
+                                        <div class="placeholder-grid">
+                                            <div class="placeholder-card">Paw Wraps</div>
+                                            <div class="placeholder-card">Beach Shades</div>
+                                            <div class="placeholder-card muted">Empty Slot</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="badges">
+                                    <div class="specials-card badge-panel">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Badges</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="badge-panel__hint">Earn or find badges to unlock passive boosts.</p>
+                                        <div class="badge-grid" id="inventoryBadges"></div>
+                                        <div class="badge-empty" id="badgeEmptyState">No badges yet. Defeat a slime to find your first one.</div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="journal">
+                                    <div class="inventory-placeholder">
+                                        <h3>Journal</h3>
+                                        <p>Quest notes, collectibles, and lore snippets will appear here.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="inventoryItemModal" class="inventory-item-modal hidden" role="dialog" aria-modal="true">
+                    <div class="modal-card">
+                        <div class="modal-header">
+                            <div class="modal-icon" id="itemModalIcon" aria-hidden="true"></div>
+                            <div class="modal-title" id="itemModalName">Item</div>
+                        </div>
+                        <div class="modal-body">
+                            <p id="itemModalDescription">Item description goes here.</p>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="modal-btn use" id="itemModalUse">Use</button>
+                            <button type="button" class="modal-btn exit" id="itemModalExit">Exit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Overlay (UI only) -->
+        <div id="shopOverlay" class="shop-overlay hidden" aria-hidden="true">
+            <div class="shop-window" role="dialog" aria-labelledby="shopTitle">
+                <div class="shop-header">
+                    <div class="shop-currency chip hp">
+                        <span class="chip-label">HP</span>
+                        <span class="chip-value" id="shopHPValue">0/0</span>
+                    </div>
+                    <div class="shop-currency chip coin">
+                        <span class="chip-label">Coins</span>
+                        <span class="chip-value" id="shopCoinValue">0</span>
+                    </div>
+                    <div class="shop-currency chip rock">
+                        <span class="chip-label">Rocks</span>
+                        <span class="chip-value" id="shopRockValue">0</span>
+                    </div>
+                    <div class="shop-currency chip star">
+                        <span class="chip-label">Lvl</span>
+                        <span class="chip-value" id="shopLevelValue">1</span>
+                    </div>
+                </div>
+
+                <div class="shop-title" id="shopTitle">Which one?</div>
+
+                <div class="shop-list" id="shopItemList"></div>
+
+                <div class="shop-footer">
+                    <span class="footer-control stop">Z Stop</span>
+                    <span class="footer-control confirm">Enter Confirm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chest Overlay -->
+        <div id="chestOverlay" class="chest-overlay hidden" aria-hidden="true">
+            <div class="chest-window" role="dialog" aria-labelledby="chestTitle">
+                <div class="chest-header">
+                    <div class="chest-icon" aria-hidden="true"></div>
+                    <div class="chest-header__text">
+                        <div class="chest-title" id="chestTitle">Treasure Chest</div>
+                        <div class="chest-subtitle">Press E or Enter to close</div>
+                    </div>
+                    <button type="button" class="chest-close" aria-label="Close chest" data-action="close-chest">×</button>
+                </div>
+
+                <div class="chest-body">
+                    <div class="chest-items"></div>
+                    <div class="chest-empty hidden">This chest is empty.</div>
+                </div>
+
+                <div class="chest-footer">
+                    <button type="button" class="chest-take-all" data-action="take-all">Take all</button>
+                    <span class="chest-hint">E / Enter to exit</span>
+                </div>
             </div>
         </div>
 
@@ -117,6 +357,7 @@
     
     <!-- Manager Classes -->
     <script src="scripts/core/GameStateManager.js"></script>
+    <script src="scripts/ui/BadgeUI.js"></script>
     
     <!-- Player System -->
     <script src="scripts/player/Player.js"></script>
@@ -133,20 +374,28 @@
     <script src="scripts/environment/LevelGenerator.js"></script>
     <script src="scripts/environment/PalmTreeManager.js"></script>
     <script src="scripts/environment/TestRoom.js"></script>
+    <script src="scripts/environment/Sign.js"></script>
     
     <!-- Items and Collectibles -->
     <script src="scripts/items/Item.js"></script>
     <script src="scripts/items/Coin.js"></script>
     <script src="scripts/items/RockBag.js"></script>
     <script src="scripts/items/HealthPotion.js"></script>
+    <script src="scripts/items/Coffee.js"></script>
+    <script src="scripts/items/Chest.js"></script>
     <script src="scripts/items/Flag.js"></script>
+
+    <!-- NPCs -->
+    <script src="scripts/npcs/ShopGhost.js"></script>
+    <script src="scripts/npcs/PrincessNPC.js"></script>
+    <script src="scripts/npcs/BalloonNPC.js"></script>
     
     <!-- Game Logic -->
     <script src="scripts/Game.js"></script>
     
     <!-- Initialize Game -->
     <script>
-        // Initialize the game when page loads
+        // Initialize the game when page loads, after inventory markup is injected
         window.addEventListener('load', () => {
             const game = new Game('gameCanvas');
             window.game = game; // For debugging

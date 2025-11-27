@@ -160,12 +160,19 @@ class AudioManager {
         this.loadSound('hurt', 'sfx/hurt.mp3');
         this.loadSound('jump', 'sfx/jump.mp3');
         this.loadSound('level', 'sfx/level.mp3');
+        this.loadSound('coffee', 'sfx/coffee.mp3');
         this.loadSound('slime_patrol', 'sfx/slime-patrol.mp3');
         this.loadSound('rock', 'sfx/rock.mp3');
         this.loadSound('slime_defeat', 'sfx/slime-defeat.mp3');
         this.loadSound('slimy', 'sfx/slimy.mp3');
         this.loadSound('special', 'sfx/special.mp3');
         this.loadSound('high_score', 'sfx/high-score.mp3');
+        this.loadSound('chest', 'sfx/chest.mp3');
+        this.loadSound('button', 'sfx/button.mp3');
+        this.loadSound('menu_enter', 'sfx/menu-enter.mp3');
+        this.loadSound('menu_exit', 'sfx/menu-exit.mp3');
+        this.loadSound('purchase', 'sfx/purchase.mp3');
+        this.loadSound('badge', 'sfx/badge.mp3');
         
         // Additional sound aliases for backwards compatibility
         this.loadSound('attack', 'sfx/rock.mp3'); // Rock throwing sound
@@ -175,9 +182,10 @@ class AudioManager {
         this.loadSound('hit', 'sfx/slimy.mp3'); // Hit enemy sound
         this.loadSound('health_pickup', 'sfx/health.mp3'); // Health potion sound
         
-        // Background music
-        this.loadMusic('title', 'music/titlescreen.mp3');
-        this.loadMusic('level1', 'music/level1.mp3');
+        // Background music (add a cache-bust so replaced files take effect)
+        const titleSrc = 'music/titlescreen.mp3?v=1';
+        this.loadMusic('title', titleSrc);
+        this.loadMusic('level1', 'music/overworld.mp3'); // main level theme
     }
 
     /**
@@ -210,5 +218,16 @@ class AudioManager {
      */
     isMuted() {
         return this.muted;
+    }
+
+    /**
+     * Check if a music track is currently playing
+     * @param {string} name - Music identifier
+     * @returns {boolean}
+     */
+    isMusicPlaying(name) {
+        const track = this.music[name];
+        if (!track) return false;
+        return !track.paused && track.currentTime > 0 && !track.ended;
     }
 }

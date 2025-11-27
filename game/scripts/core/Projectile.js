@@ -136,10 +136,15 @@ class Projectile extends Entity {
     hitTarget(target) {
         // Add to hit targets
         this.hitTargets.add(target);
+
+        let damage = this.damage;
+        if (this.owner && typeof this.owner.modifyOutgoingDamage === 'function') {
+            damage = this.owner.modifyOutgoingDamage(this.damage, target);
+        }
         
         // Deal damage
         if (target.takeDamage) {
-            target.takeDamage(this.damage, this.owner);
+            target.takeDamage(damage, this.owner);
         }
         
         // Play hit effect
