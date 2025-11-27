@@ -106,6 +106,7 @@ class Game {
         this.princess = null;
         this.balloonFan = null;
         this.signBoard = null;
+        this.signBoards = [];
         this.signCallout = null;
         this.signDialogue = {
             container: null,
@@ -113,11 +114,8 @@ class Game {
             hint: null,
             active: false,
             target: null,
-            messages: [
-                '<<<~AAAAAAAAAAAAAAAAAAAAAA~>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-                'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
-                '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
-            ],
+            messages: [],
+            defaultMessages: [],
             index: 0
         };
         this.signSprite = new Image();
@@ -400,9 +398,15 @@ class Game {
             gameContainer.appendChild(container);
             this.signDialogue.container = container;
             this.signDialogue.bubble = bubble;
-            this.signDialogue.textEl = textEl;
-            this.signDialogue.hint = hint;
-        }
+        this.signDialogue.textEl = textEl;
+        this.signDialogue.hint = hint;
+        this.signDialogue.defaultMessages = [
+            '<<<~AAAAAAAAAAAAAAAAAAAAAA~>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
+            '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
+        ];
+        this.signDialogue.messages = [...this.signDialogue.defaultMessages];
+    }
     }
 
     /**
@@ -1109,7 +1113,12 @@ class Game {
             }
 
             // Sign interaction takes priority over chests
-            if (this.isPlayerNearSign()) {
+            const nearbySign = this.getNearbySign();
+            if (nearbySign) {
+                this.signDialogue.target = nearbySign;
+                this.signDialogue.messages = (nearbySign.dialogueLines && nearbySign.dialogueLines.length)
+                    ? [...nearbySign.dialogueLines]
+                    : [...this.signDialogue.defaultMessages];
                 if (this.signDialogue.active) {
                     this.advanceSignDialogue();
                 } else {
@@ -1472,6 +1481,14 @@ class Game {
         this.hazards = [];
         this.chests = [];
         this.flag = null;
+        this.signBoards = [];
+        this.signBoard = null;
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        this.signBoard = null;
+        this.signBoards = [];
         this.npcs = [];
         this.shopGhost = null;
         this.princess = null;
@@ -1601,6 +1618,12 @@ class Game {
                 y: this.signBoard.y,
                 spriteSrc: this.signBoard.sprite?.src
             } : null,
+            signBoards: (this.signBoards || []).map(sign => ({
+                x: sign.x,
+                y: sign.y,
+                spriteSrc: sign.sprite?.src,
+                dialogueLines: sign.dialogueLines ? [...sign.dialogueLines] : null
+            })),
             flag: this.flag ? { x: this.flag.x, y: this.flag.y } : null
         };
     }
@@ -1685,6 +1708,20 @@ class Game {
         this.signBoard = blueprint.signBoard
             ? new Sign(blueprint.signBoard.x, blueprint.signBoard.y, blueprint.signBoard.spriteSrc)
             : null;
+        this.signBoards = (blueprint.signBoards || []).map(def => {
+            const sign = new Sign(def.x, def.y, def.spriteSrc);
+            if (def.dialogueLines) sign.dialogueLines = [...def.dialogueLines];
+            return sign;
+        });
+        if (this.signBoard) {
+            const alreadyIncluded = this.signBoards.some(sign => sign && sign.x === this.signBoard.x && sign.y === this.signBoard.y);
+            if (!alreadyIncluded) {
+                this.signBoards.unshift(this.signBoard);
+            }
+        }
+        if (!this.signBoard && this.signBoards.length > 0) {
+            this.signBoard = this.signBoards[0];
+        }
 
         this.flag = blueprint.flag ? Flag.create(blueprint.flag.x, blueprint.flag.y) : null;
         if (this.flag) {
@@ -2447,8 +2484,8 @@ class Game {
         // Render platforms
         this.renderPlatforms();
 
-        // Render signboard near start
-        this.renderSign();
+        // Render signs
+        this.renderSigns();
 
         // Render NPCs
         this.renderNPCs();
@@ -2574,10 +2611,13 @@ class Game {
             drawRect(x, y, p.width, p.height, 'rgba(128,128,128,0.2)', '#808080');
         });
 
-        // Sign
-        if (this.signBoard) {
-            const r = rectForEntity(this.signBoard);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
+        // Signs
+        if (Array.isArray(this.signBoards)) {
+            this.signBoards.forEach(sign => {
+                if (!sign) return;
+                const r = rectForEntity(sign);
+                drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
+            });
         }
     }
 
@@ -2722,15 +2762,23 @@ class Game {
     /**
      * Check if player is near the sign
      */
-    isPlayerNearSign() {
-        if (!this.signBoard || !this.player) return false;
+    isPlayerNearSign(sign) {
+        if (!sign || !this.player) return false;
         const px = this.player.x + this.player.width / 2;
         const py = this.player.y + this.player.height / 2;
-        const sx = this.signBoard.x;
-        const sy = this.signBoard.y;
+        const sx = sign.x;
+        const sy = sign.y;
         const dx = px - sx;
         const dy = py - sy;
         return Math.hypot(dx, dy) <= 120;
+    }
+
+    /**
+     * Find a nearby sign to interact with
+     */
+    getNearbySign() {
+        if (!this.player || !Array.isArray(this.signBoards)) return null;
+        return this.signBoards.find(sign => this.isPlayerNearSign(sign)) || null;
     }
 
     /**
@@ -2750,13 +2798,19 @@ class Game {
     showSignDialogue() {
         const dlg = this.signDialogue;
         if (!dlg.container) return;
+        if (!dlg.target) {
+            dlg.target = this.getNearbySign();
+        }
+        if (!dlg.target) return;
+        if (!dlg.messages || dlg.messages.length === 0) {
+            dlg.messages = dlg.defaultMessages ? [...dlg.defaultMessages] : [];
+        }
         dlg.active = true;
         dlg.index = 0;
         dlg.container.style.display = 'block';
         dlg.container.setAttribute('aria-hidden', 'false');
         dlg.container.classList.add('show');
         // Target the sign itself for positioning
-        dlg.target = this.signBoard;
         this.setSignBubbleText(dlg.messages[dlg.index] || '');
         this.updateSignDialoguePosition();
 
@@ -2825,20 +2879,21 @@ class Game {
      * Update sign callout visibility and position
      */
     updateSignCallout() {
-        if (!this.signBoard) return;
         this.ensureSignCallout();
         if (!this.signCallout) return;
 
-        const shouldShow = !this.signDialogue.active && this.isPlayerNearSign();
+        const nearbySign = this.getNearbySign();
+        const shouldShow = !this.signDialogue.active && nearbySign;
         if (!shouldShow) {
             this.signCallout.classList.add('hidden');
             this.signCallout.setAttribute('aria-hidden', 'true');
             return;
         }
 
+        const sign = nearbySign;
         const camera = this.camera || { x: 0, y: 0 };
-        const screenX = this.signBoard.x - camera.x + this.signBoard.width / 2;
-        const screenY = this.signBoard.y - camera.y;
+        const screenX = sign.x - camera.x + sign.width / 2;
+        const screenY = sign.y - camera.y;
         const bottomFromCanvas = this.canvas.height - screenY + 44;
 
         this.signCallout.style.left = `${screenX}px`;
@@ -2874,11 +2929,15 @@ class Game {
     }
 
     /**
-     * Render the signboard near the start
+     * Render all placed signs
      */
-    renderSign() {
-        if (!this.signBoard || typeof this.signBoard.render !== 'function') return;
-        this.signBoard.render(this.ctx, this.camera);
+    renderSigns() {
+        if (!Array.isArray(this.signBoards)) return;
+        this.signBoards.forEach(sign => {
+            if (sign && typeof sign.render === 'function') {
+                sign.render(this.ctx, this.camera);
+            }
+        });
     }
     
     /**
@@ -3048,6 +3107,7 @@ class Game {
         this.dialogueState.onClose = null;
         this.testGroundY = null;
         this.signBoard = null;
+        this.signBoards = [];
         
         this.npcs = [];
         this.shopGhost = null;
@@ -3302,6 +3362,19 @@ class Game {
             groundY - 52, // top aligned to ground like chests
             'art/items/sign.png'
         );
+        this.signBoard.dialogueLines = [...this.signDialogue.defaultMessages];
+        this.signBoards.push(this.signBoard);
+
+        // Post-parkour sign with placeholder dialogue
+        const postSignPlatform = balloonParkour[balloonParkour.length - 1];
+        const postSignX = postSignPlatform.x + postSignPlatform.width - 48;
+        const postSignY = postSignPlatform.y - 52;
+        const postSign = new Sign(postSignX, postSignY, 'art/items/sign.png');
+        postSign.dialogueLines = [
+            'Coming soon: a real message for champions.',
+            'Thanks for checking out the balloon parkour!'
+        ];
+        this.signBoards.push(postSign);
 
         // Test coin chest near spawn (coins only)
         const coinChestX = spawnAnchorX + 210;
