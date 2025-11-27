@@ -317,6 +317,14 @@ class Game {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
         this.inventoryUI.list = document.getElementById('inventoryItems');
         this.inventoryUI.statsList = document.getElementById('inventoryStats');
+        this.inventoryUI.modal = {
+            container: document.getElementById('inventoryItemModal'),
+            icon: document.getElementById('itemModalIcon'),
+            title: document.getElementById('itemModalName'),
+            description: document.getElementById('itemModalDescription'),
+            useBtn: document.getElementById('itemModalUse'),
+            exitBtn: document.getElementById('itemModalExit')
+        };
         this.inventoryUI.tabs = Array.from(document.querySelectorAll('.inventory-tab'));
         this.inventoryUI.panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
 
@@ -331,6 +339,18 @@ class Game {
         // Default tab
         this.switchInventoryTab('stats', true);
         this.hideInventoryOverlay(true);
+
+        // Modal exit handlers
+        if (this.inventoryUI.modal.exitBtn) {
+            this.inventoryUI.modal.exitBtn.addEventListener('click', () => this.hideInventoryItemModal());
+        }
+        if (this.inventoryUI.modal.container) {
+            this.inventoryUI.modal.container.addEventListener('click', (e) => {
+                if (e.target === this.inventoryUI.modal.container) {
+                    this.hideInventoryItemModal();
+                }
+            });
+        }
     }
 
     /**
@@ -338,7 +358,7 @@ class Game {
      * @param {string} tabName
      * @param {boolean} silent - avoid sounds when true
      */
-    switchInventoryTab(tabName = 'items', silent = false) {
+    switchInventoryTab(tabName = 'stats', silent = false) {
         if (!this.inventoryUI) return;
 
         const tabs = this.inventoryUI.tabs || [];
@@ -402,11 +422,19 @@ class Game {
             // Items panel
             itemEntries.push({
                 name: 'Rocks',
-                value: player.rocks ?? 0
+                value: player.rocks ?? 0,
+                description: 'Ammo used for throwing. Found scattered along the course.',
+                icon: 'art/items/rock-item.png',
+                key: 'rocks',
+                consumable: false
             });
             itemEntries.push({
                 name: 'Health Potions',
-                value: player.healthPotions ?? 0
+                value: player.healthPotions ?? 0,
+                description: 'A small health potion that restores 25 HP.',
+                icon: 'art/sprites/health-pot.png',
+                key: 'health_potion',
+                consumable: true
             });
         } else if (stats && typeof stats.timeElapsed === 'number') {
             const totalSeconds = Math.floor(stats.timeElapsed / 1000);
@@ -419,7 +447,7 @@ class Game {
             });
         }
 
-        const renderList = (target, entries) => {
+        const renderList = (target, entries, isItemList = false) => {
             target.innerHTML = '';
             entries.forEach(item => {
                 const row = document.createElement('button');
@@ -429,12 +457,81 @@ class Game {
                     <span class="inventory-item__name">${item.name}</span>
                     <span class="inventory-item__value">${item.value}</span>
                 `;
+                if (isItemList) {
+                    row.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.showInventoryItemModal(item);
+                    });
+                }
                 target.appendChild(row);
             });
         };
 
-        renderList(statsList, statEntries);
-        renderList(list, itemEntries);
+        renderList(statsList, statEntries, false);
+        renderList(list, itemEntries, true);
+    }
+
+    /**
+     * Show modal for an inventory item
+     * @param {Object} item
+     */
+    showInventoryItemModal(item) {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+
+        const nameEl = modal.title;
+        const descEl = modal.description;
+        const iconEl = modal.icon;
+        const useBtn = modal.useBtn;
+
+        if (nameEl) nameEl.textContent = item.name || 'Item';
+        if (descEl) descEl.textContent = item.description || '';
+        if (iconEl) {
+            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
+        }
+
+        if (useBtn) {
+            useBtn.disabled = !item.consumable || (item.value <= 0);
+            useBtn.onclick = () => {
+                const used = this.consumeInventoryItem(item);
+                if (used) {
+                    this.hideInventoryItemModal();
+                    this.updateInventoryOverlay();
+                }
+            };
+        }
+
+        modal.container.classList.remove('hidden');
+        modal.container.classList.add('active');
+        modal.container.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Hide inventory item modal
+     */
+    hideInventoryItemModal() {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+        modal.container.classList.remove('active');
+        modal.container.classList.add('hidden');
+        modal.container.setAttribute('aria-hidden', 'true');
+    }
+
+    /**
+     * Consume an inventory item and apply its effect
+     * @param {Object} item
+     * @returns {boolean}
+     */
+    consumeInventoryItem(item) {
+        if (!item || !item.key || !this.player) return false;
+        switch (item.key) {
+            case 'health_potion':
+                if (this.player.healthPotions <= 0) return false;
+                return this.player.consumeHealthPotion(25);
+            default:
+                return false;
+        }
     }
 
     /**

@@ -538,6 +538,19 @@ class Player extends Entity {
     }
 
     /**
+     * Consume a health potion from inventory (heals and decrements count)
+     * @param {number} healAmount
+     * @returns {boolean} success
+     */
+    consumeHealthPotion(healAmount = 25) {
+        if (this.healthPotions <= 0) return false;
+        this.healthPotions = Math.max(0, this.healthPotions - 1);
+        this.heal(healAmount);
+        this.updateUI();
+        return true;
+    }
+
+    /**
      * Update UI elements
      */
     updateUI() {
