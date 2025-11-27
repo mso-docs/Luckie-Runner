@@ -316,7 +316,48 @@ class Game {
     setupInventoryUI() {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
         this.inventoryUI.list = document.getElementById('inventoryItems');
+        this.inventoryUI.tabs = Array.from(document.querySelectorAll('.inventory-tab'));
+        this.inventoryUI.panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+
+        // Wire tab switching
+        this.inventoryUI.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.getAttribute('data-tab-target');
+                this.switchInventoryTab(target);
+            });
+        });
+
+        // Default tab
+        this.switchInventoryTab('items', true);
         this.hideInventoryOverlay(true);
+    }
+
+    /**
+     * Switch inventory tabs
+     * @param {string} tabName
+     * @param {boolean} silent - avoid sounds when true
+     */
+    switchInventoryTab(tabName = 'items', silent = false) {
+        if (!this.inventoryUI) return;
+
+        const tabs = this.inventoryUI.tabs || [];
+        const panels = this.inventoryUI.panels || [];
+
+        tabs.forEach(tab => {
+            const isActive = tab.getAttribute('data-tab-target') === tabName;
+            tab.classList.toggle('is-active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panels.forEach(panel => {
+            const isActive = panel.getAttribute('data-tab-panel') === tabName;
+            panel.classList.toggle('active', isActive);
+            panel.classList.toggle('hidden', !isActive);
+        });
+
+        if (!silent && this.audioManager) {
+            this.playButtonSound();
+        }
     }
 
     /**

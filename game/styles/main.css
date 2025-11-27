@@ -884,9 +884,14 @@ body {
     border-radius: 18px 18px 12px 12px;
     box-shadow: 0 8px 0 #b64c2b, 0 12px 16px rgba(0, 0, 0, 0.22);
     transform: translateY(4px);
-    cursor: default;
-    pointer-events: none;
+    cursor: pointer;
+    pointer-events: auto;
     font-family: 'Cooper Black', 'Trebuchet MS', cursive;
+}
+
+.inventory-tab:hover {
+    filter: brightness(1.05);
+    transform: translateY(2px);
 }
 
 .inventory-tab:nth-child(2) {
@@ -933,6 +938,57 @@ body {
     gap: 14px;
 }
 
+.inventory-panels {
+    flex: 1;
+}
+
+.inventory-panel {
+    display: none;
+}
+
+.inventory-panel.active {
+    display: block;
+}
+
+.inventory-placeholder {
+    background: linear-gradient(135deg, #ffe3e5, #ffd6bc 60%, #ffd7f4 100%);
+    border: 3px solid rgba(255, 143, 143, 0.45);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.45);
+    color: #5a1f1f;
+}
+
+.inventory-placeholder h3 {
+    margin-bottom: 6px;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.inventory-placeholder p {
+    margin-bottom: 10px;
+}
+
+.placeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.placeholder-card {
+    background: rgba(255, 255, 255, 0.65);
+    border: 2px solid rgba(255, 143, 143, 0.45);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    font-weight: 800;
+    color: #5a1f1f;
+}
+
+.placeholder-card.muted {
+    opacity: 0.6;
+}
+
 .inventory-items {
     display: flex;
     flex-direction: column;
@@ -940,6 +996,28 @@ body {
     max-height: calc(5 * 68px);
     overflow-y: auto;
     padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #b44a53 rgba(255, 200, 200, 0.4);
+}
+
+.inventory-items::-webkit-scrollbar {
+    width: 10px;
+}
+
+.inventory-items::-webkit-scrollbar-track {
+    background: rgba(255, 200, 200, 0.15);
+    border-radius: 10px;
+}
+
+.inventory-items::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffb3b3, #ff8b8b);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: inset 0 0 0 1px rgba(180, 74, 83, 0.35);
+}
+
+.inventory-items::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ff9d9d, #ff7474);
 }
 
 .inventory-item {

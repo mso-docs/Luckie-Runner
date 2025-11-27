@@ -1,11 +1,11 @@
 <div id="inventoryOverlay" class="inventory hidden" aria-hidden="true">
     <div class="inventory-window" role="dialog" aria-labelledby="inventoryTitle">
         <div class="inventory-tabs" role="tablist" aria-label="Inventory categories">
-            <button class="inventory-tab is-active" type="button" role="tab">Items</button>
-            <button class="inventory-tab" type="button" role="tab">Party</button>
-            <button class="inventory-tab" type="button" role="tab">Gear</button>
-            <button class="inventory-tab" type="button" role="tab">Badges</button>
-            <button class="inventory-tab" type="button" role="tab">Journal</button>
+            <button class="inventory-tab is-active" type="button" role="tab" data-tab-target="items">Items</button>
+            <button class="inventory-tab" type="button" role="tab" data-tab-target="party">Party</button>
+            <button class="inventory-tab" type="button" role="tab" data-tab-target="gear">Gear</button>
+            <button class="inventory-tab" type="button" role="tab" data-tab-target="badges">Badges</button>
+            <button class="inventory-tab" type="button" role="tab" data-tab-target="journal">Journal</button>
         </div>
 
         <div class="inventory-body">
@@ -52,26 +52,69 @@
             </section>
 
             <section class="inventory-column details">
-                <div class="specials-card">
-                    <div class="specials-header">
-                        <span class="star-icon" aria-hidden="true"></span>
-                        <div class="specials-title">
-                            <span>Specials</span>
-                            <div class="specials-dots" aria-hidden="true">
-                                <span class="dot dot-gold"></span>
-                                <span class="dot dot-red"></span>
-                                <span class="dot dot-pink"></span>
-                                <span class="dot dot-purple"></span>
-                                <span class="dot dot-navy"></span>
-                                <span class="dot dot-teal"></span>
+                <div class="inventory-panels">
+                    <div class="inventory-panel active" data-tab-panel="items">
+                        <div class="specials-card">
+                            <div class="specials-header">
+                                <span class="star-icon" aria-hidden="true"></span>
+                                <div class="specials-title">
+                                    <span>Specials</span>
+                                    <div class="specials-dots" aria-hidden="true">
+                                        <span class="dot dot-gold"></span>
+                                        <span class="dot dot-red"></span>
+                                        <span class="dot dot-pink"></span>
+                                        <span class="dot dot-purple"></span>
+                                        <span class="dot dot-navy"></span>
+                                        <span class="dot dot-teal"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="inventory-items" id="inventoryItems"></div>
+                        </div>
+                    </div>
+
+                    <div class="inventory-panel" data-tab-panel="party">
+                        <div class="inventory-placeholder">
+                            <h3>Party Lineup</h3>
+                            <p>Swap or inspect party members here.</p>
+                            <div class="placeholder-grid">
+                                <div class="placeholder-card">Luckie (Leader)</div>
+                                <div class="placeholder-card muted">Empty Slot</div>
+                                <div class="placeholder-card muted">Empty Slot</div>
                             </div>
                         </div>
                     </div>
-                    <div class="inventory-items" id="inventoryItems"></div>
-                </div>
 
-                <div class="inventory-note">
-                    <p>Check Luckie's items, badges, and stats here. Functionality coming soon!</p>
+                    <div class="inventory-panel" data-tab-panel="gear">
+                        <div class="inventory-placeholder">
+                            <h3>Gear Loadout</h3>
+                            <p>Assign gear to boost stats.</p>
+                            <div class="placeholder-grid">
+                                <div class="placeholder-card">Paw Wraps</div>
+                                <div class="placeholder-card">Beach Shades</div>
+                                <div class="placeholder-card muted">Empty Slot</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inventory-panel" data-tab-panel="badges">
+                        <div class="inventory-placeholder">
+                            <h3>Badges</h3>
+                            <p>Equip badges for passive bonuses.</p>
+                            <div class="placeholder-grid">
+                                <div class="placeholder-card">Sunshine Badge</div>
+                                <div class="placeholder-card muted">Empty Slot</div>
+                                <div class="placeholder-card muted">Empty Slot</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="inventory-panel" data-tab-panel="journal">
+                        <div class="inventory-placeholder">
+                            <h3>Journal</h3>
+                            <p>Quest notes, collectibles, and lore snippets will appear here.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
