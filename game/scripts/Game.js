@@ -2791,7 +2791,11 @@ class Game {
         this.npcs.push(this.shopGhost);
 
         // Signboard near start (left of first parkour platform) as an Entity for shadow support
-        this.signBoard = new Sign(this.level.spawnX + 10, groundY - 24, 'art/items/sign.png');
+        this.signBoard = new Sign(
+            this.level.spawnX + 10,
+            groundY - 52, // top aligned to ground like chests
+            'art/items/sign.png'
+        );
 
         // Test coin chest near spawn (coins only)
         const coinChestX = this.level.spawnX + 180;
