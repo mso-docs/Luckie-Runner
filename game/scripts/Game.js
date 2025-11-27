@@ -1441,7 +1441,7 @@ class Game {
         
         // Set level properties
         this.level = {
-            width: this.canvas.width,
+            width: this.testMode ? 4200 : this.canvas.width,
             height: this.canvas.height,
             spawnX: this.testMode ? (this.canvas.width / 2) - 22.5 : 100, // Center on platform
             spawnY: this.testMode ? (this.canvas.height / 2) - 100 : this.canvas.height - 150 // Safely above platform
@@ -1585,8 +1585,14 @@ class Game {
      */
     createFlag() {
         // Position the flag near the end of the level, but not at the very edge
-        const flagX = this.level.width - 300;
-        const flagY = this.level.height - 120; // Position above ground
+        let flagX = this.level.width - 300;
+        let flagY = this.level.height - 120; // Position above ground
+
+        if (this.testMode) {
+            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.level.height - 50);
+            flagY = groundY - 80; // sit on top of ground
+            flagX = 3880; // at the far/right base of the extended mountain path
+        }
         
         this.flag = Flag.create(flagX, flagY);
         this.flag.game = this;
@@ -2755,6 +2761,7 @@ class Game {
         this.dialogueState.speaker = null;
         this.dialogueState.anchor = null;
         this.dialogueState.onClose = null;
+        this.testGroundY = null;
         
         this.npcs = [];
         this.shopGhost = null;
@@ -2877,6 +2884,7 @@ class Game {
         // Create an infinite ground platform
         const groundHeight = 50;
         const groundY = this.canvas.height - groundHeight;
+        this.testGroundY = groundY;
         
         // Create multiple ground segments for infinite running
         // Each segment is 2000px wide, create 10 segments = 20000px of ground
@@ -2908,15 +2916,23 @@ class Game {
             this.platforms.push(new Platform(p.x, p.y, p.width, 12));
         });
 
-        // Blocky mountain climb to the right of the parkour section
+        // Blocky mountain climb to the right of the parkour section, then down the other side
         const mountainSteps = [
+            // Ascent
             { x: 2050, y: groundY - 32, width: 180, height: 32 },
             { x: 2220, y: groundY - 80, width: 150, height: 32 },
             { x: 2360, y: groundY - 132, width: 140, height: 32 },
             { x: 2485, y: groundY - 184, width: 120, height: 32 },
             { x: 2605, y: groundY - 236, width: 120, height: 32 },
             { x: 2725, y: groundY - 288, width: 110, height: 32 },
-            { x: 2840, y: groundY - 340, width: 170, height: 32 }
+            { x: 2840, y: groundY - 340, width: 170, height: 32 },
+            // Descent
+            { x: 2980, y: groundY - 300, width: 150, height: 32 },
+            { x: 3120, y: groundY - 240, width: 150, height: 32 },
+            { x: 3260, y: groundY - 180, width: 150, height: 32 },
+            { x: 3400, y: groundY - 120, width: 150, height: 32 },
+            { x: 3540, y: groundY - 70, width: 150, height: 32 },
+            { x: 3680, y: groundY - 32, width: 180, height: 32 }
         ];
         mountainSteps.forEach(step => {
             this.platforms.push(new Platform(step.x, step.y, step.width, step.height));
@@ -2946,7 +2962,7 @@ class Game {
         this.npcs.push(this.shopGhost);
 
         // Princess NPC on the mountain peak
-        const mountainTop = mountainSteps[mountainSteps.length - 1];
+        const mountainTop = mountainSteps[6]; // peak step
         const princessX = mountainTop.x + (mountainTop.width / 2) - 24.5; // center on peak
         const princessY = mountainTop.y - 64;
         this.princess = new PrincessNPC(princessX, princessY);
