@@ -2301,6 +2301,22 @@ class Game {
         this.shopGhost = new ShopGhost(ghostX, ghostY);
         this.npcs.push(this.shopGhost);
 
+        // Test coin chest near spawn (coins only)
+        const coinChestX = this.level.spawnX + 180;
+        const coinChestY = groundY - 64;
+        const coinChest = new Chest(coinChestX, coinChestY);
+        coinChest.displayName = 'Coin Test Chest';
+        coinChest.contents = [
+            {
+                id: 'coins_test',
+                name: '100 Coins',
+                description: 'A test stash of coins.',
+                take: (player) => player?.collectCoin && player.collectCoin(100)
+            }
+        ];
+        coinChest.game = this;
+        this.chests.push(coinChest);
+
         // Reward chest at the end of the parkour run
         const lastPlatform = parkour[parkour.length - 1];
         const chestX = lastPlatform.x + lastPlatform.width - 64;

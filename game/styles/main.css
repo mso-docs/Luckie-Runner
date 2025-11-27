@@ -1219,7 +1219,7 @@ body {
     box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.1), 0 10px 0 #7c3322;
     justify-self: center;
     background-image: url('../art/content/luckie-menu.png'), radial-gradient(circle at 60% 20%, rgba(255, 255, 255, 0.5), transparent 50%), linear-gradient(180deg, #ffd7d7, #ffb99c);
-    background-size: 110%, auto, cover;
+    background-size: 80%, auto, cover;
     background-position: center 55%, center, center;
     background-repeat: no-repeat;
 }
