@@ -234,6 +234,9 @@ class GameStateManager {
         const menu = document.getElementById(menuId);
         if (menu) {
             menu.classList.remove('hidden');
+            if (this.game && this.game.playMenuEnterSound) {
+                this.game.playMenuEnterSound();
+            }
             // Ensure title music is playing on menu/instructions screens
             if (this.isInMenu() && this.game && this.game.playTitleMusic) {
                 this.game.playTitleMusic();
@@ -248,9 +251,13 @@ class GameStateManager {
      */
     hideAllMenus() {
         const menus = document.querySelectorAll('.menu');
+        const anyVisible = Array.from(menus).some(menu => !menu.classList.contains('hidden'));
         menus.forEach(menu => {
             menu.classList.add('hidden');
         });
+        if (anyVisible && this.game && this.game.playMenuExitSound) {
+            this.game.playMenuExitSound();
+        }
     }
     
     /**
