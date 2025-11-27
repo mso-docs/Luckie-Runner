@@ -107,9 +107,9 @@ class Game {
             active: false,
             target: null,
             messages: [
-                'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-                'your game is like so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
-                'What were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
+                '<<<AAAAAAAAAAAAAAAAAAAAAA>>> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                'your game is _like_ so boring and its just like blah blah blah blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaah',
+                '<<What>> were you expecting? This is just a demo game! the kid woke up and said AAAAAAAAAAAaAAAAAAAAAAaaaAAa',
             ],
             index: 0
         };
@@ -1311,8 +1311,13 @@ class Game {
             safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
         };
 
+        // Size markers (largest first to avoid nested conflicts)
+        apply(/<<<(.+?)>>>/g, 'speech-gigantic');
+        apply(/<<(.+?)>>/g, 'speech-bigger');
+        apply(/<(.+?)>/g, 'speech-big');
+        apply(/_(.+?)_/g, 'speech-tiny');
+
         apply(/\*(.+?)\*/g, 'speech-bold');
-        apply(/_(.+?)_/g, 'speech-italic');
         apply(/%(.+?)%/g, 'speech-shake');
         apply(/~(.+?)~/g, 'speech-rainbow');
         apply(/\^(.+?)\^/g, 'speech-glow');
@@ -2309,7 +2314,7 @@ class Game {
     */
     setSignBubbleText(text) {
         const textEl = this.signDialogue.textEl;
-        if (textEl) textEl.textContent = text ?? '';
+        if (textEl) textEl.innerHTML = this.formatSpeechText(text ?? '');
     }
 
     /**
