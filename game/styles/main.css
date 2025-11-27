@@ -1573,14 +1573,21 @@ body {
 }
 
 .shop-item.is-selected {
-    border-color: #ff7b7b;
-    box-shadow: 0 6px 0 #c04646;
-    background: linear-gradient(180deg, #fff5f5 0%, #ffe1e1 100%);
+    border-color: #ffd166;
+    box-shadow: 0 6px 0 #c0892b;
+    background: linear-gradient(180deg, #fff7d1 0%, #ffe08a 100%);
 }
 .shop-item:focus-visible {
-    outline: 3px solid #ff8b8b;
+    outline: 3px solid #ffd166;
     outline-offset: 2px;
-    box-shadow: 0 0 0 3px rgba(255, 143, 143, 0.35);
+    border-color: #ffd166;
+    background: linear-gradient(180deg, #fff7d1 0%, #ffe08a 100%);
+    box-shadow: 0 6px 0 #c0892b, 0 0 0 3px rgba(255, 209, 102, 0.4);
+}
+.shop-item:active {
+    border-color: #ff9b4b;
+    background: linear-gradient(180deg, #ffc27a 0%, #ff9b4b 100%);
+    box-shadow: 0 4px 0 #b0641f, 0 0 0 2px rgba(255, 155, 75, 0.4);
 }
 
 .shop-item-icon {
