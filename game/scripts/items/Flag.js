@@ -26,6 +26,9 @@ class Flag extends Entity {
     update(deltaTime) {
         if (!this.active) return;
 
+        // Advance sprite animation frames (simple two-frame loop)
+        this.updateAnimation(deltaTime);
+
         if (this.isCompleting) {
             this.completionTime += deltaTime / 1000;
             
