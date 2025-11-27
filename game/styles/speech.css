@@ -34,6 +34,21 @@
     text-shadow: -1px -1px 0 #fff, 1px 1px 0 rgba(0, 0, 0, 0.1);
 }
 
+.sign-dialogue-bubble {
+    --tail-offset: 20px;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+.sign-dialogue-text {
+    margin: 0;
+    white-space: normal;
+    word-break: break-word;
+}
+
 .speech-bubble__body::before,
 .dialog-bubble::before {
     content: '';
