@@ -136,6 +136,13 @@ class Game {
         if (this.audioManager && this.audioManager.music['title']) {
             const targetVolume = 0.8; // match main level loudness
 
+            // If already playing, just ensure volume is correct and return
+            if (this.audioManager.isMusicPlaying('title')) {
+                const music = this.audioManager.music['title'];
+                music.volume = this.audioManager.masterVolume * this.audioManager.musicVolume * targetVolume;
+                return;
+            }
+
             this.audioManager.playMusic('title', targetVolume).catch(() => {
                 // Title music blocked by autoplay policy. Will start on first user interaction.
                 const startMusicOnInteraction = () => {

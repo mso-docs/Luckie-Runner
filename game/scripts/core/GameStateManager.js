@@ -237,10 +237,6 @@ class GameStateManager {
             if (this.game && this.game.playMenuEnterSound) {
                 this.game.playMenuEnterSound();
             }
-            // Ensure title music is playing on menu/instructions screens
-            if (this.isInMenu() && this.game && this.game.playTitleMusic) {
-                this.game.playTitleMusic();
-            }
         } else {
             // Menu not found - skipping
         }

@@ -216,4 +216,15 @@ class AudioManager {
     isMuted() {
         return this.muted;
     }
+
+    /**
+     * Check if a music track is currently playing
+     * @param {string} name - Music identifier
+     * @returns {boolean}
+     */
+    isMusicPlaying(name) {
+        const track = this.music[name];
+        if (!track) return false;
+        return !track.paused && track.currentTime > 0 && !track.ended;
+    }
 }
