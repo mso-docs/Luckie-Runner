@@ -532,11 +532,14 @@ class Enemy extends Entity {
         this.playAnimation('death');
         
         // Fade out
-        this.alpha -= deltaTime / 1000;
+        this.alpha -= deltaTime / 600; // faster fade
         
         // Remove after fading
         if (this.alpha <= 0) {
+            this.alpha = 0;
+            this.visible = false;
             this.active = false;
+            return;
         }
     }
 
