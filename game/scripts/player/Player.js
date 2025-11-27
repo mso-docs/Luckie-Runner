@@ -37,6 +37,7 @@ class Player extends Entity {
         this.coins = 0;
         this.score = 0;
         this.healthPotions = 0;
+        this.coffeeDrinks = 0;
         
         // Rock throwing
         this.maxRocks = 10;
@@ -526,6 +527,18 @@ class Player extends Entity {
     }
 
     /**
+     * Add coffee drinks to inventory (stored for use)
+     * @param {number} amount
+     */
+    addCoffee(amount = 1) {
+        this.coffeeDrinks = Math.max(0, this.coffeeDrinks + amount);
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('special', 0.7);
+        }
+        this.updateUI();
+    }
+
+    /**
      * Add health potions to inventory (stored for later use)
      * @param {number} amount
      */
@@ -561,6 +574,10 @@ class Player extends Entity {
         if (hudRocksElement) hudRocksElement.textContent = this.rocks;
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
+        }
+        // Update shop coin display if open
+        if (this.game && typeof this.game.updateShopDisplay === 'function') {
+            this.game.updateShopDisplay();
         }
     }
 

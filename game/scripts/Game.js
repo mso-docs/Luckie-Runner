@@ -442,6 +442,14 @@ class Game {
                 key: 'health_potion',
                 consumable: true
             });
+            itemEntries.push({
+                name: 'Coffee',
+                value: player.coffeeDrinks ?? 0,
+                description: 'Gives a speed boost for a short time.',
+                icon: 'art/items/coffee.png',
+                key: 'coffee',
+                consumable: true
+            });
         } else if (stats && typeof stats.timeElapsed === 'number') {
             const totalSeconds = Math.floor(stats.timeElapsed / 1000);
             const minutes = Math.floor(totalSeconds / 60);
@@ -580,6 +588,16 @@ class Game {
             case 'health_potion':
                 if (this.player.healthPotions <= 0) return false;
                 return this.player.consumeHealthPotion(25);
+            case 'coffee':
+                if (this.player.coffeeDrinks <= 0) return false;
+                this.player.coffeeDrinks = Math.max(0, this.player.coffeeDrinks - 1);
+                if (typeof this.player.applyCoffeeBuff === 'function') {
+                    this.player.applyCoffeeBuff(2, 120000);
+                }
+                if (typeof this.player.updateUI === 'function') {
+                    this.player.updateUI();
+                }
+                return true;
             default:
                 return false;
         }
@@ -622,6 +640,31 @@ class Game {
     setupShopUI() {
         this.shopUI.overlay = document.getElementById('shopOverlay');
         this.shopUI.isOpen = false;
+        this.shopUI.list = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopItemList') : null;
+        this.shopUI.coinValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopCoinValue') : null;
+        this.shopUI.items = [
+            {
+                id: 'rock_bag',
+                name: 'Bag of Rocks',
+                price: 10,
+                iconClass: 'icon-rockbag',
+                grant: (player) => player?.addRocks && player.addRocks(10)
+            },
+            {
+                id: 'health_potion',
+                name: 'Health Potion',
+                price: 25,
+                iconClass: 'icon-healthpotion',
+                grant: (player) => player?.addHealthPotion && player.addHealthPotion(1)
+            },
+            {
+                id: 'coffee',
+                name: 'Coffee',
+                price: 10,
+                iconClass: 'icon-coffee',
+                grant: (player) => player?.addCoffee && player.addCoffee(1)
+            }
+        ];
         this.hideShopOverlay(true);
         this.shopGhostBubble = document.getElementById('shopGhostBubble');
     }
@@ -753,6 +796,7 @@ class Game {
         const overlay = this.shopUI.overlay;
         if (!overlay) return;
 
+        this.updateShopDisplay();
         overlay.classList.add('active');
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
@@ -776,6 +820,66 @@ class Game {
         if (wasOpen) {
             this.playMenuExitSound();
         }
+    }
+
+    /**
+     * Render shop items and currency
+     */
+    updateShopDisplay() {
+        const ui = this.shopUI;
+        if (!ui.list || !Array.isArray(ui.items)) return;
+
+        const player = this.player;
+        if (ui.coinValue && player) {
+            ui.coinValue.textContent = player.coins ?? 0;
+        }
+
+        ui.list.innerHTML = '';
+        ui.items.forEach(item => {
+            const affordable = player ? (player.coins ?? 0) >= item.price : false;
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'shop-item';
+            row.innerHTML = `
+                <span class="shop-item-icon ${item.iconClass}" aria-hidden="true"></span>
+                <span class="shop-item-name">${item.name}</span>
+                <span class="shop-item-price">${item.price} coins</span>
+            `;
+            row.disabled = !affordable;
+            row.addEventListener('click', () => {
+                this.purchaseShopItem(item);
+            });
+            ui.list.appendChild(row);
+        });
+    }
+
+    /**
+     * Attempt to purchase a shop item
+     * @param {Object} item
+     */
+    purchaseShopItem(item) {
+        if (!item || !this.player) return false;
+        const player = this.player;
+        const coins = player.coins ?? 0;
+        if (coins < item.price) {
+            if (this.audioManager) {
+                this.audioManager.playSound('error', 0.8);
+            }
+            return false;
+        }
+
+        player.coins = coins - item.price;
+        if (typeof player.updateUI === 'function') {
+            player.updateUI();
+        }
+        if (typeof item.grant === 'function') {
+            item.grant(player);
+        }
+        if (this.audioManager) {
+            this.audioManager.playSound('menu_enter', 0.8);
+        }
+        this.updateShopDisplay();
+        return true;
     }
 
     /**

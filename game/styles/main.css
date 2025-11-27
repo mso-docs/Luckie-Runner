@@ -1603,6 +1603,15 @@ body {
 .icon-fire {
     background: radial-gradient(circle at 50% 20%, #ffe9a6 0, #ff9957 60%, #e34b2b 95%);
 }
+.icon-rockbag {
+    background: url('../art/items/rock-item.png') center/70% no-repeat, #fff0d6;
+}
+.icon-healthpotion {
+    background: url('../art/sprites/health-pot.png') center/70% no-repeat, #fff0d6;
+}
+.icon-coffee {
+    background: url('../art/items/coffee.png') center/70% no-repeat, #fff0d6;
+}
 
 .shop-item-price {
     color: #384b63;
