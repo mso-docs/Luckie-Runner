@@ -66,7 +66,10 @@ class Game {
             index: 0,
             active: false,
             dismissing: false,
-            hideTimeout: null
+            hideTimeout: null,
+            speaker: null,
+            anchor: null,
+            onClose: null
         };
         this.speechBubble = {
             container: null,
@@ -98,6 +101,7 @@ class Game {
         };
         this.npcs = [];
         this.shopGhost = null;
+        this.princess = null;
         this.signBoard = null;
         this.signCallout = null;
         this.signDialogue = {
@@ -1025,6 +1029,9 @@ class Game {
         this.dialogueState.index = 0;
         this.dialogueState.active = true;
         this.dialogueState.dismissing = false;
+        this.dialogueState.speaker = null;
+        this.dialogueState.anchor = null;
+        this.dialogueState.onClose = null;
         this.showSpeechBubble(this.dialogueState.messages[0]);
     }
 
@@ -1048,6 +1055,12 @@ class Game {
         if (this.input.consumeInteractPress()) {
             if (this.chestUI.isOpen) {
                 this.hideChestOverlay();
+                return;
+            }
+
+            const talker = this.getNearbyTalkableNpc();
+            if (talker) {
+                this.startNpcDialogue(talker);
                 return;
             }
 
@@ -1111,6 +1124,20 @@ class Game {
     }
 
     /**
+     * Locate a talkable NPC in range (Enter key interactions)
+     * @returns {Entity|null}
+     */
+    getNearbyTalkableNpc() {
+        if (!this.player || !Array.isArray(this.npcs)) return null;
+        return this.npcs.find(npc =>
+            npc &&
+            npc.canTalk &&
+            typeof npc.isPlayerNearby === 'function' &&
+            npc.isPlayerNearby(this.player, npc.interactRadius || 120)
+        ) || null;
+    }
+
+    /**
      * Find a chest if the player is close enough
      * @returns {Chest|null}
      */
@@ -1144,6 +1171,30 @@ class Game {
         if (this.audioManager) {
             this.audioManager.playSound('purchase', 1);
         }
+    }
+
+    /**
+     * Start a dialogue with an NPC using the global speech bubble
+     * @param {Entity} npc
+     */
+    startNpcDialogue(npc) {
+        if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
+        if (this.dialogueState.active) return;
+
+        this.dialogueState.messages = npc.dialogueLines.slice();
+        this.dialogueState.index = 0;
+        this.dialogueState.speaker = npc;
+        this.dialogueState.anchor = npc;
+        this.dialogueState.onClose = () => {
+            if (typeof npc.onDialogueClosed === 'function') {
+                npc.onDialogueClosed();
+            }
+        };
+        this.dialogueState.dismissing = false;
+        if (typeof npc.setTalking === 'function') {
+            npc.setTalking(true);
+        }
+        this.showSpeechBubble(this.dialogueState.messages[0]);
     }
 
     /**
@@ -1188,22 +1239,36 @@ class Game {
      */
     hideSpeechBubble(immediate = false) {
         const bubble = this.speechBubble.container;
+        const runCloseHook = () => {
+            if (typeof this.dialogueState.onClose === 'function') {
+                this.dialogueState.onClose();
+            } else if (this.dialogueState.speaker && typeof this.dialogueState.speaker.onDialogueClosed === 'function') {
+                this.dialogueState.speaker.onDialogueClosed();
+            }
+        };
+        const resetDialogueState = () => {
+            runCloseHook();
+            this.dialogueState.active = false;
+            this.dialogueState.dismissing = false;
+            this.dialogueState.hideTimeout = null;
+            this.dialogueState.speaker = null;
+            this.dialogueState.anchor = null;
+            this.dialogueState.onClose = null;
+        };
         if (this.dialogueState.hideTimeout) {
             clearTimeout(this.dialogueState.hideTimeout);
             this.dialogueState.hideTimeout = null;
         }
 
         if (!bubble) {
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
+            resetDialogueState();
             return;
         }
 
         if (immediate) {
             bubble.classList.remove('show');
             bubble.setAttribute('aria-hidden', 'true');
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
+            resetDialogueState();
             return;
         }
 
@@ -1211,24 +1276,35 @@ class Game {
         bubble.classList.remove('show');
         this.dialogueState.hideTimeout = setTimeout(() => {
             bubble.setAttribute('aria-hidden', 'true');
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
-            this.dialogueState.hideTimeout = null;
+            resetDialogueState();
         }, 250);
     }
 
     /**
-     * Keep the bubble anchored to the player's mouth horizontally
+     * Keep the bubble anchored to the active speaker (player or NPC)
      */
     updateSpeechBubblePosition() {
         const bubble = this.speechBubble.container;
         if (!bubble) return;
 
+        const camera = this.camera || { x: 0, y: 0 };
+        const anchor = this.dialogueState.anchor;
         let targetX = this.canvas.width / 2;
         let headY = this.canvas.height / 2;
-        if (this.player) {
-            targetX = this.player.x - this.camera.x + this.player.width / 2;
-            headY = this.player.y - this.camera.y;
+        let anchorWidth = 0;
+        let facingDir = 1;
+
+        if (anchor) {
+            const center = anchor.getCenter ? anchor.getCenter() : { x: anchor.x + (anchor.width || 0) / 2, y: anchor.y + (anchor.height || 0) / 2 };
+            targetX = center.x - camera.x;
+            headY = anchor.y - camera.y;
+            anchorWidth = anchor.width || 0;
+            facingDir = anchor.facing || 1;
+        } else if (this.player) {
+            targetX = this.player.x - camera.x + this.player.width / 2;
+            headY = this.player.y - camera.y;
+            anchorWidth = this.player.width;
+            facingDir = this.player.facing || 1;
         }
 
         bubble.style.left = `${targetX}px`;
@@ -1240,7 +1316,7 @@ class Game {
 
         // Offset tail toward the player's mouth (slight bias toward facing direction)
         // Nudge tail 20px further right relative to previous anchor
-        const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
+        const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
     }
 
@@ -1840,6 +1916,9 @@ class Game {
                 this.resolvePlayerPlatformCollision(platform);
             }
         });
+
+        // NPC collisions (solid talkers/shopkeepers)
+        this.handleNpcCollisions();
         
         // Enemy collisions (disabled in test mode)
         if (!this.testMode) {
@@ -1912,6 +1991,64 @@ class Game {
             } else {
                 // Hit from below
                 this.player.y = platform.y + platform.height;
+                this.player.velocity.y = Math.max(0, this.player.velocity.y);
+            }
+        }
+    }
+
+    /**
+     * Resolve collisions between the player and solid NPCs
+     */
+    handleNpcCollisions() {
+        if (!this.player || !Array.isArray(this.npcs)) return;
+        this.npcs.forEach(npc => {
+            if (!npc || npc.solid === false) return;
+            if (CollisionDetection.entityCollision(this.player, npc)) {
+                this.resolvePlayerEntityCollision(npc);
+            }
+        });
+    }
+
+    /**
+     * Push the player out of an NPC hitbox
+     * @param {Entity} entity
+     */
+    resolvePlayerEntityCollision(entity) {
+        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const entityBounds = CollisionDetection.getCollisionBounds(entity);
+        const offsetX = this.player.collisionOffset?.x || 0;
+        const offsetY = this.player.collisionOffset?.y || 0;
+
+        const overlapX = Math.min(
+            playerBounds.x + playerBounds.width - entityBounds.x,
+            entityBounds.x + entityBounds.width - playerBounds.x
+        );
+        const overlapY = Math.min(
+            playerBounds.y + playerBounds.height - entityBounds.y,
+            entityBounds.y + entityBounds.height - playerBounds.y
+        );
+
+        if (overlapX < overlapY) {
+            // Horizontal collision
+            if (playerBounds.x < entityBounds.x) {
+                // Hit from left
+                this.player.x = entityBounds.x - playerBounds.width - offsetX;
+                this.player.velocity.x = Math.min(0, this.player.velocity.x);
+            } else {
+                // Hit from right
+                this.player.x = entityBounds.x + entityBounds.width - offsetX;
+                this.player.velocity.x = Math.max(0, this.player.velocity.x);
+            }
+        } else {
+            // Vertical collision
+            if (playerBounds.y < entityBounds.y) {
+                // Landing on top
+                this.player.y = entityBounds.y - playerBounds.height - offsetY;
+                this.player.velocity.y = Math.min(0, this.player.velocity.y);
+                this.player.onGround = true;
+            } else {
+                // Hit from below
+                this.player.y = entityBounds.y + entityBounds.height - offsetY;
                 this.player.velocity.y = Math.max(0, this.player.velocity.y);
             }
         }
@@ -2615,6 +2752,9 @@ class Game {
         this.signCallout = null;
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
+        this.dialogueState.speaker = null;
+        this.dialogueState.anchor = null;
+        this.dialogueState.onClose = null;
         
         this.npcs = [];
         this.shopGhost = null;
@@ -2768,6 +2908,20 @@ class Game {
             this.platforms.push(new Platform(p.x, p.y, p.width, 12));
         });
 
+        // Blocky mountain climb to the right of the parkour section
+        const mountainSteps = [
+            { x: 2050, y: groundY - 32, width: 180, height: 32 },
+            { x: 2220, y: groundY - 80, width: 150, height: 32 },
+            { x: 2360, y: groundY - 132, width: 140, height: 32 },
+            { x: 2485, y: groundY - 184, width: 120, height: 32 },
+            { x: 2605, y: groundY - 236, width: 120, height: 32 },
+            { x: 2725, y: groundY - 288, width: 110, height: 32 },
+            { x: 2840, y: groundY - 340, width: 170, height: 32 }
+        ];
+        mountainSteps.forEach(step => {
+            this.platforms.push(new Platform(step.x, step.y, step.width, step.height));
+        });
+
         // Quick test spawns
         const slime = new Slime(300, groundY);
         slime.game = this;
@@ -2788,7 +2942,21 @@ class Game {
         const ghostX = 680;
         const ghostY = groundY - 64;
         this.shopGhost = new ShopGhost(ghostX, ghostY);
+        this.shopGhost.game = this;
         this.npcs.push(this.shopGhost);
+
+        // Princess NPC on the mountain peak
+        const mountainTop = mountainSteps[mountainSteps.length - 1];
+        const princessX = mountainTop.x + (mountainTop.width / 2) - 24.5; // center on peak
+        const princessY = mountainTop.y - 64;
+        this.princess = new PrincessNPC(princessX, princessY);
+        this.princess.game = this;
+        this.princess.dialogueLines = [
+            'You actually made it up here? I promise I will have a real quest soon.',
+            'For now, enjoy this breeze and pretend the mountain is much taller.',
+            'Press Enter again if you want to hear me repeat myself. I am patient!'
+        ];
+        this.npcs.push(this.princess);
 
         // Signboard near start (left of first parkour platform) as an Entity for shadow support
         this.signBoard = new Sign(
