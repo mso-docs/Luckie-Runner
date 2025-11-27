@@ -1429,6 +1429,19 @@ class Game {
         this.chests = [];
         this.flag = null;
         
+        // Determine player spawn
+        const getTestSpawn = () => {
+            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.canvas.height - 50);
+            const playerWidth = 45;
+            const playerHeight = 66;
+            const defaultX = 140; // aligns with test-room sign anchor
+            const signX = this.signBoard ? this.signBoard.x : defaultX + 40;
+            return {
+                x: signX - 20 - playerWidth,
+                y: groundY - playerHeight
+            };
+        };
+
         if (this.testMode) {
             this.createTestRoom();
         } else {
@@ -1440,11 +1453,13 @@ class Game {
         }
         
         // Set level properties
+        const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
+
         this.level = {
             width: this.testMode ? 4200 : this.canvas.width,
             height: this.canvas.height,
-            spawnX: this.testMode ? (this.canvas.width / 2) - 22.5 : 100, // Center on platform
-            spawnY: this.testMode ? (this.canvas.height / 2) - 100 : this.canvas.height - 150 // Safely above platform
+            spawnX: spawn.x,
+            spawnY: spawn.y
         };
         
         // Create level completion flag
@@ -1735,16 +1750,6 @@ class Game {
             this.player.updateHealthUI();
         }
 
-        // In test mode, start just left of the sign for quick interaction
-        if (this.testMode && this.signBoard) {
-            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.canvas.height - 50);
-            const spawnY = groundY - this.player.height;
-            const spawnX = this.signBoard.x - 20 - this.player.width;
-            this.level.spawnX = spawnX;
-            this.level.spawnY = spawnY;
-            this.player.x = spawnX;
-            this.player.y = spawnY;
-        }
         this.updateInventoryOverlay();
         
         // Reset game stats
@@ -2772,6 +2777,7 @@ class Game {
         this.dialogueState.anchor = null;
         this.dialogueState.onClose = null;
         this.testGroundY = null;
+        this.signBoard = null;
         
         this.npcs = [];
         this.shopGhost = null;
@@ -2895,6 +2901,7 @@ class Game {
         const groundHeight = 50;
         const groundY = this.canvas.height - groundHeight;
         this.testGroundY = groundY;
+        const spawnAnchorX = 140;
         
         // Create multiple ground segments for infinite running
         // Each segment is 2000px wide, create 10 segments = 20000px of ground
@@ -2986,13 +2993,13 @@ class Game {
 
         // Signboard near start (left of first parkour platform) as an Entity for shadow support
         this.signBoard = new Sign(
-            this.level.spawnX + 10,
+            spawnAnchorX + 40,
             groundY - 52, // top aligned to ground like chests
             'art/items/sign.png'
         );
 
         // Test coin chest near spawn (coins only)
-        const coinChestX = this.level.spawnX + 180;
+        const coinChestX = spawnAnchorX + 210;
         const coinChestY = groundY - 64;
         const coinChest = new Chest(coinChestX, coinChestY);
         coinChest.displayName = 'Coin Test Chest';
