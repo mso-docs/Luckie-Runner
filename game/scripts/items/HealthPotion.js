@@ -22,7 +22,14 @@ class HealthPotion extends Item {
 
     collect(collector) {
         if (this.collected || !collector) return false;
-        collector.heal(this.healAmount);
+
+        // If player is full health, stash potion instead of consuming
+        if (collector.health >= collector.maxHealth && typeof collector.addHealthPotion === 'function') {
+            collector.addHealthPotion(1);
+        } else {
+            collector.heal(this.healAmount);
+        }
+
         this.collected = true;
         this.active = false;
         if (this.game && this.game.audioManager) {

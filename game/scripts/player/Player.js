@@ -36,6 +36,7 @@ class Player extends Entity {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
+        this.healthPotions = 0;
         
         // Rock throwing
         this.maxRocks = 10;
@@ -525,6 +526,18 @@ class Player extends Entity {
     }
 
     /**
+     * Add health potions to inventory (stored for later use)
+     * @param {number} amount
+     */
+    addHealthPotion(amount = 1) {
+        this.healthPotions = Math.max(0, this.healthPotions + amount);
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('health', 0.7);
+        }
+        this.updateUI();
+    }
+
+    /**
      * Update UI elements
      */
     updateUI() {
@@ -533,6 +546,9 @@ class Player extends Entity {
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
         if (hudRocksElement) hudRocksElement.textContent = this.rocks;
+        if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
+            this.game.updateInventoryOverlay();
+        }
     }
 
     /**
@@ -551,6 +567,9 @@ class Player extends Entity {
                 color = '#ffd447'; // yellow for mid health
             }
             healthFill.style.backgroundColor = color;
+        }
+        if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
+            this.game.updateInventoryOverlay();
         }
     }
 
@@ -628,6 +647,7 @@ class Player extends Entity {
         this.coins = 0;
         this.score = 0;
         this.rocks = this.maxRocks;
+        this.healthPotions = 0;
         this.attackCooldown = 0;
         this.velocity = { x: 0, y: 0 };
         this.facing = 1;

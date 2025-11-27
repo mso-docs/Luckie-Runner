@@ -315,7 +315,67 @@ class Game {
      */
     setupInventoryUI() {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
+        this.inventoryUI.list = document.getElementById('inventoryItems');
         this.hideInventoryOverlay(true);
+    }
+
+    /**
+     * Populate the inventory overlay with live player stats/items
+     */
+    updateInventoryOverlay() {
+        const list = this.inventoryUI?.list;
+        if (!list) return;
+
+        const player = this.player;
+        const stats = this.stats;
+        const items = [];
+
+        if (player) {
+            items.push({
+                name: 'Coins',
+                value: player.coins ?? 0
+            });
+            items.push({
+                name: 'Rocks',
+                value: player.rocks ?? 0
+            });
+            items.push({
+                name: 'Health Potions',
+                value: player.healthPotions ?? 0
+            });
+            items.push({
+                name: 'Score',
+                value: player.score ?? 0
+            });
+            items.push({
+                name: 'HP',
+                value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
+            });
+        }
+
+        if (stats && typeof stats.timeElapsed === 'number') {
+            const totalSeconds = Math.floor(stats.timeElapsed / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            items.push({
+                name: 'Time',
+                value: timeString
+            });
+        }
+
+        list.innerHTML = '';
+
+        items.forEach(item => {
+            const row = document.createElement('button');
+            row.className = 'inventory-item';
+            row.type = 'button';
+            row.innerHTML = `
+                <span class="inventory-item__name">${item.name}</span>
+                <span class="inventory-item__value">${item.value}</span>
+            `;
+            list.appendChild(row);
+        });
     }
 
     /**
@@ -1151,6 +1211,7 @@ class Game {
         this.player = new Player(this.level.spawnX, this.level.spawnY);
         this.player.game = this;
         // Player uses default gravity from Entity class
+        this.updateInventoryOverlay();
         
         // Reset game stats
         this.stats = {
@@ -1285,6 +1346,7 @@ class Game {
         
         // Update statistics
         this.updateGameStats(deltaTime);
+        this.updateInventoryOverlay();
         
         // Check game over conditions
         this.checkGameOver();
