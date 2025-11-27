@@ -133,6 +133,34 @@ class Game {
     }
 
     /**
+     * Save a snapshot of pristine game state for future resets
+     */
+    saveInitialStateTemplate() {
+        this.initialStateTemplate = {
+            timeScale: this.timeScale,
+            testMode: this.testMode,
+            level: { ...(this.level || {}) },
+            stats: {
+                enemiesDefeated: 0,
+                coinsCollected: 0,
+                distanceTraveled: 0,
+                timeElapsed: 0
+            },
+            camera: { x: 0, y: 0 },
+            dialogue: {
+                messages: [],
+                index: 0,
+                active: false,
+                dismissing: false,
+                hideTimeout: null,
+                speaker: null,
+                anchor: null,
+                onClose: null
+            }
+        };
+    }
+
+    /**
      * Initialize all game systems
      */
     init() {
@@ -160,6 +188,9 @@ class Game {
         this.playTitleMusic();
         
         // Game initialized
+
+        // Capture pristine defaults for reliable resets
+        this.saveInitialStateTemplate();
     }
     
 
@@ -2760,9 +2791,30 @@ class Game {
      * Reset game entities and state (used by GameStateManager)
      */
     resetGame() {
+        // Ensure we have a baseline snapshot to restore from
+        if (!this.initialStateTemplate) {
+            this.saveInitialStateTemplate();
+        }
+
+        // Restore primitive state from the initial template
+        if (this.initialStateTemplate) {
+            this.timeScale = this.initialStateTemplate.timeScale;
+            this.testMode = this.initialStateTemplate.testMode;
+            this.level = { ...this.initialStateTemplate.level };
+            this.stats = { ...this.initialStateTemplate.stats };
+            this.camera = { ...this.initialStateTemplate.camera };
+            this.dialogueState = { ...this.initialStateTemplate.dialogue };
+            this.gameTime = 0;
+            this.frameCount = 0;
+            this.lastTime = 0;
+        }
+
         // Clear transient state before rebuilding
         this.player = null;
         this.projectiles = [];
+        this.enemies = [];
+        this.items = [];
+        this.platforms = [];
         this.hazards = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
@@ -2794,6 +2846,7 @@ class Game {
         }
         this.chests = [];
         this.chestUI.currentChest = null;
+        this.flag = null;
 
         // Reset managers
         this.palmTreeManager.reset();
