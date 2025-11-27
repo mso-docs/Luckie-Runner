@@ -7,25 +7,9 @@ class Sign extends Entity {
         this.sprite.onload = () => { this.spriteLoaded = true; };
     }
 
-    render(ctx, camera) {
-        if (!this.visible) return;
-        const screenX = this.x - camera.x;
-        const screenY = this.y - camera.y;
-        if (screenX + this.width < 0 || screenX > ctx.canvas.width || screenY + this.height < 0 || screenY > ctx.canvas.height) return;
-
-        // Shadow
-        this.renderShadow(ctx, screenX, camera);
-
-        ctx.save();
-        ctx.translate(screenX - this.width / 2, screenY - this.height / 2);
-        if (this.spriteLoaded) {
-            ctx.drawImage(this.sprite, 0, 0, this.width, this.height);
-        } else {
-            ctx.fillStyle = '#d9b178';
-            ctx.fillRect(0, 0, this.width, this.height);
-        }
-        ctx.restore();
-    }
+  render(ctx, camera) {
+    super.render(ctx, camera);
+  }
 }
 
 if (typeof module !== 'undefined') {
