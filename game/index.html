@@ -55,112 +55,8 @@
             Press Z to interact with me!
         </div>
 
-        <!-- Inventory Overlay (UI only) -->
-        <div id="inventoryOverlay" class="inventory hidden" aria-hidden="true">
-            <div class="inventory-window" role="dialog" aria-labelledby="inventoryTitle">
-                <div class="inventory-tabs" role="tablist" aria-label="Inventory categories">
-                    <button class="inventory-tab is-active" type="button" role="tab">Items</button>
-                    <button class="inventory-tab" type="button" role="tab">Party</button>
-                    <button class="inventory-tab" type="button" role="tab">Gear</button>
-                    <button class="inventory-tab" type="button" role="tab">Badges</button>
-                    <button class="inventory-tab" type="button" role="tab">Journal</button>
-                </div>
-
-                <div class="inventory-body">
-                    <section class="inventory-column profile">
-                        <header class="profile-card">
-                            <div class="profile-nameplate">
-                                <div class="profile-name">
-                                    <span id="inventoryTitle">Luckie</span>
-                                    <span class="profile-level">Lvl. 07</span>
-                                </div>
-                                <span class="profile-rank">B-list Pup</span>
-                            </div>
-                            <div class="profile-bust" aria-hidden="true"></div>
-                            <div class="profile-actions">
-                                <div class="profile-action action-hammer">
-                                    <span class="action-icon" aria-hidden="true"></span>
-                                    <span class="action-label">Paw Smash</span>
-                                </div>
-                                <div class="profile-action action-coin">
-                                    <span class="action-icon" aria-hidden="true"></span>
-                                    <span class="action-label">Coin Toss</span>
-                                </div>
-                                <div class="profile-action action-spin">
-                                    <span class="action-icon" aria-hidden="true"></span>
-                                    <span class="action-label">Shell Spin</span>
-                                </div>
-                            </div>
-                        </header>
-
-                        <div class="stat-cards">
-                            <div class="stat-card stat-heart">
-                                <span class="stat-label">HP</span>
-                                <span class="stat-value">34/35</span>
-                            </div>
-                            <div class="stat-card stat-flower">
-                                <span class="stat-label">Stamina</span>
-                                <span class="stat-value">25/25</span>
-                            </div>
-                            <div class="stat-card stat-badge">
-                                <span class="stat-label">Badge Pts</span>
-                                <span class="stat-value">15</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="inventory-column details">
-                        <div class="specials-card">
-                            <div class="specials-header">
-                                <span class="star-icon" aria-hidden="true"></span>
-                                <div class="specials-title">
-                                    <span>Specials</span>
-                                    <div class="specials-dots" aria-hidden="true">
-                                        <span class="dot dot-gold"></span>
-                                        <span class="dot dot-red"></span>
-                                        <span class="dot dot-pink"></span>
-                                        <span class="dot dot-purple"></span>
-                                        <span class="dot dot-navy"></span>
-                                        <span class="dot dot-teal"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <ul class="specials-list">
-                                <li>
-                                    <span class="bullet bullet-star" aria-hidden="true"></span>
-                                    Star Pts.
-                                    <span class="specials-value">× 54</span>
-                                </li>
-                                <li>
-                                    <span class="bullet bullet-coin" aria-hidden="true"></span>
-                                    Coins
-                                    <span class="specials-value">× 233</span>
-                                </li>
-                                <li>
-                                    <span class="bullet bullet-note" aria-hidden="true"></span>
-                                    Star Pcs.
-                                    <span class="specials-value">× 24</span>
-                                </li>
-                                <li>
-                                    <span class="bullet bullet-sun" aria-hidden="true"></span>
-                                    Sunshine Shards
-                                    <span class="specials-value">× 11</span>
-                                </li>
-                                <li>
-                                    <span class="bullet bullet-clock" aria-hidden="true"></span>
-                                    Play Time
-                                    <span class="specials-value">18:29</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="inventory-note">
-                            <p>Check Luckie's items, badges, and stats here. Functionality coming soon!</p>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
+        <!-- Inventory Overlay (loaded from separate file) -->
+        <div id="inventoryContainer"></div>
 
         <!-- Shop Overlay (UI only) -->
         <div id="shopOverlay" class="shop-overlay hidden" aria-hidden="true">
@@ -319,6 +215,19 @@
         </div>
     </div>
 
+    <!-- Load inventory markup -->
+    <script>
+        const inventoryReady = fetch('ui/inventory.html')
+            .then(res => res.text())
+            .then(html => {
+                const container = document.getElementById('inventoryContainer');
+                if (container) {
+                    container.innerHTML = html;
+                }
+            })
+            .catch(() => {});
+    </script>
+
     <!-- Core Game Scripts -->
     <script src="scripts/utils/InputManager.js"></script>
     <script src="scripts/utils/AudioManager.js"></script>
@@ -364,10 +273,12 @@
     
     <!-- Initialize Game -->
     <script>
-        // Initialize the game when page loads
+        // Initialize the game when page loads, after inventory markup is injected
         window.addEventListener('load', () => {
-            const game = new Game('gameCanvas');
-            window.game = game; // For debugging
+            inventoryReady.finally(() => {
+                const game = new Game('gameCanvas');
+                window.game = game; // For debugging
+            });
         });
     </script>
 </body>
