@@ -1745,6 +1745,10 @@ class Game {
         // Create player
         this.player = new Player(this.level.spawnX, this.level.spawnY);
         this.player.game = this;
+        // Ensure fresh player state (buffs/items/health/UI)
+        if (typeof this.player.reset === 'function') {
+            this.player.reset();
+        }
         // Player uses default gravity from Entity class
         if (typeof this.player.updateHealthUI === 'function') {
             this.player.updateHealthUI();
@@ -2771,6 +2775,10 @@ class Game {
             this.signCallout.parentNode.removeChild(this.signCallout);
         }
         this.signCallout = null;
+        const buffPanel = document.getElementById('buffPanel');
+        const coffeeTimer = document.getElementById('coffeeTimer');
+        if (buffPanel) buffPanel.classList.add('hidden');
+        if (coffeeTimer) coffeeTimer.textContent = '--:--';
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
         this.dialogueState.speaker = null;

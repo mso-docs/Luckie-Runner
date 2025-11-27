@@ -16,8 +16,20 @@ class GameStateManager {
             GAME_OVER: 'gameOver',
             VICTORY: 'victory'
         };
+
+        this.lastRunStats = { score: 0, coins: 0 };
         
         // GameStateManager initialized
+    }
+
+    /**
+     * Capture the current run stats before wiping world state
+     */
+    captureRunStats() {
+        this.lastRunStats = {
+            score: this.game?.player?.score || 0,
+            coins: this.game?.player?.coins || 0
+        };
     }
     
     /**
@@ -75,6 +87,11 @@ class GameStateManager {
      * Start the game
      */
     startGame() {
+        // Always rebuild world for a fresh start (items/entities reset)
+        if (this.game && typeof this.game.resetGame === 'function') {
+            this.game.resetGame();
+        }
+
         this.setState(this.states.PLAYING);
         this.game.running = true;
         this.hideAllMenus();
@@ -133,7 +150,9 @@ class GameStateManager {
      * Handle game over
      */
     gameOver() {
+        this.captureRunStats();
         this.setState(this.states.GAME_OVER);
+        this.game.running = false;
         
         // Update game over screen
         const gameOverMenu = document.getElementById('gameOverMenu');
@@ -144,6 +163,9 @@ class GameStateManager {
         
         // Update final scores
         this.updateFinalScores();
+        if (this.game && typeof this.game.resetGame === 'function') {
+            this.game.resetGame();
+        }
         this.showMenu('gameOverMenu');
         
         // Play game over sound
@@ -159,7 +181,9 @@ class GameStateManager {
      * Handle victory
      */
     victory() {
+        this.captureRunStats();
         this.setState(this.states.VICTORY);
+        this.game.running = false;
         
         // Bonus points for victory
         if (this.game.player) {
@@ -175,6 +199,9 @@ class GameStateManager {
         }
         
         this.updateFinalScores();
+        if (this.game && typeof this.game.resetGame === 'function') {
+            this.game.resetGame();
+        }
         this.showMenu('gameOverMenu');
         
         // Play victory sound
@@ -192,9 +219,11 @@ class GameStateManager {
     restartGame() {
         this.setState(this.states.PLAYING);
         this.hideAllMenus();
-        
-        // Reset game systems
-        this.game.resetGame();
+
+        // Always rebuild world to respawn all items/entities
+        if (this.game && typeof this.game.resetGame === 'function') {
+            this.game.resetGame();
+        }
         
         // Start new game
         this.startGame();
@@ -206,6 +235,7 @@ class GameStateManager {
      * Return to main menu
      */
     returnToMenu() {
+        this.captureRunStats();
         this.setState(this.states.MENU);
         this.game.running = false;
         
@@ -264,10 +294,10 @@ class GameStateManager {
         const finalCoinsElement = document.getElementById('finalCoins');
         
         if (finalScoreElement) {
-            finalScoreElement.textContent = this.game.player?.score || 0;
+            finalScoreElement.textContent = this.lastRunStats.score || 0;
         }
         if (finalCoinsElement) {
-            finalCoinsElement.textContent = this.game.player?.coins || 0;
+            finalCoinsElement.textContent = this.lastRunStats.coins || 0;
         }
     }
     
