@@ -1867,10 +1867,9 @@ class Game {
         // Update flag
         if (this.flag) {
             this.flag.update(deltaTime);
-            
-            // Check flag collision with player (disabled in test mode)
-            if (!this.testMode && this.player && this.flag.checkCollision(this.player)) {
-                // Player collided with flag
+
+            // Check flag collision with player (always enabled)
+            if (this.player && this.flag.checkCollision(this.player)) {
                 this.flag.collect(this.player);
             }
         }
