@@ -1070,7 +1070,7 @@ body {
 }
 
 .inventory-item-modal.active {
-    display: flex;
+    display: flex !important; /* Ensure visibility even if a hidden class lingers */
 }
 
 .modal-card {

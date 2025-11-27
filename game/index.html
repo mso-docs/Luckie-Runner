@@ -55,8 +55,155 @@
             Press Z to interact with me!
         </div>
 
-        <!-- Inventory Overlay (loaded from separate file) -->
-        <div id="inventoryContainer"></div>
+        <!-- Inventory Overlay (inlined) -->
+        <div id="inventoryContainer">
+            <div id="inventoryOverlay" class="inventory hidden" aria-hidden="true">
+                <div class="inventory-window" role="dialog" aria-labelledby="inventoryTitle">
+                    <div class="inventory-tabs" role="tablist" aria-label="Inventory categories">
+                        <button class="inventory-tab is-active" type="button" role="tab" data-tab-target="stats">Stats</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="items">Items</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="gear">Gear</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="badges">Badges</button>
+                        <button class="inventory-tab" type="button" role="tab" data-tab-target="journal">Journal</button>
+                    </div>
+
+                    <div class="inventory-body">
+                        <section class="inventory-column profile">
+                            <header class="profile-card">
+                                <div class="profile-nameplate">
+                                    <div class="profile-name">
+                                        <span id="inventoryTitle">Luckie</span>
+                                        <span class="profile-level">Lvl. 07</span>
+                                    </div>
+                                    <span class="profile-rank">B-list Pup</span>
+                                </div>
+                                <div class="profile-bust" aria-hidden="true"></div>
+                                <div class="profile-actions">
+                                    <div class="profile-action action-hammer">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Paw Smash</span>
+                                    </div>
+                                    <div class="profile-action action-coin">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Coin Toss</span>
+                                    </div>
+                                    <div class="profile-action action-spin">
+                                        <span class="action-icon" aria-hidden="true"></span>
+                                        <span class="action-label">Shell Spin</span>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <div class="stat-cards">
+                                <div class="stat-card stat-heart">
+                                    <span class="stat-label">HP</span>
+                                    <span class="stat-value">34/35</span>
+                                </div>
+                                <div class="stat-card stat-flower">
+                                    <span class="stat-label">Stamina</span>
+                                    <span class="stat-value">25/25</span>
+                                </div>
+                                <div class="stat-card stat-badge">
+                                    <span class="stat-label">Badge Pts</span>
+                                    <span class="stat-value">15</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="inventory-column details">
+                            <div class="inventory-panels">
+                                <div class="inventory-panel active" data-tab-panel="stats">
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Stats</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="inventory-stats" id="inventoryStats"></div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="items">
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Items</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="inventory-items" id="inventoryItems"></div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="gear">
+                                    <div class="inventory-placeholder">
+                                        <h3>Gear Loadout</h3>
+                                        <p>Assign gear to boost stats.</p>
+                                        <div class="placeholder-grid">
+                                            <div class="placeholder-card">Paw Wraps</div>
+                                            <div class="placeholder-card">Beach Shades</div>
+                                            <div class="placeholder-card muted">Empty Slot</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="badges">
+                                    <div class="inventory-placeholder">
+                                        <h3>Badges</h3>
+                                        <p>Equip badges for passive bonuses.</p>
+                                        <div class="placeholder-grid">
+                                            <div class="placeholder-card">Sunshine Badge</div>
+                                            <div class="placeholder-card muted">Empty Slot</div>
+                                            <div class="placeholder-card muted">Empty Slot</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-panel" data-tab-panel="journal">
+                                    <div class="inventory-placeholder">
+                                        <h3>Journal</h3>
+                                        <p>Quest notes, collectibles, and lore snippets will appear here.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="inventoryItemModal" class="inventory-item-modal hidden" role="dialog" aria-modal="true">
+                    <div class="modal-card">
+                        <div class="modal-header">
+                            <div class="modal-icon" id="itemModalIcon" aria-hidden="true"></div>
+                            <div class="modal-title" id="itemModalName">Item</div>
+                        </div>
+                        <div class="modal-body">
+                            <p id="itemModalDescription">Item description goes here.</p>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="modal-btn use" id="itemModalUse">Use</button>
+                            <button type="button" class="modal-btn exit" id="itemModalExit">Exit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Shop Overlay (UI only) -->
         <div id="shopOverlay" class="shop-overlay hidden" aria-hidden="true">
@@ -215,19 +362,6 @@
         </div>
     </div>
 
-    <!-- Load inventory markup -->
-    <script>
-        const inventoryReady = fetch('ui/inventory.html')
-            .then(res => res.text())
-            .then(html => {
-                const container = document.getElementById('inventoryContainer');
-                if (container) {
-                    container.innerHTML = html;
-                }
-            })
-            .catch(() => {});
-    </script>
-
     <!-- Core Game Scripts -->
     <script src="scripts/utils/InputManager.js"></script>
     <script src="scripts/utils/AudioManager.js"></script>
@@ -275,10 +409,8 @@
     <script>
         // Initialize the game when page loads, after inventory markup is injected
         window.addEventListener('load', () => {
-            inventoryReady.finally(() => {
-                const game = new Game('gameCanvas');
-                window.game = game; // For debugging
-            });
+            const game = new Game('gameCanvas');
+            window.game = game; // For debugging
         });
     </script>
 </body>

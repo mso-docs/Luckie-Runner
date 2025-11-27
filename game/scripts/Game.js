@@ -317,6 +317,7 @@ class Game {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
         this.inventoryUI.list = document.getElementById('inventoryItems');
         this.inventoryUI.statsList = document.getElementById('inventoryStats');
+        this.inventoryUI.itemCache = [];
         this.inventoryUI.modal = {
             container: document.getElementById('inventoryItemModal'),
             icon: document.getElementById('itemModalIcon'),
@@ -351,6 +352,11 @@ class Game {
                 }
             });
         }
+
+        // Keyboard navigation for the inventory item list (W/S or Arrow keys)
+        document.addEventListener('keydown', (e) => {
+            this.handleInventoryListNavigation(e);
+        });
     }
 
     /**
@@ -449,6 +455,9 @@ class Game {
 
         const renderList = (target, entries, isItemList = false) => {
             target.innerHTML = '';
+            if (isItemList) {
+                this.inventoryUI.itemCache = entries.slice();
+            }
             entries.forEach(item => {
                 const row = document.createElement('button');
                 row.className = 'inventory-item';
@@ -461,6 +470,7 @@ class Game {
                     row.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('[inventory] item clicked', item.name || item.key || item);
                         this.showInventoryItemModal(item);
                     });
                 }
@@ -473,12 +483,51 @@ class Game {
     }
 
     /**
+     * Keyboard navigation for inventory items (W/S or ArrowUp/ArrowDown)
+     */
+    handleInventoryListNavigation(e) {
+        if (!this.inventoryUI?.isOpen) return;
+        if (!this.inventoryUI.list) return;
+
+        const key = e.key;
+        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
+        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
+        if (!isDown && !isUp) return;
+
+        const buttons = Array.from(this.inventoryUI.list.querySelectorAll('.inventory-item'));
+        if (!buttons.length) return;
+
+        const activeEl = document.activeElement;
+        let currentIndex = buttons.indexOf(activeEl);
+
+        if (currentIndex === -1) {
+            currentIndex = isDown ? -1 : 0; // start at first on up, before first on down
+        }
+
+        const delta = isDown ? 1 : -1;
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) nextIndex = buttons.length - 1;
+        if (nextIndex >= buttons.length) nextIndex = 0;
+
+        buttons[nextIndex].focus();
+        e.preventDefault();
+    }
+
+    /**
      * Show modal for an inventory item
      * @param {Object} item
      */
     showInventoryItemModal(item) {
         const modal = this.inventoryUI.modal;
         if (!modal || !modal.container) return;
+
+        // Ensure overlay is visible so the modal can render
+        if (this.inventoryUI.overlay) {
+            this.inventoryUI.overlay.classList.remove('hidden');
+            this.inventoryUI.overlay.classList.add('active');
+            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
+            this.inventoryUI.isOpen = true;
+        }
 
         const nameEl = modal.title;
         const descEl = modal.description;
@@ -502,6 +551,8 @@ class Game {
             };
         }
 
+        // Force visibility even if a lingering hidden class exists
+        modal.container.classList.remove('hidden');
         modal.container.classList.remove('hidden');
         modal.container.classList.add('active');
         modal.container.setAttribute('aria-hidden', 'false');
@@ -1412,6 +1463,12 @@ class Game {
         this.handleSpeechBubbleInput();
         this.handleChestInput();
         this.handleInteractionInput();
+
+        // Pause world updates while overlays are open
+        const overlayBlocking = (this.inventoryUI?.isOpen) || (this.shopUI?.isOpen);
+        if (overlayBlocking) {
+            return;
+        }
 
         // Update NPCs
         this.npcs.forEach(npc => {
