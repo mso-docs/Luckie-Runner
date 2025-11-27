@@ -316,6 +316,7 @@ class Game {
     setupInventoryUI() {
         this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
         this.inventoryUI.list = document.getElementById('inventoryItems');
+        this.inventoryUI.statsList = document.getElementById('inventoryStats');
         this.inventoryUI.tabs = Array.from(document.querySelectorAll('.inventory-tab'));
         this.inventoryUI.panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
 
@@ -328,7 +329,7 @@ class Game {
         });
 
         // Default tab
-        this.switchInventoryTab('items', true);
+        this.switchInventoryTab('stats', true);
         this.hideInventoryOverlay(true);
     }
 
@@ -365,44 +366,45 @@ class Game {
      */
     updateInventoryOverlay() {
         const list = this.inventoryUI?.list;
-        if (!list) return;
+        const statsList = this.inventoryUI?.statsList;
+        if (!list || !statsList) return;
 
         const player = this.player;
         const stats = this.stats;
-        const items = [];
+        const statEntries = [];
+        const itemEntries = [];
 
         if (player) {
-            // Priority stats first
-            items.push({
+            // Stats panel
+            statEntries.push({
                 name: 'Score',
                 value: player.score ?? 0
             });
-            items.push({
+            statEntries.push({
                 name: 'HP',
                 value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
             });
-
             if (stats && typeof stats.timeElapsed === 'number') {
                 const totalSeconds = Math.floor(stats.timeElapsed / 1000);
                 const minutes = Math.floor(totalSeconds / 60);
                 const seconds = totalSeconds % 60;
                 const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                items.push({
+                statEntries.push({
                     name: 'Time',
                     value: timeString
                 });
             }
-
-            // Inventory resources
-            items.push({
+            statEntries.push({
                 name: 'Coins',
                 value: player.coins ?? 0
             });
-            items.push({
+
+            // Items panel
+            itemEntries.push({
                 name: 'Rocks',
                 value: player.rocks ?? 0
             });
-            items.push({
+            itemEntries.push({
                 name: 'Health Potions',
                 value: player.healthPotions ?? 0
             });
@@ -411,24 +413,28 @@ class Game {
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
             const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            items.push({
+            statEntries.push({
                 name: 'Time',
                 value: timeString
             });
         }
 
-        list.innerHTML = '';
+        const renderList = (target, entries) => {
+            target.innerHTML = '';
+            entries.forEach(item => {
+                const row = document.createElement('button');
+                row.className = 'inventory-item';
+                row.type = 'button';
+                row.innerHTML = `
+                    <span class="inventory-item__name">${item.name}</span>
+                    <span class="inventory-item__value">${item.value}</span>
+                `;
+                target.appendChild(row);
+            });
+        };
 
-        items.forEach(item => {
-            const row = document.createElement('button');
-            row.className = 'inventory-item';
-            row.type = 'button';
-            row.innerHTML = `
-                <span class="inventory-item__name">${item.name}</span>
-                <span class="inventory-item__value">${item.value}</span>
-            `;
-            list.appendChild(row);
-        });
+        renderList(statsList, statEntries);
+        renderList(list, itemEntries);
     }
 
     /**
