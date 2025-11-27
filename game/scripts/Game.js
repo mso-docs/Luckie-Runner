@@ -667,6 +667,11 @@ class Game {
         ];
         this.hideShopOverlay(true);
         this.shopGhostBubble = document.getElementById('shopGhostBubble');
+
+        // Keyboard navigation for shop list (W/S or Arrow keys)
+        document.addEventListener('keydown', (e) => {
+            this.handleShopListNavigation(e);
+        });
     }
 
     /**
@@ -802,6 +807,12 @@ class Game {
         overlay.setAttribute('aria-hidden', 'false');
         this.shopUI.isOpen = true;
         this.playMenuEnterSound();
+
+        // Focus first shop item for keyboard navigation
+        const firstItem = this.shopUI.list ? this.shopUI.list.querySelector('.shop-item') : null;
+        if (firstItem) {
+            firstItem.focus();
+        }
     }
 
     /**
@@ -880,6 +891,37 @@ class Game {
         }
         this.updateShopDisplay();
         return true;
+    }
+
+    /**
+     * Keyboard navigation for shop items (W/S or ArrowUp/ArrowDown)
+     */
+    handleShopListNavigation(e) {
+        if (!this.shopUI?.isOpen) return;
+        if (!this.shopUI.list) return;
+
+        const key = e.key;
+        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
+        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
+        if (!isDown && !isUp) return;
+
+        const buttons = Array.from(this.shopUI.list.querySelectorAll('.shop-item'));
+        if (!buttons.length) return;
+
+        const activeEl = document.activeElement;
+        let currentIndex = buttons.indexOf(activeEl);
+
+        if (currentIndex === -1) {
+            currentIndex = isDown ? -1 : 0; // start before first on down, first on up
+        }
+
+        const delta = isDown ? 1 : -1;
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) nextIndex = buttons.length - 1;
+        if (nextIndex >= buttons.length) nextIndex = 0;
+
+        buttons[nextIndex].focus();
+        e.preventDefault();
     }
 
     /**
