@@ -113,6 +113,11 @@
 .speech-italic { font-style: italic; }
 .speech-mono { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.05); padding: 0 2px; border-radius: 2px; }
 
+.speech-big { font-size: 24px; }
+.speech-bigger { font-size: 28px; }
+.speech-gigantic { font-size: 32px; line-height: 1.1; }
+.speech-tiny { font-size: 14px; }
+
 .speech-glow {
     color: #c5ff4a;
     -webkit-text-stroke: 0.5px #0f3a0f;
