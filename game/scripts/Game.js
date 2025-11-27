@@ -104,6 +104,7 @@ class Game {
         this.npcs = [];
         this.shopGhost = null;
         this.princess = null;
+        this.balloonFan = null;
         this.signBoard = null;
         this.signCallout = null;
         this.signDialogue = {
@@ -1471,6 +1472,11 @@ class Game {
         this.hazards = [];
         this.chests = [];
         this.flag = null;
+        this.npcs = [];
+        this.shopGhost = null;
+        this.princess = null;
+        this.balloonFan = null;
+        this.signBoard = null;
         
         // Determine player spawn
         const getTestSpawn = () => {
@@ -1499,7 +1505,7 @@ class Game {
         const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
 
         this.level = {
-            width: this.testMode ? 4200 : this.canvas.width,
+            width: this.testMode ? 4600 : this.canvas.width,
             height: this.canvas.height,
             spawnX: spawn.x,
             spawnY: spawn.y
@@ -1538,6 +1544,14 @@ class Game {
                 x: this.princess.x,
                 y: this.princess.y,
                 dialogueLines: [...(this.princess.dialogueLines || [])]
+            });
+        }
+        if (this.balloonFan) {
+            npcBlueprints.push({
+                type: 'balloonFan',
+                x: this.balloonFan.x,
+                y: this.balloonFan.baseY ?? this.balloonFan.y,
+                dialogueLines: [...(this.balloonFan.dialogueLines || [])]
             });
         }
 
@@ -1645,6 +1659,7 @@ class Game {
         this.npcs = [];
         this.shopGhost = null;
         this.princess = null;
+        this.balloonFan = null;
         (blueprint.npcs || []).forEach(def => {
             if (def.type === 'shopGhost') {
                 const ghost = new ShopGhost(def.x, def.y);
@@ -1657,6 +1672,13 @@ class Game {
                 princess.dialogueLines = [...(def.dialogueLines || [])];
                 this.princess = princess;
                 this.npcs.push(princess);
+            } else if (def.type === 'balloonFan') {
+                const balloonFan = new BalloonNPC(def.x, def.y);
+                balloonFan.game = this;
+                balloonFan.baseY = def.y;
+                balloonFan.dialogueLines = [...(def.dialogueLines || [])];
+                this.balloonFan = balloonFan;
+                this.npcs.push(balloonFan);
             }
         });
 
@@ -3027,6 +3049,7 @@ class Game {
         
         this.npcs = [];
         this.shopGhost = null;
+        this.balloonFan = null;
         if (Array.isArray(this.chests)) {
             this.chests.forEach(chest => chest.destroy && chest.destroy());
         }
@@ -3206,6 +3229,18 @@ class Game {
             this.platforms.push(new Platform(step.x, step.y, step.width, step.height));
         });
 
+        // Compact post-flag parkour path leading to a perch
+        const balloonParkour = [
+            { x: 3960, y: groundY - 90, width: 110 },
+            { x: 4080, y: groundY - 150, width: 100 },
+            { x: 4220, y: groundY - 205, width: 90 },
+            { x: 4340, y: groundY - 255, width: 110 },
+            { x: 4420, y: groundY - 245, width: 140 }
+        ];
+        balloonParkour.forEach(p => {
+            this.platforms.push(new Platform(p.x, p.y, p.width, 14));
+        });
+
         // Quick test spawns
         const slime = new Slime(300, groundY);
         slime.game = this;
@@ -3249,6 +3284,15 @@ class Game {
             'Press Enter again if you want to hear me repeat myself. I am patient!'
         ];
         this.npcs.push(this.princess);
+
+        // Balloon fan NPC perched above the post-flag parkour
+        const balloonPerch = balloonParkour[balloonParkour.length - 1];
+        const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
+        const balloonFanY = balloonPerch.y - 63;
+        this.balloonFan = new BalloonNPC(balloonFanX, balloonFanY);
+        this.balloonFan.game = this;
+        this.balloonFan.baseY = balloonFanY;
+        this.npcs.push(this.balloonFan);
 
         // Signboard near start (left of first parkour platform) as an Entity for shadow support
         this.signBoard = new Sign(
