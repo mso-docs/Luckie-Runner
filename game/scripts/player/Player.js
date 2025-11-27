@@ -15,6 +15,18 @@ class Player extends Entity {
         this.jumpStrength = -700; // pixels/second - negative = up (increased to compensate for higher gravity)
         this.gravity = 1000; // pixels/second² - falling acceleration (increased by 25%)
         
+        this.baseMoveSpeed = this.moveSpeed;
+        this.baseAcceleration = this.acceleration;
+        this.baseDeceleration = this.deceleration;
+        this.baseAirDeceleration = this.airDeceleration;
+
+        // Temporary speed buff (coffee)
+        this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.buffHud = {
+            panel: document.getElementById('buffPanel'),
+            timer: document.getElementById('coffeeTimer')
+        };
+
         // Simple state
         this.facing = 1; // 1 = right, -1 = left
         this.canJump = false; // Can only jump when on ground
@@ -69,6 +81,9 @@ class Player extends Entity {
     onUpdate(deltaTime) {
         const dt = deltaTime / 1000; // Convert to seconds
         const input = this.game.input;
+
+        // Update timed buffs
+        this.updateCoffeeBuff(deltaTime);
         
         // HORIZONTAL MOVEMENT - Smooth acceleration/deceleration
         const movingLeft = input.isMovingLeft();
@@ -540,6 +555,72 @@ class Player extends Entity {
     }
 
     /**
+     * Apply a coffee speed buff
+     * @param {number} multiplier - Speed multiplier
+     * @param {number} durationMs - Duration in milliseconds
+     */
+    applyCoffeeBuff(multiplier = 2, durationMs = 120000) {
+        this.coffeeBuff = {
+            active: true,
+            remaining: durationMs,
+            multiplier: multiplier
+        };
+        this.updateMovementStatsFromBuff();
+        this.updateCoffeeHUD();
+    }
+
+    /**
+     * Tick coffee buff timer and clear when done
+     * @param {number} deltaTime
+     */
+    updateCoffeeBuff(deltaTime) {
+        if (!this.coffeeBuff.active) return;
+
+        this.coffeeBuff.remaining = Math.max(0, this.coffeeBuff.remaining - deltaTime);
+        if (this.coffeeBuff.remaining <= 0) {
+            this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+            this.updateMovementStatsFromBuff();
+        }
+        this.updateCoffeeHUD();
+    }
+
+    /**
+     * Recompute movement stats based on buff state
+     */
+    updateMovementStatsFromBuff() {
+        const mult = this.coffeeBuff.active ? this.coffeeBuff.multiplier : 1;
+        this.moveSpeed = this.baseMoveSpeed * mult;
+        this.acceleration = this.baseAcceleration * mult;
+        this.deceleration = this.baseDeceleration * mult;
+        this.airDeceleration = this.baseAirDeceleration * mult;
+    }
+
+    /**
+     * Update the HUD timer for the coffee buff
+     * @param {boolean} forceHide - hide regardless of state
+     */
+    updateCoffeeHUD(forceHide = false) {
+        const panel = this.buffHud?.panel || document.getElementById('buffPanel');
+        const timer = this.buffHud?.timer || document.getElementById('coffeeTimer');
+
+        if (!panel || !timer) return;
+
+        const active = this.coffeeBuff.active && !forceHide;
+        if (!active) {
+            panel.classList.add('hidden');
+            timer.textContent = '--:--';
+            return;
+        }
+
+        const remainingMs = Math.max(0, this.coffeeBuff.remaining);
+        const totalSeconds = Math.ceil(remainingMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        panel.classList.remove('hidden');
+    }
+
+    /**
      * Reset player to starting state
      */
     reset() {
@@ -558,6 +639,9 @@ class Player extends Entity {
         this.hitRayDuration = 500;
         this.knockbackTiltTime = 0;
         this.rotation = 0;
+        this.coffeeBuff = { active: false, remaining: 0, multiplier: 1 };
+        this.updateMovementStatsFromBuff();
+        this.updateCoffeeHUD(true);
         this.updateUI();
         this.updateHealthUI();
     }

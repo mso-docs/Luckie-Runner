@@ -994,6 +994,16 @@ class Game {
                 this.items.push(rock);
             });
         });
+
+        // Coffee speed buff pickups
+        const coffeeSpawns = [
+            { x: 1550, y: 360 }
+        ];
+        coffeeSpawns.forEach(spawn => {
+            const coffee = new CoffeeItem(spawn.x, spawn.y);
+            coffee.game = this;
+            this.items.push(coffee);
+        });
     }
 
     /**
@@ -2002,6 +2012,10 @@ class Game {
         const potion = new HealthPotion(480, groundY - 40, 25);
         potion.game = this;
         this.items.push(potion);
+
+        const coffee = new CoffeeItem(860, groundY - 70);
+        coffee.game = this;
+        this.items.push(coffee);
 
         // Shop ghost NPC near spawn
         const ghostX = 680;

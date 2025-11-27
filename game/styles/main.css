@@ -30,6 +30,10 @@ body {
     background: #87CEEB; /* Sky blue background */
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* SVG Palm Trees Overlay */
 #palmTreeSVG {
     position: absolute;
@@ -181,6 +185,62 @@ body {
     text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
     min-width: 28px;
     text-align: left;
+}
+
+/* Buff HUD */
+.buff-panel {
+    position: absolute;
+    top: 98px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: linear-gradient(90deg, #66d66f 0%, #45b45f 60%, #2d944b 100%);
+    border: 1px solid #1f6f35;
+    border-radius: 10px;
+    box-shadow: 0 2px 0 #0f4e24, 0 5px 8px rgba(0, 0, 0, 0.26);
+    pointer-events: none;
+    z-index: 12;
+    min-width: 90px;
+}
+
+.buff-panel.hidden {
+    display: none;
+}
+
+.buff-icon {
+    width: 42px;
+    height: 42px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+}
+
+.coffee-icon {
+    background-image: url('../art/items/coffee.png');
+}
+
+.buff-text {
+    text-align: center;
+    color: #fffdf5;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+}
+
+.buff-name {
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+.buff-timer {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
 }
 
 /* Speech bubble overlay */
