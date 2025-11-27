@@ -78,6 +78,14 @@ class Game {
             overlay: null,
             isOpen: false
         };
+
+        // Shop UI state and NPCs
+        this.shopUI = {
+            overlay: null,
+            isOpen: false
+        };
+        this.npcs = [];
+        this.shopGhost = null;
         
         // Game statistics
         this.stats = {
@@ -105,6 +113,7 @@ class Game {
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
         this.setupInventoryUI();
+        this.setupShopUI();
         
         // Create initial level
         this.createLevel();
@@ -278,6 +287,16 @@ class Game {
     }
 
     /**
+     * Prepare shop UI state
+     */
+    setupShopUI() {
+        this.shopUI.overlay = document.getElementById('shopOverlay');
+        this.shopUI.isOpen = false;
+        this.hideShopOverlay(true);
+        this.shopGhostBubble = document.getElementById('shopGhostBubble');
+    }
+
+    /**
      * Show the inventory overlay
      */
     showInventoryOverlay() {
@@ -302,6 +321,33 @@ class Game {
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
         this.inventoryUI.isOpen = false;
+    }
+
+    /**
+     * Show the shop overlay
+     */
+    showShopOverlay() {
+        const overlay = this.shopUI.overlay;
+        if (!overlay) return;
+
+        overlay.classList.add('active');
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        this.shopUI.isOpen = true;
+    }
+
+    /**
+     * Hide the shop overlay
+     * @param {boolean} immediate - provided for API symmetry
+     */
+    hideShopOverlay(immediate = false) {
+        const overlay = this.shopUI.overlay;
+        if (!overlay) return;
+
+        overlay.classList.remove('active');
+        overlay.classList.add('hidden');
+        overlay.setAttribute('aria-hidden', 'true');
+        this.shopUI.isOpen = false;
     }
 
     /**
@@ -357,10 +403,37 @@ class Game {
         if (!this.player || !this.input) return;
 
         if (this.input.consumeActionPress()) {
+            // Close shop if open
+            if (this.shopUI.isOpen) {
+                this.hideShopOverlay();
+                if (this.shopGhost) this.shopGhost.toggleFrame();
+                return;
+            }
+
+            // Open shop if near the ghost
+            const ghost = this.getNearbyShopGhost();
+            if (ghost) {
+                ghost.toggleFrame();
+                this.showShopOverlay();
+                return;
+            }
+
+            // Fallback to player interaction
             if (typeof this.player.handleInteraction === 'function') {
                 this.player.handleInteraction();
             }
         }
+    }
+
+    /**
+     * Find the shop ghost if player is in range
+     * @returns {ShopGhost|null}
+     */
+    getNearbyShopGhost() {
+        if (this.shopGhost && this.player && this.shopGhost.isPlayerNearby(this.player)) {
+            return this.shopGhost;
+        }
+        return null;
     }
 
     /**
@@ -459,6 +532,33 @@ class Game {
         // Nudge tail 20px further right relative to previous anchor
         const mouthOffset = this.player ? (this.player.width * 0.22 * (this.player.facing || 1)) + 50 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+    }
+
+    /**
+     * Update shop ghost hint bubble position and visibility
+     */
+    updateShopGhostBubble() {
+        const bubble = this.shopGhostBubble;
+        const ghost = this.shopGhost;
+
+        if (!bubble || !ghost || !this.player) {
+            if (bubble) bubble.classList.add('hidden');
+            return;
+        }
+
+        if (this.shopUI.isOpen || !ghost.isPlayerNearby(this.player)) {
+            bubble.classList.add('hidden');
+            bubble.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const screenX = ghost.x - this.camera.x + ghost.width / 2;
+        const screenY = ghost.y - this.camera.y + ghost.bobOffset;
+        bubble.style.left = `${screenX}px`;
+        const bottomFromCanvas = this.canvas.height - screenY + ghost.height + 6;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+        bubble.classList.remove('hidden');
+        bubble.setAttribute('aria-hidden', 'false');
     }
 
     /**
@@ -800,6 +900,10 @@ class Game {
             this.input.mouse.clicked = false;
             this.input.mouse.pressed = false;
         }
+
+        // Hide overlays on fresh start
+        this.hideInventoryOverlay(true);
+        this.hideShopOverlay(true);
         
         // Create player
         this.player = new Player(this.level.spawnX, this.level.spawnY);
@@ -848,6 +952,13 @@ class Game {
         this.input.update();
         this.handleSpeechBubbleInput();
         this.handleInteractionInput();
+
+        // Update NPCs
+        this.npcs.forEach(npc => {
+            if (npc.update) {
+                npc.update(deltaTime);
+            }
+        });
         
         // Update player
         if (this.player) {
@@ -1176,6 +1287,9 @@ class Game {
         // Render platforms
         this.renderPlatforms();
         
+        // Render NPCs
+        this.renderNPCs();
+
         // Render hazards
         this.hazards.forEach(hazard => {
             hazard.render(this.ctx, this.camera);
@@ -1210,6 +1324,9 @@ class Game {
         if (this.dialogueState.active) {
             this.updateSpeechBubblePosition();
         }
+
+        // Update NPC hint bubble position
+        this.updateShopGhostBubble();
     }
 
     /**
@@ -1325,6 +1442,17 @@ class Game {
     renderPlatforms() {
         this.platforms.forEach(platform => {
             StylizedPlatform.renderPlatform(this.ctx, platform, this.camera);
+        });
+    }
+
+    /**
+     * Render NPCs (currently only the shop ghost)
+     */
+    renderNPCs() {
+        this.npcs.forEach(npc => {
+            if (npc.render) {
+                npc.render(this.ctx, this.camera);
+            }
         });
     }
     
@@ -1456,9 +1584,13 @@ class Game {
         this.backgroundLayers = [];
         this.hideSpeechBubble(true);
         this.hideInventoryOverlay(true);
+        this.hideShopOverlay(true);
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
         
+        this.npcs = [];
+        this.shopGhost = null;
+
         // Reset managers
         this.palmTreeManager.reset();
         
@@ -1614,6 +1746,12 @@ class Game {
         const potion = new HealthPotion(480, groundY - 40, 25);
         potion.game = this;
         this.items.push(potion);
+
+        // Shop ghost NPC near spawn
+        const ghostX = 680;
+        const ghostY = groundY - 64;
+        this.shopGhost = new ShopGhost(ghostX, ghostY);
+        this.npcs.push(this.shopGhost);
     }
     
     /**

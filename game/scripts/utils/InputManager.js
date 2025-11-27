@@ -71,7 +71,12 @@ class InputManager {
      * @returns {boolean} true if a fresh press was detected
      */
     consumeActionPress() {
-        return this.consumeKeyPress('z') || this.consumeKeyPress('keyz');
+        const keys = ['z', 'keyz'];
+        const pressed = keys.some(k => this.keyPresses.has(k));
+        if (pressed) {
+            keys.forEach(k => this.keyPresses.delete(k));
+        }
+        return pressed;
     }
 
     /**

@@ -42,6 +42,11 @@
             </div>
         </div>
 
+        <!-- Shop Ghost hint bubble -->
+        <div id="shopGhostBubble" class="npc-bubble hidden" aria-hidden="true">
+            Press Z to interact with me!
+        </div>
+
         <!-- Inventory Overlay (UI only) -->
         <div id="inventoryOverlay" class="inventory hidden" aria-hidden="true">
             <div class="inventory-window" role="dialog" aria-labelledby="inventoryTitle">
@@ -149,6 +154,75 @@
             </div>
         </div>
 
+        <!-- Shop Overlay (UI only) -->
+        <div id="shopOverlay" class="shop-overlay hidden" aria-hidden="true">
+            <div class="shop-window" role="dialog" aria-labelledby="shopTitle">
+                <div class="shop-header">
+                    <div class="shop-currency chip hp">
+                        <span class="chip-label">HP</span>
+                        <span class="chip-value">10/10</span>
+                    </div>
+                    <div class="shop-currency chip fp">
+                        <span class="chip-label">FP</span>
+                        <span class="chip-value">10/10</span>
+                    </div>
+                    <div class="shop-currency chip star">
+                        <span class="chip-label">Star</span>
+                        <span class="chip-value">10</span>
+                    </div>
+                    <div class="shop-currency chip coin">
+                        <span class="chip-label">Coins</span>
+                        <span class="chip-value">233</span>
+                    </div>
+                </div>
+
+                <div class="shop-title" id="shopTitle">Which one?</div>
+
+                <div class="shop-list">
+                    <div class="shop-item is-selected">
+                        <span class="shop-item-icon icon-mushroom" aria-hidden="true"></span>
+                        <span class="shop-item-name">Mushroom</span>
+                        <span class="shop-item-price">10 coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-honey" aria-hidden="true"></span>
+                        <span class="shop-item-name">Honey Syrup</span>
+                        <span class="shop-item-price">10 coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-honey" aria-hidden="true"></span>
+                        <span class="shop-item-name">Honey Syrup</span>
+                        <span class="shop-item-price">10 coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-honey" aria-hidden="true"></span>
+                        <span class="shop-item-name">Honey Syrup</span>
+                        <span class="shop-item-price">10 coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-pow" aria-hidden="true"></span>
+                        <span class="shop-item-name">POW Block</span>
+                        <span class="shop-item-price">? coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-fire" aria-hidden="true"></span>
+                        <span class="shop-item-name">Fire Flower</span>
+                        <span class="shop-item-price">? coins</span>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon icon-fire" aria-hidden="true"></span>
+                        <span class="shop-item-name">Fire Flower</span>
+                        <span class="shop-item-price">? coins</span>
+                    </div>
+                </div>
+
+                <div class="shop-footer">
+                    <span class="footer-control stop">Z Stop</span>
+                    <span class="footer-control confirm">Enter Confirm</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Start Menu -->
         <div id="startMenu" class="menu">
             <h1>Luckie Runner!</h1>
@@ -247,6 +321,9 @@
     <script src="scripts/items/RockBag.js"></script>
     <script src="scripts/items/HealthPotion.js"></script>
     <script src="scripts/items/Flag.js"></script>
+
+    <!-- NPCs -->
+    <script src="scripts/npcs/ShopGhost.js"></script>
     
     <!-- Game Logic -->
     <script src="scripts/Game.js"></script>
