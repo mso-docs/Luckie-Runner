@@ -38,6 +38,7 @@ class Player extends Entity {
         this.score = 0;
         this.healthPotions = 0;
         this.coffeeDrinks = 0;
+        this.level = 1;
         
         // Rock throwing
         this.maxRocks = 10;

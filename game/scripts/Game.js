@@ -642,6 +642,9 @@ class Game {
         this.shopUI.isOpen = false;
         this.shopUI.list = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopItemList') : null;
         this.shopUI.coinValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopCoinValue') : null;
+        this.shopUI.hpValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopHPValue') : null;
+        this.shopUI.rockValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopRockValue') : null;
+        this.shopUI.levelValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopLevelValue') : null;
         this.shopUI.items = [
             {
                 id: 'rock_bag',
@@ -843,6 +846,17 @@ class Game {
         const player = this.player;
         if (ui.coinValue && player) {
             ui.coinValue.textContent = player.coins ?? 0;
+        }
+        if (ui.hpValue && player) {
+            const current = Math.max(0, Math.floor(player.health));
+            const max = Math.max(1, Math.floor(player.maxHealth));
+            ui.hpValue.textContent = `${current}/${max}`;
+        }
+        if (ui.rockValue && player) {
+            ui.rockValue.textContent = player.rocks ?? 0;
+        }
+        if (ui.levelValue && player) {
+            ui.levelValue.textContent = player.level ?? 1;
         }
 
         ui.list.innerHTML = '';

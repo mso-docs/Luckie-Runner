@@ -1524,6 +1524,7 @@ body {
 .chip.fp { background: linear-gradient(135deg, #fff3c2, #ffd36f); }
 .chip.star { background: linear-gradient(135deg, #ffe5a3, #ffd166); }
 .chip.coin { background: linear-gradient(135deg, #ffeab5, #ffc76b); }
+.chip.rock { background: linear-gradient(135deg, #e0e0e0, #b5b5b5); }
 
 .chip-label {
     font-size: 12px;
