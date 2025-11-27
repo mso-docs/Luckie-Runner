@@ -98,6 +98,22 @@ class Game {
         };
         this.npcs = [];
         this.shopGhost = null;
+        this.signBoard = null;
+        this.signCallout = null;
+        this.signDialogue = {
+            container: null,
+            bubbles: [],
+            active: false,
+            target: null,
+            messages: [
+                'Dummy line 1',
+                'Dummy line 2',
+                'Dummy line 3'
+            ],
+            index: 0
+        };
+        this.signSprite = new Image();
+        this.signSprite.src = 'art/items/sign.png';
         
         // Game statistics
         this.stats = {
@@ -124,6 +140,7 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
+        this.setupSignDialogueUI();
         this.setupInventoryUI();
         this.setupChestUI();
         this.setupShopUI();
@@ -308,6 +325,31 @@ class Game {
         this.speechBubble.text = document.getElementById('speechText');
         this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
         this.hideSpeechBubble(true);
+    }
+
+    /**
+     * Prepare simple sign dialogue UI (3 stacked bubbles)
+     */
+    setupSignDialogueUI() {
+        const container = document.createElement('div');
+        container.id = 'signDialogueContainer';
+        container.style.position = 'absolute';
+        container.style.pointerEvents = 'none';
+        container.style.display = 'none';
+        container.style.zIndex = '40';
+        container.style.transform = 'translate(-50%, -90px)';
+        const bubble = document.createElement('div');
+        bubble.className = 'speech-bubble__body';
+        bubble.style.marginBottom = '6px';
+        bubble.style.maxWidth = '260px';
+        bubble.textContent = '';
+        container.appendChild(bubble);
+        const gameContainer = document.getElementById('gameContainer');
+        if (gameContainer) {
+            gameContainer.appendChild(container);
+            this.signDialogue.container = container;
+            this.signDialogue.bubbles = [bubble];
+        }
     }
 
     /**
@@ -995,6 +1037,16 @@ class Game {
                 return;
             }
 
+            // Sign interaction takes priority over chests
+            if (this.isPlayerNearSign()) {
+                if (this.signDialogue.active) {
+                    this.advanceSignDialogue();
+                } else {
+                    this.showSignDialogue();
+                }
+                return;
+            }
+
             const chest = this.getNearbyChest();
             if (chest) {
                 chest.open();
@@ -1649,6 +1701,8 @@ class Game {
 
         // Update chests (callouts + glow)
         this.updateChests(deltaTime);
+        this.updateSignCallout();
+        this.updateSignDialoguePosition();
         
         // Update all background layers
         this.backgroundLayers.forEach(layer => {
@@ -1970,7 +2024,10 @@ class Game {
         
         // Render platforms
         this.renderPlatforms();
-        
+
+        // Render signboard near start
+        this.renderSign();
+
         // Render NPCs
         this.renderNPCs();
 
@@ -2153,6 +2210,166 @@ class Game {
             }
         });
     }
+
+    /**
+     * Check if player is near the sign
+     */
+    isPlayerNearSign() {
+        if (!this.signBoard || !this.player) return false;
+        const px = this.player.x + this.player.width / 2;
+        const py = this.player.y + this.player.height / 2;
+        const sx = this.signBoard.x;
+        const sy = this.signBoard.y;
+        const dx = px - sx;
+        const dy = py - sy;
+        return Math.hypot(dx, dy) <= 120;
+    }
+
+    /**
+     * Toggle the sign dialogue bubble set
+     */
+    toggleSignDialogue() {
+        if (this.signDialogue.active) {
+            this.hideSignDialogue();
+        } else {
+            this.showSignDialogue();
+        }
+    }
+
+    /**
+     * Show the sign dialogue bubbles
+     */
+    showSignDialogue() {
+        if (!this.signDialogue.container) return;
+        this.signDialogue.active = true;
+        this.signDialogue.index = 0;
+        this.signDialogue.container.style.display = 'block';
+        // Target the sign itself for positioning
+        this.signDialogue.target = this.signBoard;
+        this.setSignBubbleText(this.signDialogue.messages[this.signDialogue.index] || '');
+        this.updateSignDialoguePosition();
+    }
+
+    /**
+     * Hide the sign dialogue bubbles
+     */
+    hideSignDialogue(immediate = false) {
+        if (!this.signDialogue.container) return;
+        this.signDialogue.active = false;
+        this.signDialogue.index = 0;
+        this.signDialogue.container.style.display = 'none';
+    }
+
+    /**
+     * Advance through sign dialogue messages
+     */
+    advanceSignDialogue() {
+        if (!this.signDialogue.active) return;
+        this.signDialogue.index++;
+        if (this.signDialogue.index >= this.signDialogue.messages.length) {
+            this.hideSignDialogue();
+            return;
+        }
+        this.setSignBubbleText(this.signDialogue.messages[this.signDialogue.index] || '');
+        this.updateSignDialoguePosition();
+    }
+
+    /**
+    * Set bubble text
+    */
+    setSignBubbleText(text) {
+        const bubble = this.signDialogue.bubbles?.[0];
+        if (bubble) {
+            bubble.textContent = text ?? '';
+        }
+    }
+
+    /**
+     * Ensure callout exists
+     */
+    ensureSignCallout() {
+        if (this.signCallout) return;
+        const container = document.getElementById('gameContainer');
+        if (!container) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'sign-callout hidden';
+        bubble.textContent = 'Press Enter to talk to me!';
+        bubble.setAttribute('aria-hidden', 'true');
+        container.appendChild(bubble);
+        this.signCallout = bubble;
+    }
+
+    /**
+     * Update sign callout visibility and position
+     */
+    updateSignCallout() {
+        if (!this.signBoard) return;
+        this.ensureSignCallout();
+        if (!this.signCallout) return;
+
+        const shouldShow = !this.signDialogue.active && this.isPlayerNearSign();
+        if (!shouldShow) {
+            this.signCallout.classList.add('hidden');
+            this.signCallout.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const camera = this.camera || { x: 0, y: 0 };
+        const screenX = this.signBoard.x - camera.x + this.signBoard.width / 2;
+        const screenY = this.signBoard.y - camera.y;
+        const bottomFromCanvas = this.canvas.height - screenY + 44;
+
+        this.signCallout.style.left = `${screenX}px`;
+        this.signCallout.style.bottom = `${bottomFromCanvas}px`;
+        this.signCallout.classList.remove('hidden');
+        this.signCallout.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Update dialogue bubble position
+     */
+    updateSignDialoguePosition() {
+        if (!this.signDialogue.active || !this.signDialogue.container) return;
+        const target = this.signDialogue.target;
+        if (!target) return;
+        let tx = target.x || 0;
+        let ty = target.y || 0;
+        let h = target.height || 0;
+        // If target is Entity, adjust to center
+        if (target.getCenter) {
+            const c = target.getCenter();
+            tx = c.x;
+            ty = c.y;
+            h = target.height || 0;
+        }
+        const camera = this.camera || { x: 0, y: 0 };
+        const screenX = tx - camera.x;
+        const screenY = ty - camera.y - h;
+        this.signDialogue.container.style.left = `${screenX}px`;
+        this.signDialogue.container.style.bottom = `${this.canvas.height - screenY}px`;
+    }
+
+    /**
+     * Render the signboard near the start
+     */
+    renderSign() {
+        if (!this.signBoard) return;
+        const { x, y, width, height } = this.signBoard;
+        const screenX = x - this.camera.x;
+        const screenY = y - this.camera.y;
+        const ctx = this.ctx;
+        if (screenX + width < 0 || screenX > ctx.canvas.width || screenY + height < 0 || screenY > ctx.canvas.height) return;
+
+        ctx.save();
+        ctx.translate(screenX - width / 2, screenY - height / 2);
+        if (this.signSprite && this.signSprite.complete) {
+            ctx.drawImage(this.signSprite, 0, 0, width, height);
+        } else {
+            ctx.fillStyle = '#d9b178';
+            ctx.fillRect(0, 0, width, height);
+        }
+        ctx.restore();
+    }
     
     /**
      * Render canvas-based palm trees with parallax effect\n     */
@@ -2284,6 +2501,11 @@ class Game {
         this.hideInventoryOverlay(true);
         this.hideChestOverlay(true);
         this.hideShopOverlay(true);
+        this.hideSignDialogue(true);
+        if (this.signCallout && this.signCallout.parentNode) {
+            this.signCallout.parentNode.removeChild(this.signCallout);
+        }
+        this.signCallout = null;
         this.dialogueState.messages = [];
         this.dialogueState.active = false;
         
@@ -2460,6 +2682,14 @@ class Game {
         const ghostY = groundY - 64;
         this.shopGhost = new ShopGhost(ghostX, ghostY);
         this.npcs.push(this.shopGhost);
+
+        // Signboard near start (left of first parkour platform)
+        this.signBoard = {
+            x: this.level.spawnX + 10,
+            y: groundY - 24,
+            width: 40,
+            height: 52
+        };
 
         // Test coin chest near spawn (coins only)
         const coinChestX = this.level.spawnX + 180;

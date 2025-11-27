@@ -1952,3 +1952,24 @@ body {
 .chest-callout.hidden {
     display: none;
 }
+
+.sign-callout {
+    position: absolute;
+    padding: 8px 12px;
+    background: #ffe3e5;
+    border: 2px solid #ff8b8b;
+    border-radius: 14px;
+    box-shadow: 0 6px 0 #b44a53, 0 10px 16px rgba(0, 0, 0, 0.3);
+    color: #5a1f1f;
+    font-family: 'Comic Sans MS', 'Baloo 2', 'Trebuchet MS', cursive;
+    font-weight: 800;
+    font-size: 14px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 24;
+    transform: translate(-50%, 0);
+}
+
+.sign-callout.hidden {
+    display: none;
+}
