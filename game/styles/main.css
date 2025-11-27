@@ -1976,3 +1976,7 @@ body {
 .sign-callout.hidden {
     display: none;
 }
+
+.sign-speech-bubble {
+    max-width: 78%;
+}

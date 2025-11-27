@@ -102,13 +102,14 @@ class Game {
         this.signCallout = null;
         this.signDialogue = {
             container: null,
-            bubbles: [],
+            bubble: null,
+            hint: null,
             active: false,
             target: null,
             messages: [
-                'Dummy line 1',
-                'Dummy line 2',
-                'Dummy line 3'
+                'the color of your skin and the content of your character',
+                'your mom is your dad and your dad is your mom',
+                'What were you expecting? This is just a demo game!',
             ],
             index: 0
         };
@@ -333,22 +334,32 @@ class Game {
     setupSignDialogueUI() {
         const container = document.createElement('div');
         container.id = 'signDialogueContainer';
+        container.className = 'speech-bubble sign-speech-bubble';
+        container.setAttribute('aria-hidden', 'true');
         container.style.position = 'absolute';
         container.style.pointerEvents = 'none';
         container.style.display = 'none';
         container.style.zIndex = '40';
-        container.style.transform = 'translate(-50%, -90px)';
+        container.style.left = '50%';
+        container.style.bottom = '110px';
+        container.style.transform = 'translate(-50%, 12px) scale(0.98)';
         const bubble = document.createElement('div');
         bubble.className = 'dialog-bubble sign-dialogue-bubble';
         bubble.style.marginBottom = '6px';
-        bubble.style.maxWidth = '260px';
+        bubble.style.maxWidth = '78vw';
         bubble.textContent = '';
         container.appendChild(bubble);
+
+        const hint = document.createElement('div');
+        hint.className = 'speech-bubble__hint';
+        hint.textContent = 'Press Enter';
+        container.appendChild(hint);
         const gameContainer = document.getElementById('gameContainer');
         if (gameContainer) {
             gameContainer.appendChild(container);
             this.signDialogue.container = container;
-            this.signDialogue.bubbles = [bubble];
+            this.signDialogue.bubble = bubble;
+            this.signDialogue.hint = hint;
         }
     }
 
@@ -2240,13 +2251,17 @@ class Game {
      * Show the sign dialogue bubbles
      */
     showSignDialogue() {
-        if (!this.signDialogue.container) return;
-        this.signDialogue.active = true;
-        this.signDialogue.index = 0;
-        this.signDialogue.container.style.display = 'block';
+        const dlg = this.signDialogue;
+        if (!dlg.container) return;
+        dlg.active = true;
+        dlg.index = 0;
+        dlg.container.style.display = 'block';
+        dlg.container.setAttribute('aria-hidden', 'false');
+        dlg.container.classList.add('show');
+        dlg.container.style.transform = 'translate(-50%, 0) scale(1)';
         // Target the sign itself for positioning
-        this.signDialogue.target = this.signBoard;
-        this.setSignBubbleText(this.signDialogue.messages[this.signDialogue.index] || '');
+        dlg.target = this.signBoard;
+        this.setSignBubbleText(dlg.messages[dlg.index] || '');
         this.updateSignDialoguePosition();
     }
 
@@ -2254,23 +2269,28 @@ class Game {
      * Hide the sign dialogue bubbles
      */
     hideSignDialogue(immediate = false) {
-        if (!this.signDialogue.container) return;
-        this.signDialogue.active = false;
-        this.signDialogue.index = 0;
-        this.signDialogue.container.style.display = 'none';
+        const dlg = this.signDialogue;
+        if (!dlg.container) return;
+        dlg.active = false;
+        dlg.index = 0;
+        dlg.container.style.display = 'none';
+        dlg.container.setAttribute('aria-hidden', 'true');
+        dlg.container.classList.remove('show');
+        dlg.container.style.transform = 'translate(-50%, 12px) scale(0.98)';
     }
 
     /**
      * Advance through sign dialogue messages
      */
     advanceSignDialogue() {
-        if (!this.signDialogue.active) return;
-        this.signDialogue.index++;
-        if (this.signDialogue.index >= this.signDialogue.messages.length) {
+        const dlg = this.signDialogue;
+        if (!dlg.active) return;
+        dlg.index++;
+        if (dlg.index >= dlg.messages.length) {
             this.hideSignDialogue();
             return;
         }
-        this.setSignBubbleText(this.signDialogue.messages[this.signDialogue.index] || '');
+        this.setSignBubbleText(dlg.messages[dlg.index] || '');
         this.updateSignDialoguePosition();
     }
 
@@ -2278,10 +2298,8 @@ class Game {
     * Set bubble text
     */
     setSignBubbleText(text) {
-        const bubble = this.signDialogue.bubbles?.[0];
-        if (bubble) {
-            bubble.textContent = text ?? '';
-        }
+        const bubble = this.signDialogue.bubble;
+        if (bubble) bubble.textContent = text ?? '';
     }
 
     /**
@@ -2329,8 +2347,9 @@ class Game {
      * Update dialogue bubble position
      */
     updateSignDialoguePosition() {
-        if (!this.signDialogue.active || !this.signDialogue.container) return;
-        const target = this.signDialogue.target;
+        const dlg = this.signDialogue;
+        if (!dlg.active || !dlg.container) return;
+        const target = dlg.target;
         if (!target) return;
         let tx = target.x || 0;
         let ty = target.y || 0;
@@ -2345,8 +2364,9 @@ class Game {
         const camera = this.camera || { x: 0, y: 0 };
         const screenX = tx - camera.x;
         const screenY = ty - camera.y - h;
-        this.signDialogue.container.style.left = `${screenX}px`;
-        this.signDialogue.container.style.bottom = `${this.canvas.height - screenY}px`;
+        dlg.container.style.left = `${screenX}px`;
+        dlg.container.style.bottom = `${this.canvas.height - screenY}px`;
+        dlg.container.setAttribute('aria-hidden', 'false');
     }
 
     /**
