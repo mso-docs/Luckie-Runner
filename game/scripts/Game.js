@@ -339,10 +339,6 @@ class Game {
         container.style.position = 'absolute';
         container.style.pointerEvents = 'none';
         container.style.display = 'none';
-        container.style.zIndex = '40';
-        container.style.left = '50%';
-        container.style.bottom = '110px';
-        container.style.transform = 'translate(-50%, 12px) scale(0.98)';
         const bubble = document.createElement('div');
         bubble.className = 'dialog-bubble sign-dialogue-bubble';
         bubble.style.marginBottom = '6px';
@@ -2265,7 +2261,6 @@ class Game {
         dlg.container.style.display = 'block';
         dlg.container.setAttribute('aria-hidden', 'false');
         dlg.container.classList.add('show');
-        dlg.container.style.transform = 'translate(-50%, 0) scale(1)';
         // Target the sign itself for positioning
         dlg.target = this.signBoard;
         this.setSignBubbleText(dlg.messages[dlg.index] || '');
@@ -2288,7 +2283,6 @@ class Game {
         dlg.container.style.display = 'none';
         dlg.container.setAttribute('aria-hidden', 'true');
         dlg.container.classList.remove('show');
-        dlg.container.style.transform = 'translate(-50%, 12px) scale(0.98)';
 
         if (dlg.hint) {
             dlg.hint.style.display = 'none';

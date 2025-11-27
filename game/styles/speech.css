@@ -49,6 +49,13 @@
     word-break: break-word;
 }
 
+.sign-speech-bubble {
+    position: absolute;
+    pointer-events: none;
+    z-index: 40;
+    max-width: 78%;
+}
+
 .speech-bubble__body::before,
 .dialog-bubble::before {
     content: '';
