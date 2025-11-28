@@ -381,10 +381,12 @@ class WorldBuilder {
 
     createTestRoom() {
         const g = this.game;
-        const groundHeight = 50;
+        const levelDef = (typeof window !== 'undefined' && window.LevelDefinitions && window.LevelDefinitions.testRoom) || {};
+        const config = this.config.testRoom || {};
+        const groundHeight = config.groundHeight ?? 50;
         const groundY = g.canvas.height - groundHeight;
         g.testGroundY = groundY;
-        const spawnAnchorX = 140;
+        const spawnAnchorX = config.spawnAnchorX ?? 140;
 
         for (let i = 0; i < 10; i++) {
             const segmentX = i * 2000;
@@ -396,48 +398,30 @@ class WorldBuilder {
         g.platforms.push(this.factory.platform(-wallWidth, 0, wallWidth, wallHeight));
 
         const baseY = groundY - 90;
-        const parkour = [
-            { x: 220, width: 120, y: baseY },
-            { x: 420, width: 90, y: baseY - 50 },
-            { x: 600, width: 100, y: baseY - 90 },
-            { x: 780, width: 80, y: baseY - 130 },
-            { x: 950, width: 110, y: baseY - 60 },
-            { x: 1140, width: 90, y: baseY - 20 },
-            { x: 1320, width: 80, y: baseY - 70 },
-            { x: 1480, width: 120, y: baseY - 120 },
-            { x: 1660, width: 80, y: baseY - 160 },
-            { x: 1800, width: 160, y: baseY - 60 }
-        ];
+        const parkour = (levelDef.parkour || []).map(p => ({
+            x: p.x,
+            width: p.width,
+            y: p.y !== null && p.y !== undefined ? p.y : baseY - ((p.yOffset || 0))
+        }));
         parkour.forEach(p => {
             g.platforms.push(this.factory.platform(p.x, p.y, p.width, 12));
         });
 
-        const mountainSteps = [
-            { x: 2050, y: groundY - 32, width: 180, height: 32 },
-            { x: 2220, y: groundY - 80, width: 150, height: 32 },
-            { x: 2360, y: groundY - 132, width: 140, height: 32 },
-            { x: 2485, y: groundY - 184, width: 120, height: 32 },
-            { x: 2605, y: groundY - 236, width: 120, height: 32 },
-            { x: 2725, y: groundY - 288, width: 110, height: 32 },
-            { x: 2840, y: groundY - 340, width: 170, height: 32 },
-            { x: 2980, y: groundY - 300, width: 150, height: 32 },
-            { x: 3120, y: groundY - 240, width: 150, height: 32 },
-            { x: 3260, y: groundY - 180, width: 150, height: 32 },
-            { x: 3400, y: groundY - 120, width: 150, height: 32 },
-            { x: 3540, y: groundY - 70, width: 150, height: 32 },
-            { x: 3680, y: groundY - 32, width: 180, height: 32 }
-        ];
+        const mountainSteps = (levelDef.mountainSteps || []).map(step => ({
+            x: step.x,
+            y: groundY - (step.yOffset || 0),
+            width: step.width,
+            height: step.height
+        }));
         mountainSteps.forEach(step => {
             g.platforms.push(this.factory.platform(step.x, step.y, step.width, step.height));
         });
 
-        const balloonParkour = [
-            { x: 3960, y: groundY - 90, width: 110 },
-            { x: 4080, y: groundY - 150, width: 100 },
-            { x: 4220, y: groundY - 205, width: 90 },
-            { x: 4340, y: groundY - 255, width: 110 },
-            { x: 4420, y: groundY - 245, width: 140 }
-        ];
+        const balloonParkour = (levelDef.balloonParkour || []).map(p => ({
+            x: p.x,
+            width: p.width,
+            y: groundY - (p.yOffset || 0)
+        }));
         balloonParkour.forEach(p => {
             g.platforms.push(this.factory.platform(p.x, p.y, p.width, 14));
         });
@@ -494,7 +478,7 @@ class WorldBuilder {
             spawnAnchorX + 40,
             groundY - 52,
             'art/items/sign.png',
-            [...g.signDialogue.defaultMessages]
+            levelDef.defaultSignMessages ? [...levelDef.defaultSignMessages] : [...g.signDialogue.defaultMessages]
         );
         g.signBoards.push(g.signBoard);
 

@@ -26,6 +26,13 @@ const GameConfig = {
         toggleDebug: ['F1'],
         toggleTest: ['F2'],
         toggleMute: ['m', 'M'],
-        toggleInventory: ['i', 'I']
+        toggleInventory: ['i', 'I'],
+        pause: ['Escape', 'p', 'P']
+    },
+    testRoom: {
+        groundHeight: 50,
+        spawnAnchorX: 140,
+        fallDeathBuffer: 200,
+        teleportBuffer: 500
     }
 };

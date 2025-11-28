@@ -97,30 +97,44 @@ class UIManager {
             }
         });
 
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // State-related shortcuts
-            sm.handleKeyboardShortcuts(e.key);
+        const matches = (key, actionKeys, fallbacks) => {
+            const list = actionKeys && actionKeys.length ? actionKeys : fallbacks;
+            return list ? list.includes(key) : false;
+        };
 
-            switch (e.key) {
-                case (controls.toggleDebug?.[0] || 'F1'):
-                    g.debug = !g.debug;
-                    e.preventDefault();
-                    break;
-                case (controls.toggleTest?.[0] || 'F2'):
-                    g.toggleTestMode();
-                    e.preventDefault();
-                    break;
-                case (controls.toggleMute?.[0] || 'm'):
-                case (controls.toggleMute?.[1] || 'M'):
-                    g.toggleMute();
-                    break;
-                case (controls.toggleInventory?.[0] || 'i'):
-                case (controls.toggleInventory?.[1] || 'I'):
-                    this.toggleInventoryOverlay();
-                    e.preventDefault();
-                    break;
+        document.addEventListener('keydown', (e) => {
+            // First handle configurable shortcuts; if handled, skip state-manager defaults to avoid double toggles
+            if (matches(e.key, controls.toggleDebug, ['F1'])) {
+                g.debug = !g.debug;
+                e.preventDefault();
+                return;
             }
+            if (matches(e.key, controls.toggleTest, ['F2'])) {
+                g.toggleTestMode();
+                e.preventDefault();
+                return;
+            }
+            if (matches(e.key, controls.toggleMute, ['m', 'M'])) {
+                g.toggleMute();
+                return;
+            }
+            if (matches(e.key, controls.toggleInventory, ['i', 'I'])) {
+                this.toggleInventoryOverlay();
+                e.preventDefault();
+                return;
+            }
+            if (matches(e.key, controls.pause, ['Escape', 'p', 'P'])) {
+                if (sm.isPlaying()) {
+                    sm.pauseGame();
+                } else if (sm.isPaused()) {
+                    sm.resumeGame();
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Fall back to original state manager shortcuts (Escape/P) and others
+            sm.handleKeyboardShortcuts(e.key);
         });
     }
 

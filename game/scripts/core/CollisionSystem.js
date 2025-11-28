@@ -4,6 +4,7 @@
 class CollisionSystem {
     constructor(game) {
         this.game = game;
+        this.config = game.config || GameConfig || {};
     }
 
     checkPlayerCollisions() {
@@ -53,9 +54,11 @@ class CollisionSystem {
             });
         }
 
-        if (!g.testMode && player.y > g.level.height + 200) {
+        const fallBuffer = this.config.testRoom?.fallDeathBuffer ?? 200;
+        const teleportBuffer = this.config.testRoom?.teleportBuffer ?? 500;
+        if (!g.testMode && player.y > g.level.height + fallBuffer) {
             player.takeDamage(player.health, null);
-        } else if (g.testMode && player.y > g.level.height + 500) {
+        } else if (g.testMode && player.y > g.level.height + teleportBuffer) {
             player.x = g.level.spawnX;
             player.y = g.level.spawnY;
             player.velocity.x = 0;
