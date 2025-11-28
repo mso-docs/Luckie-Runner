@@ -25,6 +25,8 @@ class UIManager {
             items: []
         };
         this.game.shopUI = this.shopUI;
+
+        this.config = game.config || GameConfig || {};
     }
 
     /**

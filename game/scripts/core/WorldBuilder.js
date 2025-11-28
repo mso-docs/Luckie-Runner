@@ -6,6 +6,7 @@ class WorldBuilder {
     constructor(game, factory) {
         this.game = game;
         this.factory = factory || new EntityFactory(game);
+        this.config = game.config || GameConfig || {};
     }
 
     createLevel() {
@@ -23,6 +24,7 @@ class WorldBuilder {
         g.princess = null;
         g.balloonFan = null;
 
+        const defaultSpawn = this.config.level?.spawn || { x: 100, y: g.canvas.height - 150 };
         const getTestSpawn = () => {
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.canvas.height - 50);
             const playerWidth = 45;
@@ -44,12 +46,12 @@ class WorldBuilder {
             this.spawnItems();
         }
 
-        const spawn = g.testMode ? getTestSpawn() : { x: 100, y: g.canvas.height - 150 };
-        const contentMaxX = g.testMode ? Math.max(4600, g.testRoomMaxX || 0) : g.canvas.width;
+        const spawn = g.testMode ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
+        const contentMaxX = g.testMode ? Math.max(4600, g.testRoomMaxX || 0) : (this.config.level?.width || g.canvas.width);
 
         g.level = {
             width: contentMaxX,
-            height: g.canvas.height,
+            height: this.config.level?.height ?? g.canvas.height,
             spawnX: spawn.x,
             spawnY: spawn.y
         };

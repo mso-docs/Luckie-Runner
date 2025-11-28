@@ -24,6 +24,7 @@ class Game {
         this.smallPalms = [];
         this.testRoomMaxX = 0;
         this.softLandingTolerance = 20; // px window to allow top-only landings
+        this.config = GameConfig;
         
         // Game entities
         this.player = null;
@@ -36,20 +37,21 @@ class Game {
         this.flag = null;
         
         // Camera system
-        this.cameraLead = { x: 100, y: 50 }; // Look ahead distance
+        this.cameraLead = { ...(GameConfig.camera?.lead || { x: 100, y: 50 }) }; // Look ahead distance
         this.camera = new Camera({
             viewportWidth: this.canvas.width,
             viewportHeight: this.canvas.height,
-            lead: this.cameraLead
+            lead: this.cameraLead,
+            lerpSpeed: GameConfig.camera?.lerpSpeed ?? 0.15
         });
         
         // Level system
         this.level = {
-            width: 3000,
-            height: 600,
-            spawnX: 100,
-            spawnY: 400,
-            scrollSpeed: 2
+            width: GameConfig.level?.width ?? 3000,
+            height: GameConfig.level?.height ?? 600,
+            spawnX: GameConfig.level?.spawn?.x ?? 100,
+            spawnY: GameConfig.level?.spawn?.y ?? 400,
+            scrollSpeed: GameConfig.level?.scrollSpeed ?? 2
         };
         
         // Background layers for parallax
@@ -60,8 +62,8 @@ class Game {
         this.deltaTime = 0;
         this.gameTime = 0;
         this.frameCount = 0;
-        this.timeScale = 0.6; // Slow down everything by 40%
-        this.fps = 60;
+        this.timeScale = GameConfig.timing?.timeScale ?? 0.6; // Slow down everything by 40%
+        this.fps = GameConfig.timing?.fps ?? 60;
         this.targetFrameTime = 1000 / this.fps;
         this.loop = new GameLoop({
             timeScale: this.timeScale,
