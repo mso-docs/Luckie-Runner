@@ -213,5 +213,30 @@ class CollisionSystem {
                 projectile.hitObstacle(platform);
             }
         });
+
+        // Hazards vs projectiles (if hazards expose hit/hurt)
+        g.hazards.forEach(hazard => {
+            if (typeof hazard.checkProjectileCollision === 'function') {
+                hazard.checkProjectileCollision(projectile);
+            }
+        });
+    }
+
+    updateHazardCollisions() {
+        const g = this.game;
+        if (g.testMode) return;
+        if (!g.player) return;
+        g.hazards.forEach(hazard => {
+            if (hazard.checkPlayerCollision) {
+                hazard.checkPlayerCollision();
+            } else if (hazard.bounds && CollisionDetection.rectangleCollision(
+                CollisionDetection.getCollisionBounds(g.player),
+                hazard.bounds
+            )) {
+                if (typeof hazard.onPlayerHit === 'function') {
+                    hazard.onPlayerHit(g.player);
+                }
+            }
+        });
     }
 }

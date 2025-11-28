@@ -18,6 +18,14 @@ class Game {
         // Core systems
         this.input = new InputManager();
         this.audioManager = new AudioManager();
+        // Apply audio defaults from config
+        if (this.config?.audio && this.audioManager) {
+            const a = this.config.audio;
+            if (typeof a.master === 'number') this.audioManager.setMasterVolume(a.master);
+            if (typeof a.music === 'number') this.audioManager.setMusicVolume(a.music);
+            if (typeof a.sfx === 'number') this.audioManager.setSfxVolume(a.sfx);
+            if (a.muted) this.audioManager.toggleMute(true);
+        }
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
@@ -1294,6 +1302,7 @@ class Game {
         this.hazards = this.hazards.filter(hazard => {
             if (hazard.active) {
                 hazard.update(deltaTime);
+                this.collisionSystem?.updateHazardCollisions();
                 return true;
             }
             return false;
