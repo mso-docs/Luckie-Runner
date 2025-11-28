@@ -511,6 +511,7 @@ class WorldBuilder {
             'art/items/sign.png',
             levelDef.defaultSignMessages ? [...levelDef.defaultSignMessages] : (g.signUI?.signDialogue?.defaultMessages ? [...g.signUI.signDialogue.defaultMessages] : [])
         );
+        g.signBoard.dialogueId = 'default_sign';
         g.signBoards.push(g.signBoard);
 
         const postSignPlatform = balloonParkour[balloonParkour.length - 1];

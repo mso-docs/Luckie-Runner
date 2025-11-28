@@ -20,6 +20,7 @@ class Game {
         this.input = new InputManager();
         this.audioManager = new AudioManager(this.config);
         this.stateManager = new GameStateManager(this);
+        this.sceneManager = new SceneManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
         this.smallPalms = [];
@@ -124,7 +125,8 @@ class Game {
         this.signSprite.src = 'art/items/sign.png';
         this.signUI = new SignUI(this);
 
-        // UI manager (inventory overlays, tabs, item modals)
+        // UI managers
+        this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {});
         this.uiManager = new UIManager(this);
         this.entityFactory = new EntityFactory(this);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory);
@@ -229,6 +231,16 @@ class Game {
             });
         }
         this.createLevel('testRoom');
+
+        // Register scenes
+        if (this.sceneManager) {
+            this.sceneManager.register('menu', new MenuScene());
+            this.sceneManager.register('play', new PlayScene());
+            this.sceneManager.register('pause', new PauseScene());
+            this.sceneManager.change('menu');
+        } else {
+            this.stateManager.showMenu('startMenu');
+        }
         
         // Show start menu
         this.stateManager.showMenu('startMenu');
@@ -568,7 +580,7 @@ class Game {
                 if (this.signUI.signDialogue.active) {
                     this.signUI.advanceSignDialogue();
                 } else {
-                    this.signUI.showSignDialogue();
+                    this.signUI.showSignDialogue(nearbySign);
                 }
                 return;
             }

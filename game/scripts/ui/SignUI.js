@@ -100,19 +100,20 @@ class SignUI {
         }
     }
 
-    showSignDialogue() {
+    showSignDialogue(target = null) {
         const dlg = this.signDialogue;
-        const nearbySign = this.findNearbySign();
+        const nearbySign = target || this.findNearbySign();
         if (!dlg.container || !nearbySign) return;
 
         dlg.target = nearbySign;
-        dlg.messages = (nearbySign.dialogueLines && nearbySign.dialogueLines.length)
-            ? [...nearbySign.dialogueLines]
-            : [...dlg.defaultMessages];
+        dlg.messages = this.getMessagesForSign(nearbySign);
         dlg.index = 0;
         dlg.active = true;
         dlg.container.style.display = 'block';
         dlg.container.setAttribute('aria-hidden', 'false');
+        dlg.container.classList.remove('hidden');
+        dlg.container.classList.add('show');
+        if (dlg.hint) dlg.hint.style.display = 'block';
         this.updateSignDialoguePosition();
         this.showSignDialogueText();
     }
@@ -123,6 +124,8 @@ class SignUI {
         dlg.active = false;
         dlg.container.style.display = 'none';
         dlg.container.setAttribute('aria-hidden', 'true');
+        dlg.container.classList.add('hidden');
+        dlg.container.classList.remove('show');
         dlg.target = null;
     }
 
@@ -134,7 +137,13 @@ class SignUI {
             return;
         }
         const message = dlg.messages[dlg.index];
-        textEl.innerHTML = this.game.applySpeechMarkup ? this.game.applySpeechMarkup(message) : message;
+        if (this.game.formatSpeechText) {
+            textEl.innerHTML = this.game.formatSpeechText(message);
+        } else if (this.game.applySpeechMarkup) {
+            textEl.innerHTML = this.game.applySpeechMarkup(message);
+        } else {
+            textEl.innerHTML = message;
+        }
     }
 
     updateSignDialoguePosition() {
@@ -146,6 +155,8 @@ class SignUI {
         const bottomFromCanvas = this.game.canvas.height - (sign.y - camera.y) + sign.height + 10;
         dlg.container.style.left = `${targetX}px`;
         dlg.container.style.bottom = `${bottomFromCanvas}px`;
+        dlg.container.setAttribute('aria-hidden', 'false');
+        dlg.container.classList.remove('hidden');
     }
 
     showSignCallout() {
@@ -186,6 +197,25 @@ class SignUI {
         this.updateSignDialoguePosition();
     }
 
+    getMessagesForSign(sign) {
+        // Priority: dialogueId -> dialogueLines -> defaults
+        if (sign && sign.dialogueId && this.game.dialogueManager) {
+            const fromId = this.game.dialogueManager.getLines(sign.dialogueId);
+            if (fromId && fromId.length) return fromId;
+        }
+        if (sign && Array.isArray(sign.dialogueLines) && sign.dialogueLines.length) {
+            return [...sign.dialogueLines];
+        }
+        if (this.signDialogue.defaultMessages.length) {
+            return [...this.signDialogue.defaultMessages];
+        }
+        if (this.game.dialogueManager) {
+            const fallback = this.game.dialogueManager.getLines('default_sign');
+            if (fallback.length) return fallback;
+        }
+        return [];
+    }
+
     reset() {
         this.hideSignDialogue();
         if (this.signCallout && this.signCallout.parentNode) {
@@ -195,5 +225,9 @@ class SignUI {
         this.signDialogue.target = null;
         this.signDialogue.messages = [];
         this.signDialogue.index = 0;
+        if (this.signDialogue.container) {
+            this.signDialogue.container.classList.add('hidden');
+            this.signDialogue.container.setAttribute('aria-hidden', 'true');
+        }
     }
 }
