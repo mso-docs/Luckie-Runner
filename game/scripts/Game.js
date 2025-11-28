@@ -227,6 +227,7 @@ class Game {
         this.badgeUI = new BadgeUI(this);
         this.setupChestUI();
         this.setupShopUI();
+        this.primeAudioUIFromConfig();
         // Sync audio UI with config defaults on load
         this.updateAudioUI();
         
@@ -324,6 +325,25 @@ class Game {
      */
     setupEventListeners() {
         this.uiManager?.setupMenuAndControls();
+    }
+
+    /**
+     * Apply config defaults to audio input elements before wiring events
+     */
+    primeAudioUIFromConfig() {
+        const a = this.config?.audio || {};
+        const masterVolumeSlider = document.getElementById('masterVolume');
+        const musicVolumeSlider = document.getElementById('musicVolume');
+        const sfxVolumeSlider = document.getElementById('sfxVolume');
+        if (masterVolumeSlider && typeof a.master === 'number') {
+            masterVolumeSlider.value = Math.round(a.master * 100);
+        }
+        if (musicVolumeSlider && typeof a.music === 'number') {
+            musicVolumeSlider.value = Math.round(a.music * 100);
+        }
+        if (sfxVolumeSlider && typeof a.sfx === 'number') {
+            sfxVolumeSlider.value = Math.round(a.sfx * 100);
+        }
     }
 
     /**
