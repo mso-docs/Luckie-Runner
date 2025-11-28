@@ -17,6 +17,9 @@ class PalmTreeManager {
                 frondCount: [3, 4],
                 trunkColor: '#4a5c4e',
                 frondColor: '#2a3d2e',
+                brightness: 0.55,
+                saturation: 0.7,
+                alpha: 0.65,
                 groundY: null,
                 trees: []
             },
@@ -29,6 +32,9 @@ class PalmTreeManager {
                 frondCount: [4, 5],
                 trunkColor: '#6b7a5e',
                 frondColor: '#4a6844',
+                brightness: 0.7,
+                saturation: 0.8,
+                alpha: 0.8,
                 groundY: null,
                 trees: []
             },
@@ -41,6 +47,9 @@ class PalmTreeManager {
                 frondCount: [5, 6],
                 trunkColor: '#8b6f47',
                 frondColor: '#5a8c4a',
+                brightness: 0.85,
+                saturation: 0.9,
+                alpha: 0.9,
                 groundY: null,
                 trees: []
             },
@@ -53,6 +62,9 @@ class PalmTreeManager {
                 frondCount: [6, 8],
                 trunkColor: '#a87f56',
                 frondColor: '#68a355',
+                brightness: 1,
+                saturation: 1,
+                alpha: 1,
                 groundY: null,
                 trees: []
             }
@@ -61,6 +73,70 @@ class PalmTreeManager {
         this.lastGeneratedX = 0;
         this.enabled = true;
         this.clouds = []; // persistent cloud field
+
+        // Palm sprite variants (loaded once)
+        this.palmSpritePaths = [
+            { key: 'palm', src: 'art/bg/palms/palm.png' },
+            { key: 'small', src: 'art/bg/palms/small-palm.png' },
+            { key: 'tall', src: 'art/bg/palms/tall-palm.png' },
+            { key: 'tall2', src: 'art/bg/palms/tall-palm-2.png' },
+            { key: 'tall3', src: 'art/bg/palms/palm-3.png' }
+        ];
+        this.palmSprites = [];
+        this.palmSpritesReady = false;
+        this.spriteLoadAttempted = false;
+    }
+    
+    /**
+     * Load palm sprite variants once
+     */
+    loadPalmSprites() {
+        if (this.spriteLoadAttempted) return;
+        this.spriteLoadAttempted = true;
+
+        const pending = [];
+        let loaded = 0;
+
+        const finalize = () => {
+            if (loaded < this.palmSpritePaths.length) return;
+            // Keep only successfully loaded sprites
+            this.palmSprites = pending.filter(entry => {
+                const img = entry.img;
+                return img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+            });
+            // Fallback: if none loaded, keep whatever we tried so we at least attempt draws
+            if (this.palmSprites.length === 0) {
+                this.palmSprites = pending;
+            }
+            this.palmSpritesReady = this.palmSprites.length > 0;
+        };
+
+        this.palmSpritePaths.forEach(entry => {
+            const img = new Image();
+            img.onload = () => { loaded += 1; finalize(); };
+            img.onerror = () => { loaded += 1; finalize(); };
+            img.src = entry.src;
+            pending.push({ key: entry.key, img });
+        });
+    }
+
+    /**
+     * Get a sprite image for a given tree
+     */
+    getSpriteForTree(tree) {
+        if (!this.palmSpritesReady || this.palmSprites.length === 0) return null;
+        const sprite = this.palmSprites.find(s => s.key === tree.spriteKey) || this.palmSprites[0];
+        return sprite?.img || null;
+    }
+
+    /**
+     * Pick a random sprite key for a new tree
+     */
+    getRandomSpriteKey() {
+        const keys = this.palmSpritePaths.map(p => p.key);
+        if (keys.length === 0) return null;
+        const idx = Math.floor(Math.random() * keys.length);
+        return keys[idx];
     }
     
     /**
@@ -84,6 +160,9 @@ class PalmTreeManager {
 
         // Build new cloud field
         this.generateCloudField(this.game.canvas.width, this.game.canvas.height);
+
+        // Begin loading sprite assets
+        this.loadPalmSprites();
     }
     
     /**
@@ -131,7 +210,8 @@ class PalmTreeManager {
                 trunkWidth: trunkWidth,
                 frondCount: frondCount,
                 lean: (Math.random() - 0.5) * 0.15,
-                swayPhase: Math.random() * Math.PI * 2
+                swayPhase: Math.random() * Math.PI * 2,
+                spriteKey: this.getRandomSpriteKey()
             });
             
             currentX += layer.spacing + Math.random() * 100 - 50; // Add variation
@@ -159,18 +239,7 @@ class PalmTreeManager {
                 if (screenX > -400 && screenX < ctx.canvas.width + 400) {
                     const swayOffset = Math.sin(time + tree.swayPhase) * 3;
                     const lean = tree.lean + swayOffset * 0.001;
-                    
-                    this.drawPalmTree(
-                        ctx,
-                        screenX,
-                        layer.groundY,
-                        tree.height,
-                        lean,
-                        tree.trunkWidth,
-                        tree.frondCount,
-                        layer.trunkColor,
-                        layer.frondColor
-                    );
+                    this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, lean, layer, tree);
                 }
             });
         });
@@ -423,15 +492,25 @@ class PalmTreeManager {
     /**
      * Draw a single stylized palm tree
      */
-    drawPalmTree(ctx, x, groundY, height, lean, trunkWidth, frondCount, trunkColor, frondColor) {
+    drawPalmTree(ctx, x, groundY, height, lean, layer, tree) {
+        const sprite = this.getSpriteForTree(tree);
+        if (!sprite) return;
+
+        const naturalHeight = sprite.naturalHeight || sprite.height || 1;
+        const naturalWidth = sprite.naturalWidth || sprite.width || 1;
+        const scale = height / naturalHeight;
+        const drawWidth = naturalWidth * scale;
+        const drawHeight = height;
+
+        // Offset lean subtly to keep bases on the ground
+        const leanOffset = (lean || 0) * height * 0.3;
+        const drawX = x + leanOffset - drawWidth / 2;
+        const drawY = groundY - drawHeight;
+
         ctx.save();
-        
-        // Draw slender trunk with curve
-        this.drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, trunkColor);
-        
-        // Draw frond canopy
-        this.drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, frondColor);
-        
+        ctx.globalAlpha *= layer.alpha ?? 1;
+        ctx.filter = `brightness(${layer.brightness ?? 1}) saturate(${layer.saturation ?? 1})`;
+        ctx.drawImage(sprite, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
     }
     
