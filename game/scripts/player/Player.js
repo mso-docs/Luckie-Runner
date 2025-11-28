@@ -56,6 +56,7 @@ class Player extends Entity {
         this.throwables.registerType('rock', {
             maxAmmo: this.maxRocks,
             ammo: this.maxRocks,
+            initialAmmo: this.maxRocks,
             icon: 'art/items/rock-item.png',
             displayName: 'Rocks',
             createProjectile: (player, worldTarget) => {
@@ -76,6 +77,32 @@ class Player extends Entity {
                 rock.game = player.game;
                 rock.maxDistance = player.width * 4;
                 return rock;
+            }
+        });
+        this.throwables.registerType('coconut', {
+            maxAmmo: 10,
+            ammo: 10,
+            initialAmmo: 10,
+            icon: 'art/items/coconut.png',
+            displayName: 'Coconuts',
+            description: 'Heavy rolling coconut that bounces and slows to a stop.',
+            createProjectile: (player, worldTarget) => {
+                const playerCenter = player.getCenter();
+                const dirX = worldTarget.x - playerCenter.x;
+                const dirY = worldTarget.y - playerCenter.y;
+                const len = Math.hypot(dirX, dirY) || 1;
+                const normalized = { x: dirX / len, y: dirY / len };
+                
+                const throwSpeed = player.moveSpeed * 1.0; // slightly slower than rocks
+                const velocity = {
+                    x: normalized.x * throwSpeed,
+                    y: normalized.y * throwSpeed * 0.4
+                };
+                
+                const coco = new Coconut(playerCenter.x - 6, playerCenter.y - 6, velocity);
+                coco.setOwner(player, 'player');
+                coco.game = player.game;
+                return coco;
             }
         });
         this.throwables.setActive('rock');
@@ -257,6 +284,11 @@ class Player extends Entity {
 
         // Add to game projectiles
         this.game.projectiles.push(projectile);
+
+        // Play throw sound if available
+        if (projectile.throwSound && this.game.audioManager) {
+            this.game.audioManager.playSound(projectile.throwSound, 0.7);
+        }
         
         // Use ammo and set cooldown
         this.throwables.consumeActive(1);

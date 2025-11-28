@@ -177,6 +177,16 @@ class Projectile extends Entity {
     }
 
     /**
+     * Begin a fade-out timer before removal
+     */
+    startFadeOut() {
+        if (this.fadeOut) return;
+        this.fadeOut = true;
+        this.fadeDuration = 2000; // 2 seconds
+        this.fadeElapsed = 0;
+    }
+
+    /**
      * Create visual effect when hitting something
      * @param {Entity} target - What was hit
      */
@@ -365,16 +375,6 @@ class Rock extends Projectile {
     }
 
     /**
-     * Begin a fade-out timer before removal
-     */
-    startFadeOut() {
-        if (this.fadeOut) return;
-        this.fadeOut = true;
-        this.fadeDuration = 2000; // 2 seconds
-        this.fadeElapsed = 0;
-    }
-
-    /**
      * Override update to handle gravity and fade
      */
     update(deltaTime) {
@@ -445,5 +445,93 @@ class MagicArrow extends Projectile {
     createMagicParticle() {
         // TODO: Create magical particle effects
         // This would create small sparkles around the arrow
+    }
+}
+
+/**
+ * Coconut - Heavy rolling projectile
+ */
+class Coconut extends Projectile {
+    constructor(x, y, velocity) {
+        super(x, y, 28, 28, velocity, 20);
+        this.gravity = 900;
+        this.friction = 0.98;
+        this.rollFriction = 0.985;
+        this.maxDistance = 200;
+        this.lifeTime = 8000;
+        this.startX = x;
+        this.throwSound = 'coconut';
+        this.loadSprite('art/items/coconut.png');
+        this.ownerType = 'player';
+        this.autoFadeOnImpact = false; // use custom roll/disintegrate logic
+    }
+
+    onUpdate(deltaTime) {
+        super.onUpdate(deltaTime);
+
+        // Apply rolling friction
+        this.velocity.x *= this.rollFriction;
+
+        // Stop after distance or low speed
+        const dist = Math.abs(this.x - this.startX);
+        const speed = Math.hypot(this.velocity.x, this.velocity.y);
+        if (dist >= this.maxDistance || speed < 20) {
+            this.disintegrate();
+        }
+    }
+
+    onHitTarget(target) {
+        this.active = false;
+        if (target.velocity) {
+            const knockbackForce = 2.0;
+            target.velocity.x += this.direction.x * knockbackForce;
+        }
+    }
+
+    onHitObstacle(obstacle) {
+        if (!obstacle || !obstacle.solid) {
+            this.disintegrate(obstacle);
+            return;
+        }
+
+        const bounds = CollisionDetection.getCollisionBounds(this);
+        const ob = CollisionDetection.getCollisionBounds(obstacle);
+
+        const overlapX = Math.min(
+            bounds.x + bounds.width - ob.x,
+            ob.x + ob.width - bounds.x
+        );
+        const overlapY = Math.min(
+            bounds.y + bounds.height - ob.y,
+            ob.y + ob.height - bounds.y
+        );
+
+        if (overlapX < overlapY) {
+            // Horizontal bounce with heavy damping
+            const hitFromLeft = bounds.x < ob.x;
+            this.x = hitFromLeft ? ob.x - bounds.width - 0.1 : ob.x + ob.width + 0.1;
+            this.velocity.x = -this.velocity.x * 0.3;
+        } else {
+            // Vertical contact: small hop, more damping
+            const hitFromAbove = bounds.y < ob.y;
+            this.y = hitFromAbove ? ob.y - bounds.height - 0.1 : ob.y + ob.height + 0.1;
+            this.velocity.y = -Math.abs(this.velocity.y) * 0.2;
+            this.velocity.x *= 0.8;
+        }
+
+        // Stop if energy is too low
+        const speed = Math.hypot(this.velocity.x, this.velocity.y);
+        if (speed < 15) {
+            this.disintegrate(obstacle);
+        }
+    }
+
+    disintegrate() {
+        this.active = false;
+        if (typeof this.startFadeOut === 'function') {
+            this.startFadeOut();
+        } else {
+            this.active = false;
+        }
     }
 }

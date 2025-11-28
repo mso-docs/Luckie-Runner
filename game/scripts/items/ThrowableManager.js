@@ -77,7 +77,12 @@ class ThrowableManager {
 
     reset() {
         this.types.forEach((t, key) => {
-            t.ammo = t.maxAmmo === Infinity ? 0 : t.maxAmmo;
+            // Preserve initial ammo when provided; otherwise refill to max
+            if (typeof t.initialAmmo === 'number') {
+                t.ammo = Math.min(t.maxAmmo, t.initialAmmo);
+            } else {
+                t.ammo = t.maxAmmo === Infinity ? 0 : t.maxAmmo;
+            }
         });
     }
 }
