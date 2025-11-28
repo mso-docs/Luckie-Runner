@@ -23,6 +23,7 @@ class Game {
         this.badgeUI = null;
         this.smallPalms = [];
         this.testRoomMaxX = 0;
+        this.softLandingTolerance = 20; // px window to allow top-only landings
         
         // Game entities
         this.player = null;
@@ -133,6 +134,36 @@ class Game {
         
         // Initialize game
         this.init();
+    }
+
+    /**
+     * Top-only landing helper: allows passing in front but landing from above.
+     * @param {Object} targetRect - {x,y,width,height}
+     * @returns {{onTop:boolean, landed:boolean}}
+     */
+    topOnlyLanding(targetRect) {
+        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const playerBottom = playerBounds.y + playerBounds.height;
+        const targetTop = targetRect.y;
+
+        // Must overlap horizontally
+        const overlapX = playerBounds.x < targetRect.x + targetRect.width &&
+            playerBounds.x + playerBounds.width > targetRect.x;
+
+        // Must be coming from above within tolerance
+        const descending = this.player.velocity?.y >= 0;
+        const withinTolerance = playerBottom >= targetTop &&
+            playerBottom <= targetTop + (this.softLandingTolerance || 20);
+
+        if (overlapX && descending && withinTolerance) {
+            // Land on top
+            this.player.y = targetTop - playerBounds.height;
+            this.player.velocity.y = Math.min(0, this.player.velocity.y);
+            this.player.onGround = true;
+            return { onTop: true, landed: true };
+        }
+
+        return { onTop: false, landed: false };
     }
 
     /**
@@ -2247,11 +2278,9 @@ class Game {
             this.smallPalms.forEach(palm => {
                 const palmBounds = CollisionDetection.getCollisionBounds(palm);
                 const playerBounds = CollisionDetection.getCollisionBounds(this.player);
-                if (CollisionDetection.rectangleCollision(playerBounds, palmBounds)) {
-                    const result = this.resolvePlayerPlatformCollision(palmBounds);
-                    if (result && result.onTop) {
-                        palm.setPlayerOnTop(true, result.landed);
-                    }
+                const landed = this.topOnlyLanding(palmBounds);
+                if (landed.onTop) {
+                    palm.setPlayerOnTop(true, landed.landed);
                 }
             });
         }
@@ -2352,8 +2381,11 @@ class Game {
         if (!this.player || !Array.isArray(this.npcs)) return;
         this.npcs.forEach(npc => {
             if (!npc || npc.solid === false) return;
-            if (CollisionDetection.entityCollision(this.player, npc)) {
-                this.resolvePlayerEntityCollision(npc);
+            const npcBounds = CollisionDetection.getCollisionBounds(npc);
+            const landed = this.topOnlyLanding(npcBounds);
+            if (!landed.onTop) {
+                // Allow passing in front when not landing on top
+                return;
             }
         });
     }
