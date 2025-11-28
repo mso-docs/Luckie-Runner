@@ -28,6 +28,100 @@ class UIManager {
     }
 
     /**
+     * Wire up menu/pause/audio controls and global shortcuts.
+     */
+    setupMenuAndControls() {
+        const g = this.game;
+        const sm = this.game.stateManager;
+
+        // Start menu buttons
+        document.getElementById('startButton')?.addEventListener('click', () => {
+            g.ensureTitleMusicPlaying();
+            sm.startGame();
+        });
+
+        document.getElementById('instructionsButton')?.addEventListener('click', () => {
+            g.ensureTitleMusicPlaying();
+            sm.showMenu('instructionsMenu');
+        });
+
+        // Instructions back button
+        document.getElementById('backButton')?.addEventListener('click', () => {
+            g.ensureTitleMusicPlaying();
+            sm.showMenu('startMenu');
+        });
+
+        // Game over buttons
+        document.getElementById('restartButton')?.addEventListener('click', () => {
+            sm.restartGame();
+        });
+
+        document.getElementById('mainMenuButton')?.addEventListener('click', () => {
+            sm.returnToMenu();
+        });
+
+        // Pause menu buttons
+        document.getElementById('resumeButton')?.addEventListener('click', () => {
+            sm.resumeGame();
+        });
+
+        document.getElementById('pauseMainMenuButton')?.addEventListener('click', () => {
+            sm.returnToMenu();
+        });
+
+        // Audio controls
+        document.getElementById('muteButton')?.addEventListener('click', () => {
+            g.toggleMute();
+        });
+
+        document.getElementById('masterVolume')?.addEventListener('input', (e) => {
+            g.setMasterVolume(parseInt(e.target.value, 10));
+        });
+
+        document.getElementById('musicVolume')?.addEventListener('input', (e) => {
+            g.setMusicVolume(parseInt(e.target.value, 10));
+        });
+
+        document.getElementById('sfxVolume')?.addEventListener('input', (e) => {
+            g.setSfxVolume(parseInt(e.target.value, 10));
+        });
+
+        // Play button sound for any menu buttons
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (btn && g.playButtonSound) {
+                g.playButtonSound();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // State-related shortcuts
+            sm.handleKeyboardShortcuts(e.key);
+
+            switch (e.key) {
+                case 'F1':
+                    g.debug = !g.debug;
+                    e.preventDefault();
+                    break;
+                case 'F2':
+                    g.toggleTestMode();
+                    e.preventDefault();
+                    break;
+                case 'm':
+                case 'M':
+                    g.toggleMute();
+                    break;
+                case 'i':
+                case 'I':
+                    this.toggleInventoryOverlay();
+                    e.preventDefault();
+                    break;
+            }
+        });
+    }
+
+    /**
      * Prepare the inventory overlay UI state
      */
     setupInventoryUI() {
