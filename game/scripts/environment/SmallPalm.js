@@ -20,6 +20,11 @@ class SmallPalm extends Entity {
         this.loadSprite(this.spritePath);
         this.collisionReduced = false;
         this.resetCollisionBox();
+        this.targetCollision = {
+            width: this.collisionWidth,
+            height: this.collisionHeight,
+            offset: { x: this.collisionOffset.x, y: this.collisionOffset.y }
+        };
     }
 
     resetCollisionBox() {
@@ -27,12 +32,19 @@ class SmallPalm extends Entity {
         this.collisionHeight = this.height;
         this.collisionOffset = { x: 0, y: 0 };
         this.collisionReduced = false;
+        this.targetCollision = {
+            width: this.collisionWidth,
+            height: this.collisionHeight,
+            offset: { x: this.collisionOffset.x, y: this.collisionOffset.y }
+        };
     }
 
     applyOccupiedCollision() {
-        this.collisionWidth = 121;
-        this.collisionHeight = 156;
-        this.collisionOffset = { x: 0, y: this.height - this.collisionHeight };
+        this.targetCollision = {
+            width: 121,
+            height: 137,
+            offset: { x: 0, y: this.height - 156 }
+        };
         this.collisionReduced = true;
     }
 
@@ -142,6 +154,9 @@ class SmallPalm extends Entity {
     onUpdate() {
         this.ensureAnimations();
 
+        // Smooth collision transitions
+        this.smoothCollisionBox();
+
         // Explicitly skip animation advancement while occupied
         if (this.state === 'occupied') {
             this.animationFrame = 0;
@@ -152,5 +167,31 @@ class SmallPalm extends Entity {
 
     getShadowScale() {
         return { x: 0.7, y: 0.4 };
+    }
+
+    /**
+     * Gradually interpolate collision box toward target to avoid flicker
+     */
+    smoothCollisionBox() {
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const factor = 0.35; // smoothing factor per frame
+
+        const targetW = this.targetCollision?.width ?? this.collisionWidth;
+        const targetH = this.targetCollision?.height ?? this.collisionHeight;
+        const targetOff = this.targetCollision?.offset ?? this.collisionOffset;
+
+        this.collisionWidth = lerp(this.collisionWidth, targetW, factor);
+        this.collisionHeight = lerp(this.collisionHeight, targetH, factor);
+        this.collisionOffset = {
+            x: lerp(this.collisionOffset.x, targetOff.x, factor),
+            y: lerp(this.collisionOffset.y, targetOff.y, factor)
+        };
+
+        // Snap when close to eliminate tiny oscillations
+        const close = (a, b) => Math.abs(a - b) < 0.5;
+        if (close(this.collisionWidth, targetW)) this.collisionWidth = targetW;
+        if (close(this.collisionHeight, targetH)) this.collisionHeight = targetH;
+        if (close(this.collisionOffset.x, targetOff.x)) this.collisionOffset.x = targetOff.x;
+        if (close(this.collisionOffset.y, targetOff.y)) this.collisionOffset.y = targetOff.y;
     }
 }
