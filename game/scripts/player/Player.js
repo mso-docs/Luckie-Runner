@@ -685,11 +685,17 @@ class Player extends Entity {
         if (hudRocksElement) {
             const ammo = this.throwables?.getAmmo(this.throwables?.getActiveType()) ?? 0;
             hudRocksElement.textContent = ammo;
-            // Use the adjacent icon span for the image; clear any inline bg on the value
-            const rockIcon = hudRocksElement.previousElementSibling;
+            // Use the hud-icon within the same entry for the image; clear any inline bg on the value
+            const entry = hudRocksElement.parentElement;
+            const rockIcon = entry ? entry.querySelector('.hud-icon') : null;
             hudRocksElement.style.backgroundImage = 'none';
-            if (rockIcon && rockIcon.classList.contains('hud-icon')) {
-                rockIcon.style.backgroundImage = activeThrowIcon ? `url('${activeThrowIcon}')` : "url('art/items/rock-item.png')";
+            if (rockIcon) {
+                rockIcon.style.width = '36px';
+                rockIcon.style.height = '36px';
+                rockIcon.style.backgroundSize = 'contain';
+                rockIcon.style.backgroundImage = activeThrowIcon
+                    ? `url('${activeThrowIcon}')`
+                    : "url('art/items/rock-item.png')";
             }
         }
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
