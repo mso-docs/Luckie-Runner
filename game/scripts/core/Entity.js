@@ -286,6 +286,19 @@ class Entity {
         const animation = this.animations[this.currentAnimation];
         const frame = animation.frames[this.animationFrame];
 
+        if (!frame) {
+          // Fallback to full sprite if frame is missing
+          ctx.drawImage(
+            this.sprite,
+            -this.width / 2,
+            -this.height / 2,
+            this.width,
+            this.height
+          );
+          ctx.restore();
+          return;
+        }
+
         ctx.drawImage(
           this.sprite,
           frame.x,

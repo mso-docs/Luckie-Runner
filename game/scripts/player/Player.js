@@ -52,7 +52,60 @@ class Player extends Entity {
         
         // Rock throwing
         this.maxRocks = 10;
-        this.rocks = 10;
+        this.throwables = new ThrowableManager(this);
+        this.throwables.registerType('rock', {
+            maxAmmo: this.maxRocks,
+            ammo: this.maxRocks,
+            initialAmmo: this.maxRocks,
+            icon: 'art/items/rock-item.png',
+            displayName: 'Rocks',
+            createProjectile: (player, worldTarget) => {
+                const playerCenter = player.getCenter();
+                const dirX = worldTarget.x - playerCenter.x;
+                const dirY = worldTarget.y - playerCenter.y;
+                const len = Math.hypot(dirX, dirY) || 1;
+                const normalized = { x: dirX / len, y: dirY / len };
+                
+                const throwSpeed = player.moveSpeed * 1.2; // px/sec
+                const velocity = {
+                    x: normalized.x * throwSpeed,
+                    y: normalized.y * throwSpeed * 0.6
+                };
+                
+                const rock = new Rock(playerCenter.x - 4, playerCenter.y - 4, velocity);
+                rock.setOwner(player, 'player');
+                rock.game = player.game;
+                rock.maxDistance = player.width * 4;
+                return rock;
+            }
+        });
+        this.throwables.registerType('coconut', {
+            maxAmmo: 99,
+            ammo: 10,
+            initialAmmo: 10,
+            icon: 'art/items/coconut.png',
+            displayName: 'Coconuts',
+            description: 'Heavy rolling coconut that bounces and slows to a stop.',
+            createProjectile: (player, worldTarget) => {
+                const playerCenter = player.getCenter();
+                const dirX = worldTarget.x - playerCenter.x;
+                const dirY = worldTarget.y - playerCenter.y;
+                const len = Math.hypot(dirX, dirY) || 1;
+                const normalized = { x: dirX / len, y: dirY / len };
+                
+                const throwSpeed = player.moveSpeed * 1.0; // slightly slower than rocks
+                const velocity = {
+                    x: normalized.x * throwSpeed,
+                    y: normalized.y * throwSpeed * 0.4
+                };
+                
+                const coco = new Coconut(playerCenter.x - 6, playerCenter.y - 6, velocity);
+                coco.setOwner(player, 'player');
+                coco.game = player.game;
+                return coco;
+            }
+        });
+        this.throwables.setActive('rock');
         this.attackCooldown = 0;
         this.attackCooldownTime = 500; // 500ms cooldown
 
@@ -157,8 +210,8 @@ class Player extends Entity {
             this.attackCooldown -= deltaTime;
         }
         
-        if (input.isMouseClicked() && this.rocks > 0 && this.attackCooldown <= 0) {
-            this.throwRock(input.getMousePosition());
+        if (input.isMouseClicked() && this.throwables?.canThrow() && this.attackCooldown <= 0) {
+            this.throwActive(input.getMousePosition());
         }
         
         // GRAVITY - Always pull down when not on ground
@@ -216,41 +269,30 @@ class Player extends Entity {
     }
 
     /**
-     * Throw a rock projectile
-     * @param {Object} mousePos - Mouse position (unused in new system)
+     * Throw active throwable
+     * @param {Object} mousePos
      */
-    throwRock(mousePos) {
+    throwActive(mousePos) {
         const playerCenter = this.getCenter();
         const worldMouse = {
             x: this.game.camera.x + mousePos.x,
             y: this.game.camera.y + mousePos.y
         };
         
-        // Aim toward the cursor; dampen Y a bit for a flatter arc
-        const dirX = worldMouse.x - playerCenter.x;
-        const dirY = worldMouse.y - playerCenter.y;
-        const len = Math.hypot(dirX, dirY) || 1;
-        const normalized = { x: dirX / len, y: dirY / len };
-        
-        // Speed tuned to travel about 4x player length, with a gentle arc
-        const throwSpeed = this.moveSpeed * 1.2; // px/sec
-        const velocity = {
-            x: normalized.x * throwSpeed,
-            y: normalized.y * throwSpeed * 0.6
-        };
-        
-        const rock = new Rock(playerCenter.x - 4, playerCenter.y - 4, velocity);
-        rock.setOwner(this, 'player');
-        rock.game = this.game;
-        
-        // Range about 4x the player's body length
-        rock.maxDistance = this.width * 4;
-        
+        const projectile = this.throwables?.createActiveProjectile(worldMouse);
+        if (!projectile) return;
+
         // Add to game projectiles
-        this.game.projectiles.push(rock);
+        this.game.projectiles.push(projectile);
+
+        // Play throw sound if available
+        if (projectile.throwSound && this.game.audioManager && !projectile.playedThrowSound) {
+            this.game.audioManager.playSound(projectile.throwSound, 0.7);
+            projectile.playedThrowSound = true;
+        }
         
-        // Use rock and set cooldown
-        this.rocks = Math.max(0, this.rocks - 1);
+        // Use ammo and set cooldown
+        this.throwables.consumeActive(1);
         this.attackCooldown = this.attackCooldownTime;
         
         // Update UI to show rock count
@@ -494,7 +536,7 @@ class Player extends Entity {
 
                 if (this.hitFlashDamage > 0) {
                     ctx.save();
-                    ctx.font = 'bold 26px Arial';
+                    ctx.font = 'bold 26px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
                     ctx.fillStyle = '#ff8c00';
                     ctx.lineWidth = 6;
                     ctx.strokeStyle = '#000000';
@@ -579,14 +621,29 @@ class Player extends Entity {
      * @param {number} amount - Number of rocks to add
      */
     addRocks(amount) {
-        this.rocks = Math.min(this.maxRocks, this.rocks + amount);
+        const newCount = this.throwables?.addAmmo('rock', amount);
         
-        // Play special pickup sound for rocks
         if (this.game.audioManager) {
             this.game.audioManager.playSound('special', 0.7);
         }
-        
         this.updateUI();
+        return newCount;
+    }
+
+    addCoconuts(amount) {
+        const newCount = this.throwables?.addAmmo('coconut', amount);
+        if (this.game?.audioManager) {
+            this.game.audioManager.playSound('special', 0.7);
+        }
+        this.updateUI();
+        return newCount;
+    }
+
+    setActiveThrowable(key) {
+        if (this.throwables) {
+            this.throwables.setActive(key);
+            this.updateUI();
+        }
     }
 
     /**
@@ -632,9 +689,25 @@ class Player extends Entity {
     updateUI() {
         const hudCoinsElement = document.getElementById('hudCoins');
         const hudRocksElement = document.getElementById('hudRocks');
+        const activeThrowIcon = this.throwables?.getActiveIcon?.();
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
-        if (hudRocksElement) hudRocksElement.textContent = this.rocks;
+        if (hudRocksElement) {
+            const ammo = this.throwables?.getAmmo(this.throwables?.getActiveType()) ?? 0;
+            hudRocksElement.textContent = ammo;
+            // Use the hud-icon within the same entry for the image; clear any inline bg on the value
+            const entry = hudRocksElement.parentElement;
+            const rockIcon = entry ? entry.querySelector('.hud-icon') : null;
+            hudRocksElement.style.backgroundImage = 'none';
+            if (rockIcon) {
+                rockIcon.style.width = '36px';
+                rockIcon.style.height = '36px';
+                rockIcon.style.backgroundSize = 'contain';
+                rockIcon.style.backgroundImage = activeThrowIcon
+                    ? `url('${activeThrowIcon}')`
+                    : "url('art/items/rock-item.png')";
+            }
+        }
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
         }
@@ -804,7 +877,10 @@ class Player extends Entity {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
-        this.rocks = this.maxRocks;
+        if (this.throwables) {
+            this.throwables.reset();
+            this.throwables.setActive('rock');
+        }
         this.healthPotions = 0;
         this.attackCooldown = 0;
         this.velocity = { x: 0, y: 0 };

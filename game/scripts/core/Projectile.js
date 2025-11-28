@@ -19,6 +19,10 @@ class Projectile extends Entity {
         this.piercing = false;
         this.hitTargets = new Set();
         this.autoFadeOnImpact = true;
+        this.throwSound = 'rock';
+        this.hitSound = 'rock';
+        this.playedThrowSound = false;
+        this.playedHitSound = false;
         
         // Projectiles don't use gravity by default
         this.gravity = 0;
@@ -177,18 +181,25 @@ class Projectile extends Entity {
     }
 
     /**
+     * Begin a fade-out timer before removal
+     */
+    startFadeOut(duration = 2000) {
+        if (this.fadeOut) return;
+        this.fadeOut = true;
+        this.fadeDuration = duration; // ms
+        this.fadeElapsed = 0;
+    }
+
+    /**
      * Create visual effect when hitting something
      * @param {Entity} target - What was hit
      */
     createHitEffect(target) {
-        // TODO: Add particle effects, sound effects, screen shake, etc.
+        if (this.playedHitSound) return;
         if (this.game && this.game.audioManager) {
-            // Use different sounds for different hit types
-            if (target && target.type === 'enemy') {
-                this.game.audioManager.playSound('slimy', 0.5);
-            } else {
-                this.game.audioManager.playSound('hit', 0.3);
-            }
+            const key = this.hitSound || 'rock';
+            this.game.audioManager.playSound(key, 0.6);
+            this.playedHitSound = true;
         }
     }
 
@@ -213,8 +224,8 @@ class Projectile extends Entity {
      * @param {Object} camera - Camera object
      */
     drawTrail(ctx, camera) {
-        // Skip trail for rocks to keep the sprite clean
-        if (this instanceof Rock) return;
+        // Skip trail for rocks and coconuts to keep the sprite clean
+        if (this instanceof Rock || this instanceof Coconut) return;
 
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
@@ -365,16 +376,6 @@ class Rock extends Projectile {
     }
 
     /**
-     * Begin a fade-out timer before removal
-     */
-    startFadeOut() {
-        if (this.fadeOut) return;
-        this.fadeOut = true;
-        this.fadeDuration = 2000; // 2 seconds
-        this.fadeElapsed = 0;
-    }
-
-    /**
      * Override update to handle gravity and fade
      */
     update(deltaTime) {
@@ -445,5 +446,179 @@ class MagicArrow extends Projectile {
     createMagicParticle() {
         // TODO: Create magical particle effects
         // This would create small sparkles around the arrow
+    }
+}
+
+/**
+ * Coconut - Heavy rolling projectile
+ */
+class Coconut extends Projectile {
+    constructor(x, y, velocity) {
+        super(x, y, 28, 28, velocity, 20);
+        this.gravity = 300;
+        this.baseGravity = 900;
+        this.autoFadeOnImpact = false; // handle fade manually when motion stops
+        this.bounceDamping = 0.9; // lose half vertical speed each bounce
+        this.bounceFriction = 0.2; // horizontal friction per bounce
+        this.minBounceSpeed = 20; // below this, the rock disintegrates
+        this.friction = 1;      // no global drag
+        this.rollFriction = 0.9995;  // light "ice" drag while rolling
+        this.maxDistance = 3000;
+        this.lifeTime = 5000;
+        this.startX = x;
+        this.throwSound = 'coconut';
+        this.hitSound = 'coconut';
+        this.loadSprite('art/items/coconut.png');
+        this.ownerType = 'player';
+        this.autoFadeOnImpact = true; // use custom roll/disintegrate logic
+        this.groundLocked = false;
+        this.groundY = null;
+        this.restTime = 0;
+        this.slideElapsed = 0;
+    }
+
+    update(deltaTime) {
+        if (!this.active) return;
+
+        // Apply gravity when not grounded/locked
+        if (!this.onGround && !this.groundLocked) {
+            const dt = deltaTime / 1000;
+            this.velocity.y += this.gravity * dt;
+        }
+
+        // Run base entity update (includes onUpdate)
+        super.update(deltaTime);
+
+        // Handle fade-out
+        if (this.fadeOut) {
+            this.fadeElapsed += deltaTime;
+            const progress = Math.min(1, this.fadeElapsed / this.fadeDuration);
+            this.alpha = 1 - progress;
+            if (progress >= 1) {
+                this.active = false;
+            }
+        }
+
+        // Keep upright when rolling on ground
+        if (this.groundLocked) {
+            this.rotation = 0;
+        }
+    }
+
+    onUpdate(deltaTime) {
+        super.onUpdate(deltaTime);
+
+        // Apply rolling friction
+        this.velocity.x *= this.rollFriction;
+
+        // If we've made contact with a solid surface, lock to ground plane
+        if (this.hasHitSurface && this.groundLocked && this.groundY !== null) {
+            this.y = this.groundY;
+            this.velocity.y = 0;
+            this.gravity = 0;
+            // No additional drag; let maxDistance stop it
+            this.rotation = 0;
+        }
+
+        // If we're ground-locked but have no support beneath (rolling off an edge), re-enable gravity
+        if (this.groundLocked) {
+            const midX = this.x + this.width / 2;
+            const supportY = this.getGroundYAt(midX, this.y + this.height + 2);
+            if (supportY === null || supportY > (this.groundY + 2)) {
+                this.groundLocked = false;
+                this.groundY = null;
+                this.gravity = this.baseGravity;
+                this.onGround = false;
+                this.restTime = 0;
+                this.slideElapsed = 0;
+            }
+        }
+
+        // Stop if we've rolled far enough after contact
+        if (this.hasHitSurface) {
+            const dist = Math.abs(this.x - this.startX);
+            if (dist >= this.maxDistance) {
+                this.disintegrate(null, 2000);
+            }
+            // Ice-like slide duration cap (about 5 seconds)
+            this.slideElapsed += deltaTime;
+            if (this.slideElapsed >= 5000) {
+                this.disintegrate(null, 2000);
+            }
+            // Despawn if at rest for 2s (very low threshold to allow sliding)
+            const speed = Math.hypot(this.velocity.x, this.velocity.y);
+            if (speed < 0.5) {
+                this.restTime += deltaTime;
+                if (this.restTime >= 2000) {
+                    this.disintegrate(null, 2000);
+                }
+            } else {
+                this.restTime = 0;
+            }
+        }
+    }
+
+    onHitTarget(target) {
+        this.active = false;
+        if (target.velocity) {
+            const knockbackForce = 2.0;
+            target.velocity.x += this.direction.x * knockbackForce;
+        }
+    }
+
+    onHitObstacle(obstacle) {
+        if (!obstacle || !obstacle.solid) {
+            this.disintegrate(obstacle);
+            return;
+        }
+
+        const bounds = CollisionDetection.getCollisionBounds(this);
+        const ob = CollisionDetection.getCollisionBounds(obstacle);
+
+        const overlapX = Math.min(
+            bounds.x + bounds.width - ob.x,
+            ob.x + ob.width - bounds.x
+        );
+        const overlapY = Math.min(
+            bounds.y + bounds.height - ob.y,
+            ob.y + ob.height - bounds.y
+        );
+
+        if (overlapX < overlapY) {
+            // Horizontal bounce with heavy damping
+            const hitFromLeft = bounds.x < ob.x;
+            this.x = hitFromLeft ? ob.x - bounds.width - 0.1 : ob.x + ob.width + 0.1;
+            this.velocity.x = -this.velocity.x * 0.1;
+        } else {
+            // Vertical contact: small hop, more damping
+            const hitFromAbove = bounds.y < ob.y;
+            this.y = hitFromAbove ? ob.y - bounds.height - 0.1 : ob.y + ob.height + 0.1;
+            this.velocity.y = -Math.abs(this.velocity.y) * 0.1;
+            this.velocity.x *= 0.95;
+        }
+
+        // Mark contact and start fade after a short slide window
+        this.hasHitSurface = true;
+        this.onGround = true;
+        this.groundLocked = true;
+        // Anchor to the top of the obstacle for rolling
+        this.groundY = ob.y - bounds.height;
+        this.y = this.groundY;
+        this.gravity = 0;
+        this.slideElapsed = 0;
+
+        // No stop-on-speed; let distance check handle end-of-life
+    }
+
+    disintegrate(target = null, fadeMs = 2000) {
+        if (this.fadeOut) return;
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+        this.onGround = true;
+        this.startFadeOut(fadeMs);
+    }
+
+    createHitEffect(target) {
+        super.createHitEffect(target);
     }
 }

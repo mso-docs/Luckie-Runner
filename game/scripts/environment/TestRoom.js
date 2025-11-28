@@ -107,7 +107,7 @@ class TestRoom {
      */
     drawDebugInfo(ctx) {
         ctx.fillStyle = 'black';
-        ctx.font = '16px Arial';
+        ctx.font = '16px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
         ctx.fillText('TEST ROOM - Debug Environment', 10, 30);
         ctx.fillText('Press F2 to toggle back to main game', 10, 50);
         ctx.fillText('Grid: 50px squares', 10, 70);

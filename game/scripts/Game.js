@@ -21,6 +21,9 @@ class Game {
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
+        this.smallPalms = [];
+        this.testRoomMaxX = 0;
+        this.softLandingTolerance = 20; // px window to allow top-only landings
         
         // Game entities
         this.player = null;
@@ -131,6 +134,36 @@ class Game {
         
         // Initialize game
         this.init();
+    }
+
+    /**
+     * Top-only landing helper: allows passing in front but landing from above.
+     * @param {Object} targetRect - {x,y,width,height}
+     * @returns {{onTop:boolean, landed:boolean}}
+     */
+    topOnlyLanding(targetRect) {
+        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const playerBottom = playerBounds.y + playerBounds.height;
+        const targetTop = targetRect.y;
+
+        // Must overlap horizontally
+        const overlapX = playerBounds.x < targetRect.x + targetRect.width &&
+            playerBounds.x + playerBounds.width > targetRect.x;
+
+        // Must be coming from above within tolerance
+        const descending = this.player.velocity?.y >= 0;
+        const withinTolerance = playerBottom >= targetTop &&
+            playerBottom <= targetTop + (this.softLandingTolerance || 20);
+
+        if (overlapX && descending && withinTolerance) {
+            // Land on top
+            this.player.y = targetTop - playerBounds.height;
+            this.player.velocity.y = Math.min(0, this.player.velocity.y);
+            this.player.onGround = true;
+            return { onTop: true, landed: true };
+        }
+
+        return { onTop: false, landed: false };
     }
 
     /**
@@ -419,6 +452,7 @@ class Game {
         this.inventoryUI.statsList = document.getElementById('inventoryStats');
         this.inventoryUI.badgesList = document.getElementById('inventoryBadges');
         this.inventoryUI.badgesEmpty = document.getElementById('badgeEmptyState');
+        this.inventoryUI.gearList = document.getElementById('inventoryGear');
         this.inventoryUI.itemCache = [];
         this.inventoryUI.modal = {
             container: document.getElementById('inventoryItemModal'),
@@ -531,13 +565,21 @@ class Game {
                 value: player.coins ?? 0
             });
 
-            // Items panel
+            // Items panel (restore classic items)
             itemEntries.push({
                 name: 'Rocks',
-                value: player.rocks ?? 0,
+                value: player.throwables?.getAmmo('rock') ?? player.rocks ?? 0,
                 description: 'Ammo used for throwing. Found scattered along the course.',
                 icon: 'art/items/rock-item.png',
                 key: 'rocks',
+                consumable: false
+            });
+            itemEntries.push({
+                name: 'Coconuts',
+                value: player.throwables?.getAmmo('coconut') ?? 0,
+                description: 'Heavy rolling ammo dropped from palms.',
+                icon: 'art/items/coconut.png',
+                key: 'coconut',
                 consumable: false
             });
             itemEntries.push({
@@ -567,7 +609,8 @@ class Game {
             });
         }
 
-        const renderList = (target, entries, isItemList = false) => {
+        const renderList = (target, entries, options = {}) => {
+            const { isItemList = false, modalType = 'item' } = options;
             target.innerHTML = '';
             if (isItemList) {
                 this.inventoryUI.itemCache = entries.slice();
@@ -576,24 +619,58 @@ class Game {
                 const row = document.createElement('button');
                 row.className = 'inventory-item';
                 row.type = 'button';
+                const iconHtml = item.icon ? `<span class="inventory-item__icon" style="background-image:url('${item.icon}')"></span>` : '';
                 row.innerHTML = `
+                    ${iconHtml}
                     <span class="inventory-item__name">${item.name}</span>
                     <span class="inventory-item__value">${item.value}</span>
                 `;
-                if (isItemList) {
+                if (item.isActive) {
+                    row.classList.add('is-active');
+                }
+                if (isItemList || modalType === 'gear') {
                     row.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[inventory] item clicked', item.name || item.key || item);
-                        this.showInventoryItemModal(item);
+                        if (modalType === 'gear') {
+                            this.showThrowableModal(item);
+                        } else if (item.onSelect) {
+                            item.onSelect();
+                        } else {
+                            this.showInventoryItemModal(item);
+                        }
                     });
                 }
                 target.appendChild(row);
             });
         };
 
-        renderList(statsList, statEntries, false);
-        renderList(list, itemEntries, true);
+        renderList(statsList, statEntries, { isItemList: false });
+        renderList(list, itemEntries, { isItemList: true, modalType: 'item' });
+
+        // Gear tab: show throwables as selectable ammo
+        const gearList = this.inventoryUI?.gearList;
+        if (gearList) {
+            const throwableTypes = this.player?.throwables?.listTypesSortedByIcon?.() || [];
+            const gearEntries = throwableTypes.map(t => ({
+                name: t.displayName || t.key,
+                value: t.ammo ?? 0,
+                description: t.description || 'Throwable item',
+                icon: t.icon,
+                key: t.key,
+                consumable: false,
+                isActive: this.player?.throwables?.getActiveType() === t.key,
+                onSelect: () => {
+                    this.showThrowableModal({
+                        name: t.displayName || t.key,
+                        key: t.key,
+                        icon: t.icon,
+                        description: t.description || 'Click to equip this ammo type.'
+                    });
+                }
+            }));
+            renderList(gearList, gearEntries, { isItemList: true, modalType: 'gear' });
+        }
         if (this.badgeUI) {
             this.badgeUI.renderInventory();
         }
@@ -659,6 +736,7 @@ class Game {
 
         if (useBtn) {
             useBtn.disabled = !item.consumable || (item.value <= 0);
+            useBtn.textContent = item.consumable ? 'Use' : 'OK';
             useBtn.onclick = () => {
                 const used = this.consumeInventoryItem(item);
                 if (used) {
@@ -670,6 +748,47 @@ class Game {
 
         // Force visibility even if a lingering hidden class exists
         modal.container.classList.remove('hidden');
+        modal.container.classList.remove('hidden');
+        modal.container.classList.add('active');
+        modal.container.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Show modal for equipping a throwable/ammo
+     * @param {Object} item
+     */
+    showThrowableModal(item) {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+
+        if (this.inventoryUI.overlay) {
+            this.inventoryUI.overlay.classList.remove('hidden');
+            this.inventoryUI.overlay.classList.add('active');
+            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
+            this.inventoryUI.isOpen = true;
+        }
+
+        const nameEl = modal.title;
+        const descEl = modal.description;
+        const iconEl = modal.icon;
+        const useBtn = modal.useBtn;
+
+        if (nameEl) nameEl.textContent = item.name || 'Ammo';
+        if (descEl) descEl.textContent = item.description || '';
+        if (iconEl) {
+            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
+        }
+
+        if (useBtn) {
+            useBtn.disabled = false;
+            useBtn.textContent = 'Equip';
+            useBtn.onclick = () => {
+                this.player?.setActiveThrowable?.(item.key);
+                this.hideInventoryItemModal();
+                this.updateInventoryOverlay();
+            };
+        }
+
         modal.container.classList.remove('hidden');
         modal.container.classList.add('active');
         modal.container.setAttribute('aria-hidden', 'false');
@@ -962,7 +1081,7 @@ class Game {
             ui.hpValue.textContent = `${current}/${max}`;
         }
         if (ui.rockValue && player) {
-            ui.rockValue.textContent = player.rocks ?? 0;
+            ui.rockValue.textContent = player.throwables?.getAmmo('rock') ?? 0;
         }
         if (ui.levelValue && player) {
             ui.levelValue.textContent = player.level ?? 1;
@@ -1522,8 +1641,10 @@ class Game {
         // Set level properties
         const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
 
+        const contentMaxX = this.testMode ? Math.max(4600, this.testRoomMaxX || 0) : this.canvas.width;
+
         this.level = {
-            width: this.testMode ? 4600 : this.canvas.width,
+            width: contentMaxX,
             height: this.canvas.height,
             spawnX: spawn.x,
             spawnY: spawn.y
@@ -1550,6 +1671,11 @@ class Game {
             y: chest.y,
             displayName: chest.displayName,
             contents: (chest.contents || []).map(entry => ({ ...entry, taken: false }))
+        }));
+
+        const smallPalmBlueprints = (this.smallPalms || []).map(palm => ({
+            x: palm.x,
+            y: palm.y
         }));
 
         const npcBlueprints = [];
@@ -1603,7 +1729,7 @@ class Game {
         this.initialTestRoomState = {
             level: { ...(this.level || {}) },
             testGroundY: this.testGroundY,
-            platforms: (this.platforms || []).map(p => ({
+            platforms: (this.platforms || []).filter(p => p.type !== 'palm').map(p => ({
                 x: p.x,
                 y: p.y,
                 width: p.width,
@@ -1613,6 +1739,7 @@ class Game {
             enemies: enemyBlueprints,
             items: itemBlueprints,
             chests: chestBlueprints,
+            smallPalms: smallPalmBlueprints,
             npcs: npcBlueprints,
             signBoard: this.signBoard ? {
                 x: this.signBoard.x,
@@ -1642,8 +1769,11 @@ class Game {
         this.testMode = true;
         this.level = { ...(blueprint.level || {}) };
         this.testGroundY = blueprint.testGroundY;
+        this.testRoomMaxX = Math.max(0, blueprint.level?.width || 0);
 
-        this.platforms = (blueprint.platforms || []).map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
+        this.platforms = (blueprint.platforms || [])
+            .filter(p => p.type !== 'palm')
+            .map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
 
         this.enemies = (blueprint.enemies || []).map(def => {
             if (def.type === 'slime') {
@@ -1679,6 +1809,17 @@ class Game {
             chest.game = this;
             return chest;
         });
+
+        this.smallPalms = (blueprint.smallPalms || []).map(def => {
+            const palm = new SmallPalm(def.x, def.y);
+            palm.game = this;
+            this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, def.x + palm.width + 300);
+            return palm;
+        });
+
+        // Ensure level width accommodates all restored content
+        const contentMax = this.testRoomMaxX || this.level.width || 0;
+        this.level.width = Math.max(this.level.width || 0, contentMax);
 
         this.npcs = [];
         this.shopGhost = null;
@@ -2088,6 +2229,11 @@ class Game {
             this.checkPlayerCollisions();
         }
 
+        // Update small palms (foreground interactive)
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => palm.update(deltaTime));
+        }
+
         // Update chests (callouts + glow)
         this.updateChests(deltaTime);
         this.updateSignCallout();
@@ -2201,14 +2347,33 @@ class Game {
     checkPlayerCollisions() {
         // Platform collisions
         this.player.onGround = false;
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(p => p.playerOnTopCurrent = false);
+        }
         this.platforms.forEach(platform => {
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(this.player),
                 platform
             )) {
-                this.resolvePlayerPlatformCollision(platform);
+                const result = this.resolvePlayerPlatformCollision(platform);
             }
         });
+
+        // Small palm collision (treat palm body as platform)
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => {
+                const palmBounds = CollisionDetection.getCollisionBounds(palm);
+                const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+                const landed = this.topOnlyLanding(palmBounds);
+                if (landed.onTop) {
+                    palm.setPlayerOnTop(true, landed.landed);
+                }
+            });
+        }
+
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(p => p.finalizeContactFrame());
+        }
 
         // NPC collisions (solid talkers/shopkeepers)
         this.handleNpcCollisions();
@@ -2251,6 +2416,7 @@ class Game {
      */
     resolvePlayerPlatformCollision(platform) {
         const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const result = { onTop: false, landed: false };
         
         // Calculate overlap
         const overlapX = Math.min(
@@ -2278,15 +2444,20 @@ class Game {
             // Vertical collision
             if (playerBounds.y < platform.y) {
                 // Landing on top
+                const wasFalling = this.player.velocity.y > 0;
                 this.player.y = platform.y - this.player.height;
                 this.player.velocity.y = Math.min(0, this.player.velocity.y);
                 this.player.onGround = true;
+                result.onTop = true;
+                result.landed = wasFalling;
             } else {
                 // Hit from below
                 this.player.y = platform.y + platform.height;
                 this.player.velocity.y = Math.max(0, this.player.velocity.y);
             }
         }
+
+        return result;
     }
 
     /**
@@ -2296,8 +2467,11 @@ class Game {
         if (!this.player || !Array.isArray(this.npcs)) return;
         this.npcs.forEach(npc => {
             if (!npc || npc.solid === false) return;
-            if (CollisionDetection.entityCollision(this.player, npc)) {
-                this.resolvePlayerEntityCollision(npc);
+            const npcBounds = CollisionDetection.getCollisionBounds(npc);
+            const landed = this.topOnlyLanding(npcBounds);
+            if (!landed.onTop) {
+                // Allow passing in front when not landing on top
+                return;
             }
         });
     }
@@ -2494,6 +2668,11 @@ class Game {
         // Render chests
         this.renderChests();
 
+        // Render foreground small palms alongside other entities
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => palm.render(this.ctx, this.camera));
+        }
+
         // Render hazards
         this.hazards.forEach(hazard => {
             hazard.render(this.ctx, this.camera);
@@ -2603,6 +2782,15 @@ class Game {
             const r = rectForEntity(ch);
             drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
         });
+
+        // Small palms
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => {
+                if (!palm) return;
+                const r = rectForEntity(palm);
+                drawRect(r.x, r.y, r.w, r.h, 'rgba(0,128,0,0.25)', '#008000');
+            });
+        }
 
         // Platforms (not entities)
         this.platforms.forEach(p => {
@@ -3086,8 +3274,10 @@ class Game {
         this.items = [];
         this.platforms = [];
         this.hazards = [];
+        this.smallPalms = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
+        this.testRoomMaxX = 0;
         this.hideSpeechBubble(true);
         this.hideInventoryOverlay(true);
         this.hideChestOverlay(true);
@@ -3117,6 +3307,7 @@ class Game {
             this.chests.forEach(chest => chest.destroy && chest.destroy());
         }
         this.chests = [];
+        this.smallPalms = [];
         this.chestUI.currentChest = null;
         this.flag = null;
 
@@ -3239,7 +3430,6 @@ class Game {
         const groundY = this.canvas.height - groundHeight;
         this.testGroundY = groundY;
         const spawnAnchorX = 140;
-        
         // Create multiple ground segments for infinite running
         // Each segment is 2000px wide, create 10 segments = 20000px of ground
         for (let i = 0; i < 10; i++) {
@@ -3303,6 +3493,17 @@ class Game {
         balloonParkour.forEach(p => {
             this.platforms.push(new Platform(p.x, p.y, p.width, 14));
         });
+
+        // Foreground small palm (entity, no separate platform) just right of balloon parkour
+        const smallPalmHeight = 191;
+        const smallPalmWidth = 121;
+        const lastBalloon = balloonParkour[balloonParkour.length - 1];
+        const smallPalmX = lastBalloon.x + lastBalloon.width + 20; // keep within level bounds
+        const smallPalmY = groundY - smallPalmHeight;
+        const smallPalm = new SmallPalm(smallPalmX, smallPalmY);
+        smallPalm.game = this;
+        this.smallPalms.push(smallPalm);
+        this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, smallPalmX + smallPalmWidth + 300);
 
         // Quick test spawns
         const slime = new Slime(300, groundY);
@@ -3478,7 +3679,7 @@ class Game {
         this.ctx.fillRect(5, 15, 360, 70);
         
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px Arial';
+        this.ctx.font = '16px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
         this.ctx.fillText('TEST ROOM - Debug Environment', 10, 35);
         this.ctx.fillText('Press F2 to toggle back to main game', 10, 55);
         this.ctx.fillText('Grid: 100px squares', 10, 75);

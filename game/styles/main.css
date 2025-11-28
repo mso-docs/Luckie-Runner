@@ -1,6 +1,19 @@
 /* Luckie Runner Game Styles */
 @import url('./speech.css');
 
+@font-face {
+    font-family: 'Hey Gorgeous';
+    src: url('./font/heygorgeous.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-main: 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    --font-title: 'Cooper Black', 'Trebuchet MS', 'Segoe UI', cursive;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -8,13 +21,21 @@
 }
 
 body {
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
     background: linear-gradient(135deg, #ffb347 0%, #ffcc33 30%, #ff6f69 70%, #7fc7ff 100%);
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
+}
+
+/* Force the custom font across UI surfaces */
+body, button, input, select, textarea,
+.menu, #gameUI, #inventoryContainer, #inventoryOverlay, .inventory,
+#shopOverlay, .shop-overlay, #chestOverlay, .chest-overlay,
+#speechBubble, .speech-bubble, .npc-bubble, #buffPanel, #inventoryPanel {
+    font-family: var(--font-main) !important;
 }
 
 #gameContainer {
@@ -154,8 +175,8 @@ body {
 }
 
 .hud-icon {
-    width: 50px;
-    height: 50px;
+    width: 36px;
+    height: 36px;
     border-radius: 0;
     box-shadow: none;
     background-color: transparent;
@@ -172,6 +193,8 @@ body {
 .rock-icon {
     background: url('../art/items/rock-item.png') center/contain no-repeat;
     border: none;
+    width: 36px;
+    height: 36px;
 }
 
 .hud-label {
@@ -244,11 +267,11 @@ body {
       background-image: url('../art/items/shoe.png');
   }
   
-  .buff-text {
-      text-align: center;
-      color: #fffdf5;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+.buff-text {
+    text-align: center;
+    color: #fffdf5;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-family: var(--font-main);
 }
 
 .buff-name {
@@ -285,12 +308,16 @@ body {
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
 }
 
+.menu *:not(h1):not(h2) {
+    font-family: var(--font-main) !important;
+}
+
 .menu.hidden {
     display: none;
 }
 
 .menu h1 {
-    font-family: 'Cooper Black', 'Trebuchet MS', 'Segoe UI', cursive;
+    font-family: var(--font-title);
     font-size: 56px;
     margin-bottom: 20px;
     color: #ffe66d;
@@ -299,15 +326,20 @@ body {
 }
 
 .menu h2 {
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
     font-size: 34px;
     margin-bottom: 20px;
     color: #b4f8c8;
     text-shadow: -2px -2px 0 #ff928b, 3px 3px 0 #2c7cff, 0 0 10px rgba(180, 248, 200, 0.7);
 }
 
+#gameOverMenu h2,
+#victoryMenu h2 {
+    font-family: var(--font-title);
+}
+
 .menu p {
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
     font-size: 17px;
     margin-bottom: 30px;
     max-width: 400px;
@@ -329,7 +361,7 @@ body {
     min-width: 170px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
     box-shadow: 0 10px 0 #1a50a5, 0 14px 24px rgba(0, 0, 0, 0.35);
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
     letter-spacing: 0.8px;
 }
 
@@ -544,7 +576,7 @@ body {
     background: rgba(0, 0, 0, 0.7);
     padding: 5px;
     border-radius: 3px;
-    font-family: monospace;
+    font-family: var(--font-main);
     line-height: 1.2;
     z-index: 30;
 }
@@ -673,7 +705,7 @@ body {
     border-radius: 14px;
     box-shadow: 0 6px 0 #3f2a1d, 0 10px 16px rgba(0, 0, 0, 0.35);
     color: #2c1f15;
-    font-family: 'Comic Sans MS', 'Baloo 2', 'Trebuchet MS', cursive;
+    font-family: var(--font-main);
     font-weight: 800;
     font-size: 14px;
     pointer-events: none;
@@ -719,7 +751,7 @@ body {
     box-shadow: 0 20px 0 #b44a53, 0 22px 28px rgba(0, 0, 0, 0.45);
     padding: 18px 18px 22px;
     color: #2d1c1c;
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
 }
 
 .inventory-window::before {
@@ -757,7 +789,7 @@ body {
     transform: translateY(4px);
     cursor: pointer;
     pointer-events: auto;
-    font-family: 'Cooper Black', 'Trebuchet MS', cursive;
+    font-family: var(--font-main);
 }
 
 .inventory-tab:hover {
@@ -958,7 +990,7 @@ body {
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35), 0 10px 0 #b44a53;
     padding: 16px;
     color: #2d1c1c;
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
 }
 
 .modal-header {
@@ -1354,7 +1386,7 @@ body {
     box-shadow: 0 16px 0 #6d7c8a, 0 22px 28px rgba(0, 0, 0, 0.4);
     padding: 12px 14px 16px;
     color: #233147;
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
 }
 
 .shop-header {
@@ -1576,7 +1608,7 @@ body {
     border-radius: 22px;
     box-shadow: 0 16px 0 #b44a53, 0 18px 28px rgba(0, 0, 0, 0.4);
     color: #2d1c1c;
-    font-family: 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+    font-family: var(--font-main);
     overflow: hidden;
 }
 
@@ -1801,7 +1833,7 @@ body {
     border-radius: 14px;
     box-shadow: 0 6px 0 #b44a53, 0 10px 16px rgba(0, 0, 0, 0.3);
     color: #5a1f1f;
-    font-family: 'Comic Sans MS', 'Baloo 2', 'Trebuchet MS', cursive;
+    font-family: var(--font-main);
     font-weight: 800;
     font-size: 14px;
     pointer-events: none;
@@ -1822,7 +1854,7 @@ body {
     border-radius: 14px;
     box-shadow: 0 6px 0 #b44a53, 0 10px 16px rgba(0, 0, 0, 0.3);
     color: #5a1f1f;
-    font-family: 'Comic Sans MS', 'Baloo 2', 'Trebuchet MS', cursive;
+    font-family: var(--font-main);
     font-weight: 800;
     font-size: 14px;
     pointer-events: none;

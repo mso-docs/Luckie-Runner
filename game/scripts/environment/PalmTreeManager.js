@@ -11,48 +11,44 @@ class PalmTreeManager {
             {
                 name: 'distant_mountains',
                 scrollSpeed: 0.15,
-                spacing: 800,
+                spacing: 1050,
                 heightRange: [100, 140],
-                trunkWidth: [4, 6],
-                frondCount: [3, 4],
-                trunkColor: '#4a5c4e',
-                frondColor: '#2a3d2e',
+                brightness: 0.5,
+                saturation: 0.6,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
             {
                 name: 'mid_background',
                 scrollSpeed: 0.35,
-                spacing: 500,
+                spacing: 820,
                 heightRange: [150, 190],
-                trunkWidth: [7, 9],
-                frondCount: [4, 5],
-                trunkColor: '#6b7a5e',
-                frondColor: '#4a6844',
+                brightness: 0.65,
+                saturation: 0.75,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
             {
                 name: 'near_midground',
                 scrollSpeed: 0.6,
-                spacing: 350,
+                spacing: 650,
                 heightRange: [200, 260],
-                trunkWidth: [10, 13],
-                frondCount: [5, 6],
-                trunkColor: '#8b6f47',
-                frondColor: '#5a8c4a',
+                brightness: 0.75,
+                saturation: 0.9,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
             {
                 name: 'foreground',
                 scrollSpeed: 0.85,
-                spacing: 250,
+                spacing: 520,
                 heightRange: [280, 350],
-                trunkWidth: [14, 18],
-                frondCount: [6, 8],
-                trunkColor: '#a87f56',
-                frondColor: '#68a355',
+                brightness: 1,
+                saturation: 1,
+                alpha: 1,
                 groundY: null,
                 trees: []
             }
@@ -61,6 +57,70 @@ class PalmTreeManager {
         this.lastGeneratedX = 0;
         this.enabled = true;
         this.clouds = []; // persistent cloud field
+        this.offscreenBuffer = 900; // keep trees well offscreen to avoid pop-in
+
+        // Palm sprite variants (loaded once)
+        this.palmSpritePaths = [
+            { key: 'palm', src: 'art/bg/palms/palm.png' },
+            { key: 'tall', src: 'art/bg/palms/tall-palm.png' },
+            { key: 'tall2', src: 'art/bg/palms/tall-palm-2.png' },
+            { key: 'tall3', src: 'art/bg/palms/palm-3.png' }
+        ];
+        this.palmSprites = [];
+        this.palmSpritesReady = false;
+        this.spriteLoadAttempted = false;
+    }
+    
+    /**
+     * Load palm sprite variants once
+     */
+    loadPalmSprites() {
+        if (this.spriteLoadAttempted) return;
+        this.spriteLoadAttempted = true;
+
+        const pending = [];
+        let loaded = 0;
+
+        const finalize = () => {
+            if (loaded < this.palmSpritePaths.length) return;
+            // Keep only successfully loaded sprites
+            this.palmSprites = pending.filter(entry => {
+                const img = entry.img;
+                return img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+            });
+            // Fallback: if none loaded, keep whatever we tried so we at least attempt draws
+            if (this.palmSprites.length === 0) {
+                this.palmSprites = pending;
+            }
+            this.palmSpritesReady = this.palmSprites.length > 0;
+        };
+
+        this.palmSpritePaths.forEach(entry => {
+            const img = new Image();
+            img.onload = () => { loaded += 1; finalize(); };
+            img.onerror = () => { loaded += 1; finalize(); };
+            img.src = entry.src;
+            pending.push({ key: entry.key, img });
+        });
+    }
+
+    /**
+     * Get a sprite image for a given tree
+     */
+    getSpriteForTree(tree) {
+        if (!this.palmSpritesReady || this.palmSprites.length === 0) return null;
+        const sprite = this.palmSprites.find(s => s.key === tree.spriteKey) || this.palmSprites[0];
+        return sprite?.img || null;
+    }
+
+    /**
+     * Pick a random sprite key for a new tree
+     */
+    getRandomSpriteKey() {
+        const keys = this.palmSpritePaths.map(p => p.key);
+        if (keys.length === 0) return null;
+        const idx = Math.floor(Math.random() * keys.length);
+        return keys[idx];
     }
     
     /**
@@ -84,6 +144,9 @@ class PalmTreeManager {
 
         // Build new cloud field
         this.generateCloudField(this.game.canvas.width, this.game.canvas.height);
+
+        // Begin loading sprite assets
+        this.loadPalmSprites();
     }
     
     /**
@@ -94,20 +157,16 @@ class PalmTreeManager {
         
         this.layers.forEach(layer => {
             const parallaxX = cameraX * layer.scrollSpeed;
-            const viewportRight = parallaxX + canvasWidth + 500;
+            const viewportRight = parallaxX + canvasWidth + this.offscreenBuffer;
             
             // Generate new trees ahead
             const lastTreeX = layer.trees.length > 0 
                 ? Math.max(...layer.trees.map(t => t.x))
-                : -500;
+                : -this.offscreenBuffer;
             
             if (viewportRight > lastTreeX) {
-                this.generateLayerTrees(layer, lastTreeX, viewportRight + 500);
+                this.generateLayerTrees(layer, lastTreeX, viewportRight + this.offscreenBuffer);
             }
-            
-            // Cleanup trees behind viewport
-            const viewportLeft = parallaxX - 500;
-            layer.trees = layer.trees.filter(tree => tree.x > viewportLeft);
         });
     }
     
@@ -120,21 +179,16 @@ class PalmTreeManager {
         while (currentX < endX) {
             const height = layer.heightRange[0] + 
                          Math.random() * (layer.heightRange[1] - layer.heightRange[0]);
-            const trunkWidth = layer.trunkWidth[0] + 
-                             Math.random() * (layer.trunkWidth[1] - layer.trunkWidth[0]);
-            const frondCount = layer.frondCount[0] + 
-                             Math.floor(Math.random() * (layer.frondCount[1] - layer.frondCount[0] + 1));
             
             layer.trees.push({
                 x: currentX,
                 height: height,
-                trunkWidth: trunkWidth,
-                frondCount: frondCount,
                 lean: (Math.random() - 0.5) * 0.15,
-                swayPhase: Math.random() * Math.PI * 2
+                swayPhase: Math.random() * Math.PI * 2,
+                spriteKey: this.getRandomSpriteKey()
             });
             
-            currentX += layer.spacing + Math.random() * 100 - 50; // Add variation
+            currentX += layer.spacing + Math.random() * 160 - 80; // Add wider variation while keeping average spacing
         }
     }
     
@@ -150,27 +204,13 @@ class PalmTreeManager {
         // Draw each layer from back to front
         this.layers.forEach(layer => {
             const parallaxOffset = camera.x * layer.scrollSpeed;
-            const time = gameTime * 0.0001;
             
             layer.trees.forEach(tree => {
                 const screenX = tree.x - parallaxOffset;
                 
                 // Only render visible trees
-                if (screenX > -400 && screenX < ctx.canvas.width + 400) {
-                    const swayOffset = Math.sin(time + tree.swayPhase) * 3;
-                    const lean = tree.lean + swayOffset * 0.001;
-                    
-                    this.drawPalmTree(
-                        ctx,
-                        screenX,
-                        layer.groundY,
-                        tree.height,
-                        lean,
-                        tree.trunkWidth,
-                        tree.frondCount,
-                        layer.trunkColor,
-                        layer.frondColor
-                    );
+                if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
+                    this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, tree.lean, layer, tree);
                 }
             });
         });
@@ -423,178 +463,26 @@ class PalmTreeManager {
     /**
      * Draw a single stylized palm tree
      */
-    drawPalmTree(ctx, x, groundY, height, lean, trunkWidth, frondCount, trunkColor, frondColor) {
+    drawPalmTree(ctx, x, groundY, height, lean, layer, tree) {
+        const sprite = this.getSpriteForTree(tree);
+        if (!sprite) return;
+
+        const naturalHeight = sprite.naturalHeight || sprite.height || 1;
+        const naturalWidth = sprite.naturalWidth || sprite.width || 1;
+        const scale = height / naturalHeight;
+        const drawWidth = naturalWidth * scale;
+        const drawHeight = height;
+
+        // Offset lean subtly to keep bases on the ground
+        const leanOffset = (lean || 0) * height * 0.3;
+        const drawX = x + leanOffset - drawWidth / 2;
+        const drawY = groundY - drawHeight;
+
         ctx.save();
-        
-        // Draw slender trunk with curve
-        this.drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, trunkColor);
-        
-        // Draw frond canopy
-        this.drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, frondColor);
-        
+        ctx.globalAlpha *= layer.alpha ?? 1;
+        ctx.filter = `brightness(${layer.brightness ?? 1}) saturate(${layer.saturation ?? 1})`;
+        ctx.drawImage(sprite, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
-    }
-    
-    /**
-     * Draw detailed palm trunk with texture - pixel art style
-     */
-    drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, color) {
-        const segments = 12;
-        const segmentHeight = height / segments;
-        
-        // Draw trunk segments with horizontal rings (like reference images)
-        for (let i = 0; i < segments; i++) {
-            const progress = i / segments;
-            const segmentX = x + lean * progress * 50;
-            const segmentY = groundY - (i * segmentHeight);
-            const width = trunkWidth * (1 - progress * 0.4);
-            
-            // Main trunk segment - brown
-            ctx.fillStyle = color;
-            ctx.fillRect(
-                segmentX - width / 2,
-                segmentY - segmentHeight,
-                width,
-                segmentHeight - 2
-            );
-            
-            // Darker horizontal ring texture
-            const darkerColor = this.darkenColor(color, 0.2);
-            ctx.fillStyle = darkerColor;
-            ctx.fillRect(
-                segmentX - width / 2,
-                segmentY - segmentHeight,
-                width,
-                2
-            );
-            
-            // Highlight on one side for dimension
-            if (i > 0 && i < segments - 1) {
-                const lightColor = this.lightenColor(color, 0.15);
-                ctx.fillStyle = lightColor;
-                ctx.fillRect(
-                    segmentX - width / 2,
-                    segmentY - segmentHeight + 2,
-                    2,
-                    segmentHeight - 4
-                );
-            }
-        }
-    }
-    
-    /**
-     * Helper to darken colors
-     */
-    darkenColor(hex, percent) {
-        const num = parseInt(hex.replace('#', ''), 16);
-        const r = Math.max(0, Math.floor((num >> 16) * (1 - percent)));
-        const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - percent)));
-        const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - percent)));
-        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
-    }
-    
-    /**
-     * Helper to lighten colors
-     */
-    lightenColor(hex, percent) {
-        const num = parseInt(hex.replace('#', ''), 16);
-        const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
-        const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
-        const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
-        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
-    }
-    
-    /**
-     * Draw detailed palm frond canopy - pixel art style matching reference images
-     */
-    drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, color) {
-        const topX = x + lean * 50;
-        const topY = groundY - height;
-        
-        // Create lush, full frond cluster (reference images show dense canopies)
-        const totalFronds = frondCount * 3; // Triple for fullness
-        const baseColor = color;
-        const darkColor = this.darkenColor(color, 0.25);
-        const lightColor = this.lightenColor(color, 0.15);
-        
-        // Draw fronds in layers for depth
-        for (let layer = 0; layer < 3; layer++) {
-            const layerColor = layer === 0 ? darkColor : (layer === 1 ? baseColor : lightColor);
-            ctx.strokeStyle = layerColor;
-            ctx.fillStyle = layerColor;
-            
-            const frondOffset = layer * (Math.PI / 18); // Slight rotation per layer
-            
-            for (let i = 0; i < totalFronds; i++) {
-                const angle = (i / totalFronds) * Math.PI * 2 + frondOffset;
-                const frondLength = height * 0.65;
-                
-                // Calculate droop based on angle (top fronds droop down)
-                const verticalComponent = Math.sin(angle);
-                const droop = 0.15 + Math.abs(verticalComponent) * 0.3;
-                
-                // Main frond stem end position
-                const stemEndX = topX + Math.cos(angle) * frondLength;
-                const stemEndY = topY + (verticalComponent * frondLength * droop) + Math.abs(verticalComponent) * 25;
-                
-                // Draw thick central stem
-                ctx.lineWidth = 5;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(topX, topY);
-                
-                // Curved frond stem
-                const midX = topX + Math.cos(angle) * frondLength * 0.5;
-                const midY = topY + verticalComponent * frondLength * 0.25;
-                ctx.quadraticCurveTo(midX, midY, stemEndX, stemEndY);
-                ctx.stroke();
-                
-                // Draw many small leaves along frond - DENSE like reference images
-                const leafCount = 12;
-                for (let j = 0; j < leafCount; j++) {
-                    const leafProgress = j / leafCount;
-                    
-                    // Position along curved stem
-                    const t = leafProgress;
-                    const leafBaseX = topX + Math.cos(angle) * frondLength * t * 0.5;
-                    const leafBaseY = topY + verticalComponent * frondLength * 0.25 * t;
-                    
-                    // Leaves alternate sides
-                    for (let side = -1; side <= 1; side += 2) {
-                        const leafAngle = angle + (Math.PI / 2.5) * side;
-                        const leafLength = 18 * (1 - leafProgress * 0.2);
-                        
-                        // Draw leaf as filled triangle/wedge
-                        ctx.beginPath();
-                        ctx.moveTo(leafBaseX, leafBaseY);
-                        
-                        const leafEndX = leafBaseX + Math.cos(leafAngle) * leafLength;
-                        const leafEndY = leafBaseY + Math.sin(leafAngle) * leafLength * 0.5;
-                        
-                        // Leaf with slight curve
-                        ctx.quadraticCurveTo(
-                            leafBaseX + Math.cos(leafAngle) * leafLength * 0.7,
-                            leafBaseY + Math.sin(leafAngle) * leafLength * 0.3,
-                            leafEndX,
-                            leafEndY
-                        );
-                        
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                        
-                        // Add small leaf tips
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(leafEndX, leafEndY);
-                        ctx.lineTo(
-                            leafEndX + Math.cos(leafAngle + 0.3) * 5,
-                            leafEndY + Math.sin(leafAngle + 0.3) * 5
-                        );
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
     }
     
     /**
