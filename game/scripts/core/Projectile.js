@@ -454,18 +454,53 @@ class MagicArrow extends Projectile {
 class Coconut extends Projectile {
     constructor(x, y, velocity) {
         super(x, y, 28, 28, velocity, 20);
-        this.gravity = 900;
+        this.gravity =300;
+        this.baseGravity = 900;
+        this.autoFadeOnImpact = false; // handle fade manually when motion stops
+        this.bounceDamping = 0.9; // lose half vertical speed each bounce
+        this.bounceFriction = 0.2; // horizontal friction per bounce
+        this.minBounceSpeed = 20; // below this, the rock disintegrates
         this.friction = 1;      // no global drag
-        this.rollFriction = 1;  // keep speed while rolling
+        this.rollFriction = 0.9995;  // light “ice” drag while rolling
         this.maxDistance = 3000;
-        this.lifeTime = 9000;
+        this.lifeTime = 5000;
         this.startX = x;
         this.throwSound = 'sfx/coconut.mp3';
         this.loadSprite('art/items/coconut.png');
         this.ownerType = 'player';
-        this.autoFadeOnImpact = false; // use custom roll/disintegrate logic
+        this.autoFadeOnImpact = true; // use custom roll/disintegrate logic
         this.groundLocked = false;
         this.groundY = null;
+        this.restTime = 0;
+        this.slideElapsed = 0;
+    }
+
+    update(deltaTime) {
+        if (!this.active) return;
+
+        // Apply gravity when not grounded/locked
+        if (!this.onGround && !this.groundLocked) {
+            const dt = deltaTime / 1000;
+            this.velocity.y += this.gravity * dt;
+        }
+
+        // Run base entity update (includes onUpdate)
+        super.update(deltaTime);
+
+        // Handle fade-out
+        if (this.fadeOut) {
+            this.fadeElapsed += deltaTime;
+            const progress = Math.min(1, this.fadeElapsed / this.fadeDuration);
+            this.alpha = 1 - progress;
+            if (progress >= 1) {
+                this.active = false;
+            }
+        }
+
+        // Keep upright when rolling on ground
+        if (this.groundLocked) {
+            this.rotation = 0;
+        }
     }
 
     onUpdate(deltaTime) {
@@ -474,19 +509,49 @@ class Coconut extends Projectile {
         // Apply rolling friction
         this.velocity.x *= this.rollFriction;
 
-        // If we've made contact with a solid surface, apply slide friction and lock to ground plane
+        // If we've made contact with a solid surface, lock to ground plane
         if (this.hasHitSurface && this.groundLocked && this.groundY !== null) {
             this.y = this.groundY;
             this.velocity.y = 0;
             this.gravity = 0;
             // No additional drag; let maxDistance stop it
+            this.rotation = 0;
         }
 
-        // Stop if we've rolled far enough or slowed to a crawl after contact
+        // If we're ground-locked but have no support beneath (rolling off an edge), re-enable gravity
+        if (this.groundLocked) {
+            const midX = this.x + this.width / 2;
+            const supportY = this.getGroundYAt(midX, this.y + this.height + 2);
+            if (supportY === null || supportY > (this.groundY + 2)) {
+                this.groundLocked = false;
+                this.groundY = null;
+                this.gravity = this.baseGravity;
+                this.onGround = false;
+                this.restTime = 0;
+                this.slideElapsed = 0;
+            }
+        }
+
+        // Stop if we've rolled far enough after contact
         if (this.hasHitSurface) {
             const dist = Math.abs(this.x - this.startX);
             if (dist >= this.maxDistance) {
                 this.disintegrate(null, 2000);
+            }
+            // Ice-like slide duration cap (about 5 seconds)
+            this.slideElapsed += deltaTime;
+            if (this.slideElapsed >= 5000) {
+                this.disintegrate(null, 2000);
+            }
+            // Despawn if at rest for 2s (very low threshold to allow sliding)
+            const speed = Math.hypot(this.velocity.x, this.velocity.y);
+            if (speed < 0.5) {
+                this.restTime += deltaTime;
+                if (this.restTime >= 2000) {
+                    this.disintegrate(null, 2000);
+                }
+            } else {
+                this.restTime = 0;
             }
         }
     }
@@ -521,12 +586,12 @@ class Coconut extends Projectile {
             // Horizontal bounce with heavy damping
             const hitFromLeft = bounds.x < ob.x;
             this.x = hitFromLeft ? ob.x - bounds.width - 0.1 : ob.x + ob.width + 0.1;
-            this.velocity.x = -this.velocity.x * 0.15;
+            this.velocity.x = -this.velocity.x * 0.1;
         } else {
             // Vertical contact: small hop, more damping
             const hitFromAbove = bounds.y < ob.y;
             this.y = hitFromAbove ? ob.y - bounds.height - 0.1 : ob.y + ob.height + 0.1;
-            this.velocity.y = 0;
+            this.velocity.y = -Math.abs(this.velocity.y) * 0.1;
             this.velocity.x *= 0.95;
         }
 
@@ -538,17 +603,17 @@ class Coconut extends Projectile {
         this.groundY = ob.y - bounds.height;
         this.y = this.groundY;
         this.gravity = 0;
+        this.slideElapsed = 0;
 
         // No stop-on-speed; let distance check handle end-of-life
     }
 
     disintegrate(target = null, fadeMs = 2000) {
-        this.active = false;
-        if (typeof this.startFadeOut === 'function') {
-            this.startFadeOut(fadeMs);
-        } else {
-            this.active = false;
-        }
+        if (this.fadeOut) return;
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+        this.onGround = true;
+        this.startFadeOut(fadeMs);
     }
 
     createHitEffect(target) {
