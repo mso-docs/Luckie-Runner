@@ -455,8 +455,8 @@ class Coconut extends Projectile {
     constructor(x, y, velocity) {
         super(x, y, 28, 28, velocity, 20);
         this.gravity = 900;
-        this.friction = 0.995;
-        this.rollFriction = 0.995;
+        this.friction = 1;      // no global drag
+        this.rollFriction = 1;  // keep speed while rolling
         this.maxDistance = 3000;
         this.lifeTime = 9000;
         this.startX = x;
@@ -479,14 +479,13 @@ class Coconut extends Projectile {
             this.y = this.groundY;
             this.velocity.y = 0;
             this.gravity = 0;
-            this.velocity.x *= 0.99; // slight additional drag while sliding
+            // No additional drag; let maxDistance stop it
         }
 
         // Stop if we've rolled far enough or slowed to a crawl after contact
         if (this.hasHitSurface) {
             const dist = Math.abs(this.x - this.startX);
-            const speed = Math.hypot(this.velocity.x, this.velocity.y);
-            if (dist >= this.maxDistance || speed < 5) {
+            if (dist >= this.maxDistance) {
                 this.disintegrate(null, 2000);
             }
         }
@@ -540,11 +539,7 @@ class Coconut extends Projectile {
         this.y = this.groundY;
         this.gravity = 0;
 
-        // Stop if energy is too low
-        const speed = Math.hypot(this.velocity.x, this.velocity.y);
-        if (speed < 8) {
-            this.disintegrate(obstacle);
-        }
+        // No stop-on-speed; let distance check handle end-of-life
     }
 
     disintegrate(target = null, fadeMs = 2000) {
@@ -553,6 +548,12 @@ class Coconut extends Projectile {
             this.startFadeOut(fadeMs);
         } else {
             this.active = false;
+        }
+    }
+
+    createHitEffect(target) {
+        if (this.game && this.game.audioManager) {
+            this.game.audioManager.playSound('coconut', 0.6);
         }
     }
 }
