@@ -19,6 +19,8 @@ class Projectile extends Entity {
         this.piercing = false;
         this.hitTargets = new Set();
         this.autoFadeOnImpact = true;
+        this.throwSound = 'rock';
+        this.hitSound = 'rock';
         
         // Projectiles don't use gravity by default
         this.gravity = 0;
@@ -191,14 +193,9 @@ class Projectile extends Entity {
      * @param {Entity} target - What was hit
      */
     createHitEffect(target) {
-        // TODO: Add particle effects, sound effects, screen shake, etc.
         if (this.game && this.game.audioManager) {
-            // Use different sounds for different hit types
-            if (target && target.type === 'enemy') {
-                this.game.audioManager.playSound('slimy', 0.5);
-            } else {
-                this.game.audioManager.playSound('hit', 0.3);
-            }
+            const key = this.hitSound || 'rock';
+            this.game.audioManager.playSound(key, 0.6);
         }
     }
 
@@ -223,8 +220,8 @@ class Projectile extends Entity {
      * @param {Object} camera - Camera object
      */
     drawTrail(ctx, camera) {
-        // Skip trail for rocks to keep the sprite clean
-        if (this instanceof Rock) return;
+        // Skip trail for rocks and coconuts to keep the sprite clean
+        if (this instanceof Rock || this instanceof Coconut) return;
 
         const screenX = this.x - camera.x;
         const screenY = this.y - camera.y;
@@ -454,18 +451,19 @@ class MagicArrow extends Projectile {
 class Coconut extends Projectile {
     constructor(x, y, velocity) {
         super(x, y, 28, 28, velocity, 20);
-        this.gravity =300;
+        this.gravity = 300;
         this.baseGravity = 900;
         this.autoFadeOnImpact = false; // handle fade manually when motion stops
         this.bounceDamping = 0.9; // lose half vertical speed each bounce
         this.bounceFriction = 0.2; // horizontal friction per bounce
         this.minBounceSpeed = 20; // below this, the rock disintegrates
         this.friction = 1;      // no global drag
-        this.rollFriction = 0.9995;  // light “ice” drag while rolling
+        this.rollFriction = 0.9995;  // light "ice" drag while rolling
         this.maxDistance = 3000;
         this.lifeTime = 5000;
         this.startX = x;
-        this.throwSound = 'sfx/coconut.mp3';
+        this.throwSound = 'coconut';
+        this.hitSound = 'coconut';
         this.loadSprite('art/items/coconut.png');
         this.ownerType = 'player';
         this.autoFadeOnImpact = true; // use custom roll/disintegrate logic
