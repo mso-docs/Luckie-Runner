@@ -129,6 +129,8 @@ class Game {
 
         // UI manager (inventory overlays, tabs, item modals)
         this.uiManager = new UIManager(this);
+        this.entityFactory = new EntityFactory(this);
+        this.worldBuilder = new WorldBuilder(this, this.entityFactory);
         
         // Game statistics
         this.stats = {
@@ -1026,430 +1028,56 @@ class Game {
      * Create the game level with platforms, enemies, and items
      */
     createLevel() {
-        this.platforms = [];
-        this.enemies = [];
-        this.items = [];
-        this.hazards = [];
-        this.chests = [];
-        this.flag = null;
-        this.signBoards = [];
-        this.signBoard = null;
-        this.npcs = [];
-        this.shopGhost = null;
-        this.princess = null;
-        this.balloonFan = null;
-        this.signBoard = null;
-        this.signBoards = [];
-        this.npcs = [];
-        this.shopGhost = null;
-        this.princess = null;
-        this.balloonFan = null;
-        this.signBoard = null;
-        
-        // Determine player spawn
-        const getTestSpawn = () => {
-            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.canvas.height - 50);
-            const playerWidth = 45;
-            const playerHeight = 66;
-            const defaultX = 140; // aligns with test-room sign anchor
-            const signX = this.signBoard ? this.signBoard.x : defaultX + 40;
-            return {
-                x: signX - 20 - playerWidth,
-                y: groundY - playerHeight
-            };
-        };
-
-        if (this.testMode) {
-            this.createTestRoom();
-        } else {
-            // Create normal level
-            this.createGroundPlatforms();
-            this.createFloatingPlatforms();
-            this.spawnEnemies();
-            this.spawnItems();
-        }
-        
-        // Set level properties
-        const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
-
-        const contentMaxX = this.testMode ? Math.max(4600, this.testRoomMaxX || 0) : this.canvas.width;
-
-        this.level = {
-            width: contentMaxX,
-            height: this.canvas.height,
-            spawnX: spawn.x,
-            spawnY: spawn.y
-        };
-        
-        // Create level completion flag
-        this.createFlag();
-        if (this.testMode && !this.initialTestRoomState) {
-            this.captureInitialTestRoomState();
-        }
-        
-        // Create background layers
-        this.createBackground();
+        return this.worldBuilder?.createLevel();
     }
 
     /**
      * Record the pristine test room layout so resets can rebuild it exactly
      */
     captureInitialTestRoomState() {
-        if (!this.testMode || this.initialTestRoomState) return;
-
-        const chestBlueprints = (this.chests || []).map(chest => ({
-            x: chest.x,
-            y: chest.y,
-            displayName: chest.displayName,
-            contents: (chest.contents || []).map(entry => ({ ...entry, taken: false }))
-        }));
-
-        const smallPalmBlueprints = (this.smallPalms || []).map(palm => ({
-            x: palm.x,
-            y: palm.y
-        }));
-
-        const npcBlueprints = [];
-        if (this.shopGhost) {
-            npcBlueprints.push({ type: 'shopGhost', x: this.shopGhost.x, y: this.shopGhost.y });
-        }
-        if (this.princess) {
-            npcBlueprints.push({
-                type: 'princess',
-                x: this.princess.x,
-                y: this.princess.y,
-                dialogueLines: [...(this.princess.dialogueLines || [])]
-            });
-        }
-        if (this.balloonFan) {
-            npcBlueprints.push({
-                type: 'balloonFan',
-                x: this.balloonFan.x,
-                y: this.balloonFan.baseY ?? this.balloonFan.y,
-                dialogueLines: [...(this.balloonFan.dialogueLines || [])]
-            });
-        }
-
-        const enemyBlueprints = (this.enemies || []).map(enemy => {
-            if (enemy instanceof Slime) {
-                return {
-                    type: 'slime',
-                    x: enemy.x,
-                    y: enemy.y,
-                    patrol: enemy.simplePatrol ? {
-                        left: enemy.simplePatrol.left,
-                        right: enemy.simplePatrol.right,
-                        speed: enemy.simplePatrol.speed,
-                        groundY: enemy.simplePatrol.groundY
-                    } : null
-                };
-            }
-            return null;
-        }).filter(Boolean);
-
-        const itemBlueprints = (this.items || []).map(item => {
-            if (item instanceof HealthPotion) {
-                return { type: 'health_potion', x: item.x, y: item.y, healAmount: item.healAmount };
-            }
-            if (item instanceof CoffeeItem) {
-                return { type: 'coffee', x: item.x, y: item.y };
-            }
-            return null;
-        }).filter(Boolean);
-
-        this.initialTestRoomState = {
-            level: { ...(this.level || {}) },
-            testGroundY: this.testGroundY,
-            platforms: (this.platforms || []).filter(p => p.type !== 'palm').map(p => ({
-                x: p.x,
-                y: p.y,
-                width: p.width,
-                height: p.height,
-                type: p.type
-            })),
-            enemies: enemyBlueprints,
-            items: itemBlueprints,
-            chests: chestBlueprints,
-            smallPalms: smallPalmBlueprints,
-            npcs: npcBlueprints,
-            signBoard: this.signBoard ? {
-                x: this.signBoard.x,
-                y: this.signBoard.y,
-                spriteSrc: this.signBoard.sprite?.src
-            } : null,
-            signBoards: (this.signBoards || []).map(sign => ({
-                x: sign.x,
-                y: sign.y,
-                spriteSrc: sign.sprite?.src,
-                dialogueLines: sign.dialogueLines ? [...sign.dialogueLines] : null
-            })),
-            flag: this.flag ? { x: this.flag.x, y: this.flag.y } : null
-        };
+        return this.worldBuilder?.captureInitialTestRoomState();
     }
 
     /**
      * Rebuild the test room exactly as it first loaded
      */
     restoreInitialTestRoomState() {
-        const blueprint = this.initialTestRoomState;
-        if (!blueprint) {
-            this.createLevel();
-            return;
-        }
-
-        this.testMode = true;
-        this.level = { ...(blueprint.level || {}) };
-        this.testGroundY = blueprint.testGroundY;
-        this.testRoomMaxX = Math.max(0, blueprint.level?.width || 0);
-
-        this.platforms = (blueprint.platforms || [])
-            .filter(p => p.type !== 'palm')
-            .map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
-
-        this.enemies = (blueprint.enemies || []).map(def => {
-            if (def.type === 'slime') {
-                const slime = new Slime(def.x, def.y);
-                slime.game = this;
-                slime.y = def.y;
-                if (def.patrol) {
-                    slime.setSimplePatrol(def.patrol.left, def.patrol.right, def.patrol.speed, def.patrol.groundY);
-                }
-                return slime;
-            }
-            return null;
-        }).filter(Boolean);
-
-        this.items = (blueprint.items || []).map(def => {
-            if (def.type === 'health_potion') {
-                const potion = new HealthPotion(def.x, def.y, def.healAmount);
-                potion.game = this;
-                return potion;
-            }
-            if (def.type === 'coffee') {
-                const coffee = new CoffeeItem(def.x, def.y);
-                coffee.game = this;
-                return coffee;
-            }
-            return null;
-        }).filter(Boolean);
-
-        this.chests = (blueprint.chests || []).map(def => {
-            const chest = new Chest(def.x, def.y);
-            chest.displayName = def.displayName;
-            chest.contents = (def.contents || []).map(entry => ({ ...entry, taken: false }));
-            chest.game = this;
-            return chest;
-        });
-
-        this.smallPalms = (blueprint.smallPalms || []).map(def => {
-            const palm = new SmallPalm(def.x, def.y);
-            palm.game = this;
-            this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, def.x + palm.width + 300);
-            return palm;
-        });
-
-        // Ensure level width accommodates all restored content
-        const contentMax = this.testRoomMaxX || this.level.width || 0;
-        this.level.width = Math.max(this.level.width || 0, contentMax);
-
-        this.npcs = [];
-        this.shopGhost = null;
-        this.princess = null;
-        this.balloonFan = null;
-        (blueprint.npcs || []).forEach(def => {
-            if (def.type === 'shopGhost') {
-                const ghost = new ShopGhost(def.x, def.y);
-                ghost.game = this;
-                this.shopGhost = ghost;
-                this.npcs.push(ghost);
-            } else if (def.type === 'princess') {
-                const princess = new PrincessNPC(def.x, def.y);
-                princess.game = this;
-                princess.dialogueLines = [...(def.dialogueLines || [])];
-                this.princess = princess;
-                this.npcs.push(princess);
-            } else if (def.type === 'balloonFan') {
-                const balloonFan = new BalloonNPC(def.x, def.y);
-                balloonFan.game = this;
-                balloonFan.baseY = def.y;
-                balloonFan.dialogueLines = [...(def.dialogueLines || [])];
-                this.balloonFan = balloonFan;
-                this.npcs.push(balloonFan);
-            }
-        });
-
-        this.signBoard = blueprint.signBoard
-            ? new Sign(blueprint.signBoard.x, blueprint.signBoard.y, blueprint.signBoard.spriteSrc)
-            : null;
-        this.signBoards = (blueprint.signBoards || []).map(def => {
-            const sign = new Sign(def.x, def.y, def.spriteSrc);
-            if (def.dialogueLines) sign.dialogueLines = [...def.dialogueLines];
-            return sign;
-        });
-        if (this.signBoard) {
-            const alreadyIncluded = this.signBoards.some(sign => sign && sign.x === this.signBoard.x && sign.y === this.signBoard.y);
-            if (!alreadyIncluded) {
-                this.signBoards.unshift(this.signBoard);
-            }
-        }
-        if (!this.signBoard && this.signBoards.length > 0) {
-            this.signBoard = this.signBoards[0];
-        }
-
-        this.flag = blueprint.flag ? Flag.create(blueprint.flag.x, blueprint.flag.y) : null;
-        if (this.flag) {
-            this.flag.game = this;
-        }
-
-        this.createBackground();
+        return this.worldBuilder?.restoreInitialTestRoomState();
     }
 
     /**
      * Create ground platforms
      */
     createGroundPlatforms() {
-        const groundHeight = 40;
-        const groundY = this.level.height - groundHeight;
-        
-        // Main ground
-        for (let x = 0; x < this.level.width; x += 64) {
-            this.platforms.push({
-                x: x,
-                y: groundY,
-                width: 64,
-                height: groundHeight,
-                type: 'ground',
-                solid: true,
-                color: '#8B4513'
-            });
-        }
-        
-        // Some gaps for challenge
-        const gaps = [800, 1200, 1800, 2400];
-        gaps.forEach(gapX => {
-            // Remove platforms to create gap
-            this.platforms = this.platforms.filter(platform => {
-                return !(platform.x >= gapX && platform.x < gapX + 128);
-            });
-        });
+        return this.worldBuilder?.createGroundPlatforms();
     }
 
     /**
      * Create floating platforms
      */
     createFloatingPlatforms() {
-        const platforms = [
-            { x: 300, y: 400, width: 96, height: 16 },
-            { x: 500, y: 320, width: 64, height: 16 },
-            { x: 750, y: 350, width: 128, height: 16 },
-            { x: 900, y: 450, width: 64, height: 16 },
-            { x: 1100, y: 380, width: 96, height: 16 },
-            { x: 1350, y: 300, width: 128, height: 16 },
-            { x: 1600, y: 420, width: 64, height: 16 },
-            { x: 1900, y: 350, width: 96, height: 16 },
-            { x: 2100, y: 280, width: 128, height: 16 },
-            { x: 2500, y: 400, width: 160, height: 16 }
-        ];
-        
-        platforms.forEach(platform => {
-            this.platforms.push({
-                ...platform,
-                type: 'floating',
-                solid: true,
-                color: '#654321'
-            });
-        });
+        return this.worldBuilder?.createFloatingPlatforms();
     }
 
     /**
      * Spawn enemies throughout the level
      */
     spawnEnemies() {
-        // Spawn only ground slimes since other types aren't showing up properly
-        const enemySpawns = [
-            { x: 250, y: 450, type: 'Slime' },
-            { x: 600, y: 450, type: 'Slime' },
-            { x: 1000, y: 450, type: 'Slime' },
-            { x: 1400, y: 450, type: 'Slime' },
-            { x: 1800, y: 450, type: 'Slime' },
-            { x: 2200, y: 450, type: 'Slime' }
-        ];
-        
-        enemySpawns.forEach((spawn, index) => {
-            let enemy;
-            
-            try {
-                switch (spawn.type) {
-                    case 'Slime':
-                        enemy = new Slime(spawn.x, spawn.y);
-                        break;
-                    default:
-                        return;
-                }
-                
-                if (enemy) {
-                    enemy.game = this;
-                // No need to set gravity - entities use their own default
-                    this.enemies.push(enemy);
-                }
-            } catch (error) {
-                // Silently handle errors
-            }
-        });
+        return this.worldBuilder?.spawnEnemies();
     }
 
     /**
      * Spawn items throughout the level
      */
     spawnItems() {
-        // Rock items for ammo
-        const rockSpawns = [
-            { x: 450, y: 450, count: 1, rocksPerPile: 5 },
-            { x: 900, y: 400, count: 1, rocksPerPile: 8 },
-            { x: 1300, y: 450, count: 2, rocksPerPile: 4 },
-            { x: 1750, y: 420, count: 1, rocksPerPile: 6 },
-            { x: 2000, y: 450, count: 1, rocksPerPile: 10 }
-        ];
-        
-        rockSpawns.forEach(spawn => {
-            const rocks = RockItem.createScattered(spawn.x, spawn.y, spawn.count, spawn.rocksPerPile);
-            rocks.forEach(rock => {
-                rock.game = this;
-                this.items.push(rock);
-            });
-        });
-
-        // Coffee speed buff pickups
-        const coffeeSpawns = [
-            { x: 1550, y: 360 }
-        ];
-        coffeeSpawns.forEach(spawn => {
-            const coffee = new CoffeeItem(spawn.x, spawn.y);
-            coffee.game = this;
-            this.items.push(coffee);
-        });
+        return this.worldBuilder?.spawnItems();
     }
 
     /**
      * Create the level completion flag
      */
     createFlag() {
-        // Position the flag near the end of the level, but not at the very edge
-        const flagHeight = 128;
-        const groundHeight = 40;
-        let flagX = this.level.width - 300;
-        let flagY = (this.level.height - groundHeight) - flagHeight; // Sit on ground
-
-        if (this.testMode) {
-            const groundY = (typeof this.testGroundY === 'number') ? this.testGroundY : (this.level.height - 50);
-            flagY = groundY - flagHeight; // sit on top of ground
-            flagX = 3880; // at the far/right base of the extended mountain path
-        }
-        
-        this.flag = Flag.create(flagX, flagY);
-        this.flag.game = this;
-        
-        // Flag created at position
+        return this.worldBuilder?.createFlag();
     }
 
     /**
@@ -2877,213 +2505,7 @@ class Game {
      * Create a simple test room for debugging
      */
     createTestRoom() {
-        // Create an infinite ground platform
-        const groundHeight = 50;
-        const groundY = this.canvas.height - groundHeight;
-        this.testGroundY = groundY;
-        const spawnAnchorX = 140;
-        // Create multiple ground segments for infinite running
-        // Each segment is 2000px wide, create 10 segments = 20000px of ground
-        for (let i = 0; i < 10; i++) {
-            const segmentX = i * 2000;
-            this.platforms.push(new Platform(segmentX, groundY, 2000, groundHeight));
-        }
-        
-        // Left wall only (prevent going backwards past start)
-        const wallWidth = 20;
-        const wallHeight = this.canvas.height;
-        this.platforms.push(new Platform(-wallWidth, 0, wallWidth, wallHeight));
-
-        // Parkour challenge platforms (test room only)
-        const baseY = groundY - 90;
-        const parkour = [
-            { x: 220, width: 120, y: baseY },
-            { x: 420, width: 90, y: baseY - 50 },
-            { x: 600, width: 100, y: baseY - 90 },
-            { x: 780, width: 80, y: baseY - 130 },
-            { x: 950, width: 110, y: baseY - 60 },
-            { x: 1140, width: 90, y: baseY - 20 },
-            { x: 1320, width: 80, y: baseY - 70 },
-            { x: 1480, width: 120, y: baseY - 120 },
-            { x: 1660, width: 80, y: baseY - 160 },
-            { x: 1800, width: 160, y: baseY - 60 }
-        ];
-        parkour.forEach(p => {
-            this.platforms.push(new Platform(p.x, p.y, p.width, 12));
-        });
-
-        // Blocky mountain climb to the right of the parkour section, then down the other side
-        const mountainSteps = [
-            // Ascent
-            { x: 2050, y: groundY - 32, width: 180, height: 32 },
-            { x: 2220, y: groundY - 80, width: 150, height: 32 },
-            { x: 2360, y: groundY - 132, width: 140, height: 32 },
-            { x: 2485, y: groundY - 184, width: 120, height: 32 },
-            { x: 2605, y: groundY - 236, width: 120, height: 32 },
-            { x: 2725, y: groundY - 288, width: 110, height: 32 },
-            { x: 2840, y: groundY - 340, width: 170, height: 32 },
-            // Descent
-            { x: 2980, y: groundY - 300, width: 150, height: 32 },
-            { x: 3120, y: groundY - 240, width: 150, height: 32 },
-            { x: 3260, y: groundY - 180, width: 150, height: 32 },
-            { x: 3400, y: groundY - 120, width: 150, height: 32 },
-            { x: 3540, y: groundY - 70, width: 150, height: 32 },
-            { x: 3680, y: groundY - 32, width: 180, height: 32 }
-        ];
-        mountainSteps.forEach(step => {
-            this.platforms.push(new Platform(step.x, step.y, step.width, step.height));
-        });
-
-        // Compact post-flag parkour path leading to a perch
-        const balloonParkour = [
-            { x: 3960, y: groundY - 90, width: 110 },
-            { x: 4080, y: groundY - 150, width: 100 },
-            { x: 4220, y: groundY - 205, width: 90 },
-            { x: 4340, y: groundY - 255, width: 110 },
-            { x: 4420, y: groundY - 245, width: 140 }
-        ];
-        balloonParkour.forEach(p => {
-            this.platforms.push(new Platform(p.x, p.y, p.width, 14));
-        });
-
-        // Foreground small palm (entity, no separate platform) just right of balloon parkour
-        const smallPalmHeight = 191;
-        const smallPalmWidth = 121;
-        const lastBalloon = balloonParkour[balloonParkour.length - 1];
-        const smallPalmX = lastBalloon.x + lastBalloon.width + 20; // keep within level bounds
-        const smallPalmY = groundY - smallPalmHeight;
-        const smallPalm = new SmallPalm(smallPalmX, smallPalmY);
-        smallPalm.game = this;
-        this.smallPalms.push(smallPalm);
-        this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, smallPalmX + smallPalmWidth + 300);
-
-        // Quick test spawns
-        const slime = new Slime(300, groundY);
-        slime.game = this;
-        const slimeGroundY = groundY - slime.height;
-        slime.y = slimeGroundY;
-        slime.setSimplePatrol(200, 800, 90, slimeGroundY);
-        this.enemies.push(slime);
-
-        // Slime near the mountain base to test badge modifiers
-        const mountainSlime = new Slime(1960, groundY);
-        mountainSlime.game = this;
-        const mountainSlimeGroundY = groundY - mountainSlime.height;
-        mountainSlime.y = mountainSlimeGroundY;
-        mountainSlime.setSimplePatrol(1880, 2100, 80, mountainSlimeGroundY);
-        this.enemies.push(mountainSlime);
-
-        const potion = new HealthPotion(480, groundY - 40, 25);
-        potion.game = this;
-        this.items.push(potion);
-
-        const coffee = new CoffeeItem(860, groundY - 70);
-        coffee.game = this;
-        this.items.push(coffee);
-
-        // Shop ghost NPC near spawn
-        const ghostX = 680;
-        const ghostY = groundY - 64;
-        this.shopGhost = new ShopGhost(ghostX, ghostY);
-        this.shopGhost.game = this;
-        this.npcs.push(this.shopGhost);
-
-        // Princess NPC on the mountain peak
-        const mountainTop = mountainSteps[6]; // peak step
-        const princessX = mountainTop.x + (mountainTop.width / 2) - 24.5; // center on peak
-        const princessY = mountainTop.y - 64;
-        this.princess = new PrincessNPC(princessX, princessY);
-        this.princess.game = this;
-        this.princess.dialogueLines = [
-            'You actually made it up here? I promise I will have a real quest soon.',
-            'For now, enjoy this breeze and pretend the mountain is much taller.',
-            'Press Enter again if you want to hear me repeat myself. I am patient!'
-        ];
-        this.npcs.push(this.princess);
-
-        // Balloon fan NPC perched above the post-flag parkour
-        const balloonPerch = balloonParkour[balloonParkour.length - 1];
-        const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
-        const balloonFanY = balloonPerch.y - 63;
-        this.balloonFan = new BalloonNPC(balloonFanX, balloonFanY);
-        this.balloonFan.game = this;
-        this.balloonFan.baseY = balloonFanY;
-        this.npcs.push(this.balloonFan);
-
-        // Signboard near start (left of first parkour platform) as an Entity for shadow support
-        this.signBoard = new Sign(
-            spawnAnchorX + 40,
-            groundY - 52, // top aligned to ground like chests
-            'art/items/sign.png'
-        );
-        this.signBoard.dialogueLines = [...this.signDialogue.defaultMessages];
-        this.signBoards.push(this.signBoard);
-
-        // Post-parkour sign with placeholder dialogue
-        const postSignPlatform = balloonParkour[balloonParkour.length - 1];
-        const postSignX = postSignPlatform.x + postSignPlatform.width - 48;
-        const postSignY = groundY - 52; // place on ground beneath the parkour perch
-        const postSign = new Sign(postSignX, postSignY, 'art/items/sign.png');
-        postSign.dialogueLines = [
-            'Coming soon: a real message for champions.',
-            'Thanks for checking out the balloon parkour!'
-        ];
-        this.signBoards.push(postSign);
-
-        // Test coin chest near spawn (coins only)
-        const coinChestX = spawnAnchorX + 210;
-        const coinChestY = groundY - 64;
-        const coinChest = new Chest(coinChestX, coinChestY);
-        coinChest.displayName = 'Coin Test Chest';
-        coinChest.contents = [
-            {
-                id: 'coins_test',
-                name: '100 Coins',
-                description: 'A test stash of coins.',
-                take: (player) => player?.collectCoin && player.collectCoin(100)
-            }
-        ];
-        coinChest.game = this;
-        this.chests.push(coinChest);
-
-        // Reward chest at the end of the parkour run
-        const lastPlatform = parkour[parkour.length - 1];
-        const chestX = lastPlatform.x + lastPlatform.width - 64;
-        const chestY = lastPlatform.y - 64;
-        const parkourChest = new Chest(chestX, chestY);
-        parkourChest.displayName = 'Parkour Chest';
-        parkourChest.contents = [
-            {
-                id: 'climbing_shoes',
-                name: 'Climbing Shoes',
-                description: 'Sticky soles that let you double jump for 2 minutes.',
-                take: (player) => player?.applyClimbingBuff && player.applyClimbingBuff(120000, 1)
-            },
-            {
-                id: 'health_potion',
-                name: 'Health Potion',
-                description: 'Restores 25 HP (or stashes a potion if you are full).',
-                take: (player) => {
-                    if (!player) return;
-                    if (player.health >= player.maxHealth && typeof player.addHealthPotion === 'function') {
-                        player.addHealthPotion(1);
-                    } else if (typeof player.heal === 'function') {
-                        player.heal(25);
-                    } else {
-                        player.health = Math.min(player.maxHealth ?? player.health, player.health + 25);
-                    }
-                    player.updateHealthUI?.();
-                }
-            },
-            {
-                id: 'rock_bag',
-                name: 'Bag of Rocks',
-                description: "10 sturdy rocks for Luckie's throw.",
-                take: (player) => player?.addRocks && player.addRocks(10)
-            }
-        ];
-        parkourChest.game = this;
-        this.chests.push(parkourChest);
+        return this.worldBuilder?.createTestRoom();
     }
     
     /**
