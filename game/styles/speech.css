@@ -96,6 +96,7 @@
     color: #555;
     text-align: right;
     animation: speechHintPulse 1.4s ease-in-out infinite;
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif);
 }
 
 @keyframes speechHintPulse {

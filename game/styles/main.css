@@ -308,6 +308,10 @@ body, button, input, select, textarea,
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
 }
 
+.menu *:not(h1):not(h2) {
+    font-family: var(--font-main) !important;
+}
+
 .menu.hidden {
     display: none;
 }
