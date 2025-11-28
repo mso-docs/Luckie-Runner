@@ -18,33 +18,23 @@ class SmallPalm extends Entity {
 
         this.animationSpeed = 90; // ms per frame for landing/leave
         this.loadSprite(this.spritePath);
+        this.collisionBox = new CollisionBox(this.width, this.height, { x: 0, y: 0 });
         this.collisionReduced = false;
         this.resetCollisionBox();
-        this.targetCollision = {
-            width: this.collisionWidth,
-            height: this.collisionHeight,
-            offset: { x: this.collisionOffset.x, y: this.collisionOffset.y }
-        };
     }
 
     resetCollisionBox() {
-        this.collisionWidth = this.width;
-        this.collisionHeight = this.height;
-        this.collisionOffset = { x: 0, y: 0 };
         this.collisionReduced = false;
-        this.targetCollision = {
-            width: this.collisionWidth,
-            height: this.collisionHeight,
-            offset: { x: this.collisionOffset.x, y: this.collisionOffset.y }
-        };
+        this.collisionBox.reset(this.width, this.height, { x: 0, y: 0 });
+        this.collisionBox.applyTo(this);
     }
 
     applyOccupiedCollision() {
-        this.targetCollision = {
-            width: 121,
-            height: 137,
-            offset: { x: 0, y: this.height - 137 }
-        };
+        this.collisionBox.setTarget(
+            121,
+            137,
+            { x: 0, y: this.height - 137 }
+        );
         this.collisionReduced = true;
     }
 
@@ -155,7 +145,8 @@ class SmallPalm extends Entity {
         this.ensureAnimations();
 
         // Smooth collision transitions in sync with animation timing
-        this.smoothCollisionBox(deltaTime);
+        this.collisionBox.update(deltaTime, this.animationSpeed || 100);
+        this.collisionBox.applyTo(this);
 
         // Explicitly skip animation advancement while occupied
         if (this.state === 'occupied') {
@@ -167,32 +158,5 @@ class SmallPalm extends Entity {
 
     getShadowScale() {
         return { x: 0.7, y: 0.4 };
-    }
-
-    /**
-     * Gradually interpolate collision box toward target to avoid flicker
-     */
-    smoothCollisionBox(deltaTime = 0) {
-        const lerp = (a, b, t) => a + (b - a) * t;
-        const baseSpeed = this.animationSpeed || 100; // ms per frame
-        const factor = Math.min(1, Math.max(0.05, deltaTime / baseSpeed)) || 0.35; // scale with frame time
-
-        const targetW = this.targetCollision?.width ?? this.collisionWidth;
-        const targetH = this.targetCollision?.height ?? this.collisionHeight;
-        const targetOff = this.targetCollision?.offset ?? this.collisionOffset;
-
-        this.collisionWidth = lerp(this.collisionWidth, targetW, factor);
-        this.collisionHeight = lerp(this.collisionHeight, targetH, factor);
-        this.collisionOffset = {
-            x: lerp(this.collisionOffset.x, targetOff.x, factor),
-            y: lerp(this.collisionOffset.y, targetOff.y, factor)
-        };
-
-        // Snap when close to eliminate tiny oscillations
-        const close = (a, b) => Math.abs(a - b) < 0.5;
-        if (close(this.collisionWidth, targetW)) this.collisionWidth = targetW;
-        if (close(this.collisionHeight, targetH)) this.collisionHeight = targetH;
-        if (close(this.collisionOffset.x, targetOff.x)) this.collisionOffset.x = targetOff.x;
-        if (close(this.collisionOffset.y, targetOff.y)) this.collisionOffset.y = targetOff.y;
     }
 }
