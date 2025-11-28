@@ -167,10 +167,6 @@ class PalmTreeManager {
             if (viewportRight > lastTreeX) {
                 this.generateLayerTrees(layer, lastTreeX, viewportRight + this.offscreenBuffer);
             }
-            
-            // Cleanup trees behind viewport
-            const viewportLeft = parallaxX - this.offscreenBuffer * 1.2;
-            layer.trees = layer.trees.filter(tree => tree.x > viewportLeft);
         });
     }
     
