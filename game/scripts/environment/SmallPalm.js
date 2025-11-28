@@ -43,7 +43,7 @@ class SmallPalm extends Entity {
         this.targetCollision = {
             width: 121,
             height: 137,
-            offset: { x: 0, y: this.height - 156 }
+            offset: { x: 0, y: this.height - 137 }
         };
         this.collisionReduced = true;
     }
