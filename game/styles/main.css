@@ -154,8 +154,8 @@ body {
 }
 
 .hud-icon {
-    width: 50px;
-    height: 50px;
+    width: 36px;
+    height: 36px;
     border-radius: 0;
     box-shadow: none;
     background-color: transparent;
@@ -172,6 +172,8 @@ body {
 .rock-icon {
     background: url('../art/items/rock-item.png') center/contain no-repeat;
     border: none;
+    width: 36px;
+    height: 36px;
 }
 
 .hud-label {

@@ -682,12 +682,15 @@ class Player extends Entity {
         const activeThrowIcon = this.throwables?.getActiveIcon?.();
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
-        if (hudRocksElement) hudRocksElement.textContent = this.throwables?.getAmmo('rock') ?? 0;
-        if (hudRocksElement && activeThrowIcon) {
-            hudRocksElement.style.backgroundImage = `url(${activeThrowIcon})`;
-            hudRocksElement.style.backgroundRepeat = 'no-repeat';
-            hudRocksElement.style.backgroundPosition = 'left center';
-            hudRocksElement.style.paddingLeft = '24px';
+        if (hudRocksElement) {
+            const ammo = this.throwables?.getAmmo(this.throwables?.getActiveType()) ?? 0;
+            hudRocksElement.textContent = ammo;
+            // Use the adjacent icon span for the image; clear any inline bg on the value
+            const rockIcon = hudRocksElement.previousElementSibling;
+            hudRocksElement.style.backgroundImage = 'none';
+            if (rockIcon && rockIcon.classList.contains('hud-icon')) {
+                rockIcon.style.backgroundImage = activeThrowIcon ? `url('${activeThrowIcon}')` : "url('art/items/rock-item.png')";
+            }
         }
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
