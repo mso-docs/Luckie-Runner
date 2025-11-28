@@ -151,11 +151,11 @@ class SmallPalm extends Entity {
     // Small palm is static; no physics/gravity
     updatePhysics() {}
 
-    onUpdate() {
+    onUpdate(deltaTime = 0) {
         this.ensureAnimations();
 
-        // Smooth collision transitions
-        this.smoothCollisionBox();
+        // Smooth collision transitions in sync with animation timing
+        this.smoothCollisionBox(deltaTime);
 
         // Explicitly skip animation advancement while occupied
         if (this.state === 'occupied') {
@@ -172,9 +172,10 @@ class SmallPalm extends Entity {
     /**
      * Gradually interpolate collision box toward target to avoid flicker
      */
-    smoothCollisionBox() {
+    smoothCollisionBox(deltaTime = 0) {
         const lerp = (a, b, t) => a + (b - a) * t;
-        const factor = 0.35; // smoothing factor per frame
+        const baseSpeed = this.animationSpeed || 100; // ms per frame
+        const factor = Math.min(1, Math.max(0.05, deltaTime / baseSpeed)) || 0.35; // scale with frame time
 
         const targetW = this.targetCollision?.width ?? this.collisionWidth;
         const targetH = this.targetCollision?.height ?? this.collisionHeight;
