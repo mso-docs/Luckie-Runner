@@ -227,6 +227,8 @@ class Game {
         this.badgeUI = new BadgeUI(this);
         this.setupChestUI();
         this.setupShopUI();
+        // Sync audio UI with config defaults on load
+        this.updateAudioUI();
         
         // Create initial level
         // Register bundled levels
