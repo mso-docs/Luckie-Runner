@@ -517,74 +517,14 @@ class Game {
      * Prepare the chest overlay UI
      */
     setupChestUI() {
-        const overlay = document.getElementById('chestOverlay');
-        this.chestUI.overlay = overlay;
-        this.chestUI.list = overlay ? overlay.querySelector('.chest-items') : null;
-        this.chestUI.title = overlay ? overlay.querySelector('.chest-title') : null;
-        this.chestUI.takeAllButton = overlay ? overlay.querySelector('[data-action="take-all"]') : null;
-        this.chestUI.emptyState = overlay ? overlay.querySelector('.chest-empty') : null;
-
-        if (overlay) {
-            const closeButton = overlay.querySelector('[data-action="close-chest"]');
-            if (closeButton) {
-                closeButton.addEventListener('click', () => this.hideChestOverlay());
-            }
-        }
-
-        if (this.chestUI.takeAllButton) {
-            this.chestUI.takeAllButton.addEventListener('click', () => {
-                if (!this.chestUI.currentChest || !this.player) return;
-                const chest = this.chestUI.currentChest;
-                const tookAny = chest.takeAll(this.player);
-                this.populateChestOverlay(chest);
-                if (tookAny) this.playMenuEnterSound();
-            });
-        }
-
-        this.hideChestOverlay(true);
+        return this.uiManager?.setupChestUI();
     }
 
     /**
      * Prepare shop UI state
      */
     setupShopUI() {
-        this.shopUI.overlay = document.getElementById('shopOverlay');
-        this.shopUI.isOpen = false;
-        this.shopUI.list = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopItemList') : null;
-        this.shopUI.coinValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopCoinValue') : null;
-        this.shopUI.hpValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopHPValue') : null;
-        this.shopUI.rockValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopRockValue') : null;
-        this.shopUI.levelValue = this.shopUI.overlay ? this.shopUI.overlay.querySelector('#shopLevelValue') : null;
-        this.shopUI.items = [
-            {
-                id: 'rock_bag',
-                name: 'Bag of Rocks',
-                price: 10,
-                iconClass: 'icon-rockbag',
-                grant: (player) => player?.addRocks && player.addRocks(10)
-            },
-            {
-                id: 'health_potion',
-                name: 'Health Potion',
-                price: 25,
-                iconClass: 'icon-healthpotion',
-                grant: (player) => player?.addHealthPotion && player.addHealthPotion(1)
-            },
-            {
-                id: 'coffee',
-                name: 'Coffee',
-                price: 10,
-                iconClass: 'icon-coffee',
-                grant: (player) => player?.addCoffee && player.addCoffee(1)
-            }
-        ];
-        this.hideShopOverlay(true);
-        this.shopGhostBubble = document.getElementById('shopGhostBubble');
-
-        // Keyboard navigation for shop list (W/S or Arrow keys)
-        document.addEventListener('keydown', (e) => {
-            this.handleShopListNavigation(e);
-        });
+        return this.uiManager?.setupShopUI();
     }
 
     /**
@@ -606,37 +546,14 @@ class Game {
      * Show the chest overlay
      */
     showChestOverlay(chest) {
-        const ui = this.chestUI;
-        if (!ui.overlay || !chest) return;
-
-        ui.currentChest = chest;
-        ui.isOpen = true;
-        if (ui.title) {
-            ui.title.textContent = chest.displayName || 'Chest';
-        }
-        ui.overlay.classList.add('active');
-        ui.overlay.classList.remove('hidden');
-        ui.overlay.setAttribute('aria-hidden', 'false');
-        this.populateChestOverlay(chest);
-        this.playMenuEnterSound();
+        return this.uiManager?.showChestOverlay(chest);
     }
 
     /**
      * Hide the chest overlay
      */
     hideChestOverlay(immediate = false) {
-        const ui = this.chestUI;
-        if (!ui.overlay) return;
-
-        const wasOpen = ui.isOpen;
-        ui.overlay.classList.remove('active');
-        ui.overlay.classList.add('hidden');
-        ui.overlay.setAttribute('aria-hidden', 'true');
-        ui.isOpen = false;
-        ui.currentChest = null;
-        if (wasOpen && !immediate) {
-            this.playMenuExitSound();
-        }
+        return this.uiManager?.hideChestOverlay(immediate);
     }
 
     /**
@@ -644,71 +561,14 @@ class Game {
      * @param {Chest} chest
      */
     populateChestOverlay(chest) {
-        const ui = this.chestUI;
-        if (!ui.list || !chest) return;
-
-        ui.list.innerHTML = '';
-        const items = chest.getAvailableItems();
-
-        if (ui.emptyState) {
-            ui.emptyState.classList.toggle('hidden', items.length > 0);
-        }
-        if (ui.takeAllButton) {
-            ui.takeAllButton.disabled = items.length === 0;
-        }
-
-        items.forEach(item => {
-            const row = document.createElement('div');
-            row.className = 'chest-item';
-
-            const info = document.createElement('div');
-            info.className = 'chest-item__info';
-            const name = document.createElement('div');
-            name.className = 'chest-item__name';
-            name.textContent = item.name;
-            const desc = document.createElement('div');
-            desc.className = 'chest-item__desc';
-            desc.textContent = item.description || '';
-            info.appendChild(name);
-            info.appendChild(desc);
-
-            const takeBtn = document.createElement('button');
-            takeBtn.type = 'button';
-            takeBtn.className = 'chest-item__take';
-            takeBtn.textContent = 'Take';
-            takeBtn.addEventListener('click', () => {
-                const success = chest.takeItem(item.id, this.player);
-                if (success) {
-                    this.populateChestOverlay(chest);
-                    this.playMenuEnterSound();
-                }
-            });
-
-            row.appendChild(info);
-            row.appendChild(takeBtn);
-            ui.list.appendChild(row);
-        });
+        return this.uiManager?.populateChestOverlay(chest);
     }
 
     /**
      * Show the shop overlay
      */
     showShopOverlay() {
-        const overlay = this.shopUI.overlay;
-        if (!overlay) return;
-
-        this.updateShopDisplay();
-        overlay.classList.add('active');
-        overlay.classList.remove('hidden');
-        overlay.setAttribute('aria-hidden', 'false');
-        this.shopUI.isOpen = true;
-        this.playMenuEnterSound();
-
-        // Focus first shop item for keyboard navigation
-        const firstItem = this.shopUI.list ? this.shopUI.list.querySelector('.shop-item') : null;
-        if (firstItem) {
-            firstItem.focus();
-        }
+        return this.uiManager?.showShopOverlay();
     }
 
     /**
@@ -716,59 +576,14 @@ class Game {
      * @param {boolean} immediate - provided for API symmetry
      */
     hideShopOverlay(immediate = false) {
-        const overlay = this.shopUI.overlay;
-        if (!overlay) return;
-
-        const wasOpen = this.shopUI.isOpen;
-        overlay.classList.remove('active');
-        overlay.classList.add('hidden');
-        overlay.setAttribute('aria-hidden', 'true');
-        this.shopUI.isOpen = false;
-        if (wasOpen) {
-            this.playMenuExitSound();
-        }
+        return this.uiManager?.hideShopOverlay(immediate);
     }
 
     /**
      * Render shop items and currency
      */
     updateShopDisplay() {
-        const ui = this.shopUI;
-        if (!ui.list || !Array.isArray(ui.items)) return;
-
-        const player = this.player;
-        if (ui.coinValue && player) {
-            ui.coinValue.textContent = player.coins ?? 0;
-        }
-        if (ui.hpValue && player) {
-            const current = Math.max(0, Math.floor(player.health));
-            const max = Math.max(1, Math.floor(player.maxHealth));
-            ui.hpValue.textContent = `${current}/${max}`;
-        }
-        if (ui.rockValue && player) {
-            ui.rockValue.textContent = player.throwables?.getAmmo('rock') ?? 0;
-        }
-        if (ui.levelValue && player) {
-            ui.levelValue.textContent = player.level ?? 1;
-        }
-
-        ui.list.innerHTML = '';
-        ui.items.forEach(item => {
-            const affordable = player ? (player.coins ?? 0) >= item.price : false;
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'shop-item';
-            row.innerHTML = `
-                <span class="shop-item-icon ${item.iconClass}" aria-hidden="true"></span>
-                <span class="shop-item-name">${item.name}</span>
-                <span class="shop-item-price">${item.price} coins</span>
-            `;
-            row.disabled = !affordable;
-            row.addEventListener('click', () => {
-                this.purchaseShopItem(item);
-            });
-            ui.list.appendChild(row);
-        });
+        return this.uiManager?.updateShopDisplay();
     }
 
     /**
@@ -776,59 +591,14 @@ class Game {
      * @param {Object} item
      */
     purchaseShopItem(item) {
-        if (!item || !this.player) return false;
-        const player = this.player;
-        const coins = player.coins ?? 0;
-        if (coins < item.price) {
-            if (this.audioManager) {
-                this.audioManager.playSound('error', 0.8);
-            }
-            return false;
-        }
-
-        player.coins = coins - item.price;
-        if (typeof player.updateUI === 'function') {
-            player.updateUI();
-        }
-        if (typeof item.grant === 'function') {
-            item.grant(player);
-        }
-        if (this.audioManager) {
-            this.audioManager.playSound('menu_enter', 0.8);
-        }
-        this.updateShopDisplay();
-        return true;
+        return this.uiManager?.purchaseShopItem(item);
     }
 
     /**
      * Keyboard navigation for shop items (W/S or ArrowUp/ArrowDown)
      */
     handleShopListNavigation(e) {
-        if (!this.shopUI?.isOpen) return;
-        if (!this.shopUI.list) return;
-
-        const key = e.key;
-        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
-        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
-        if (!isDown && !isUp) return;
-
-        const buttons = Array.from(this.shopUI.list.querySelectorAll('.shop-item'));
-        if (!buttons.length) return;
-
-        const activeEl = document.activeElement;
-        let currentIndex = buttons.indexOf(activeEl);
-
-        if (currentIndex === -1) {
-            currentIndex = isDown ? -1 : 0; // start before first on down, first on up
-        }
-
-        const delta = isDown ? 1 : -1;
-        let nextIndex = currentIndex + delta;
-        if (nextIndex < 0) nextIndex = buttons.length - 1;
-        if (nextIndex >= buttons.length) nextIndex = 0;
-
-        buttons[nextIndex].focus();
-        e.preventDefault();
+        return this.uiManager?.handleShopListNavigation(e);
     }
 
     /**
