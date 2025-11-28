@@ -9,6 +9,7 @@
     max-width: 78%;
     z-index: 20;
     transition: opacity 0.25s ease, transform 0.25s ease;
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif) !important;
 }
 
 .speech-bubble.show {
@@ -27,7 +28,7 @@
     width: 460px;
     max-width: 90vw;
     color: #2b2b2b;
-    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif);
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif) !important;
     font-size: 20px;
     line-height: 1.25;
     letter-spacing: 0.3px;
@@ -96,7 +97,7 @@
     color: #555;
     text-align: right;
     animation: speechHintPulse 1.4s ease-in-out infinite;
-    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif);
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif) !important;
 }
 
 @keyframes speechHintPulse {
@@ -108,11 +109,12 @@
 /* Speech text inline effects */
 #speechText {
     display: block;
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif) !important;
 }
 
 .speech-bold { font-weight: 800; }
 .speech-italic { font-style: italic; }
-.speech-mono { font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif); background: rgba(0,0,0,0.05); padding: 0 2px; border-radius: 2px; }
+.speech-mono { font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif) !important; background: rgba(0,0,0,0.05); padding: 0 2px; border-radius: 2px; }
 
 .speech-big { font-size: 24px; }
 .speech-bigger { font-size: 28px; }
