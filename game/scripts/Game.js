@@ -2245,12 +2245,10 @@ class Game {
         // Small palm collision (treat palm body as platform)
         if (Array.isArray(this.smallPalms)) {
             this.smallPalms.forEach(palm => {
-                const palmRect = { x: palm.x, y: palm.y, width: palm.width, height: palm.height };
-                if (CollisionDetection.rectangleCollision(
-                    CollisionDetection.getCollisionBounds(this.player),
-                    palmRect
-                )) {
-                    const result = this.resolvePlayerPlatformCollision(palmRect);
+                const palmBounds = CollisionDetection.getCollisionBounds(palm);
+                const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+                if (CollisionDetection.rectangleCollision(playerBounds, palmBounds)) {
+                    const result = this.resolvePlayerPlatformCollision(palmBounds);
                     if (result && result.onTop) {
                         palm.setPlayerOnTop(true, result.landed);
                     }

@@ -18,6 +18,22 @@ class SmallPalm extends Entity {
 
         this.animationSpeed = 90; // ms per frame for landing/leave
         this.loadSprite(this.spritePath);
+        this.collisionReduced = false;
+        this.resetCollisionBox();
+    }
+
+    resetCollisionBox() {
+        this.collisionWidth = this.width;
+        this.collisionHeight = this.height;
+        this.collisionOffset = { x: 0, y: 0 };
+        this.collisionReduced = false;
+    }
+
+    applyOccupiedCollision() {
+        this.collisionWidth = 121;
+        this.collisionHeight = 156;
+        this.collisionOffset = { x: 0, y: this.height - this.collisionHeight };
+        this.collisionReduced = true;
     }
 
     ensureAnimations() {
@@ -68,6 +84,10 @@ class SmallPalm extends Entity {
         if (isOnTop && (landedThisFrame || !this.wasOnTop)) {
             this.triggerLand();
         }
+        if (isOnTop) {
+            // Adjust collision to sit lower while occupied so the player appears to stand on top
+            this.applyOccupiedCollision();
+        }
     }
 
     /**
@@ -99,6 +119,7 @@ class SmallPalm extends Entity {
         this.playAnimation('occupied', true);
         this.animationFrame = 0;
         this.animationTime = 0;
+        this.applyOccupiedCollision();
     }
 
     triggerDepart() {
@@ -111,6 +132,7 @@ class SmallPalm extends Entity {
         if (animationName === 'depart') {
             this.state = 'idle';
             this.playAnimation('idle', true);
+            this.resetCollisionBox();
         }
     }
 
