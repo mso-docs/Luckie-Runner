@@ -163,6 +163,7 @@ class AudioManager {
         this.loadSound('coffee', 'sfx/coffee.mp3');
         this.loadSound('slime_patrol', 'sfx/slime-patrol.mp3');
         this.loadSound('rock', 'sfx/rock.mp3');
+        this.loadSound('coconut', 'sfx/coconut.mp3');
         this.loadSound('slime_defeat', 'sfx/slime-defeat.mp3');
         this.loadSound('slimy', 'sfx/slimy.mp3');
         this.loadSound('special', 'sfx/special.mp3');

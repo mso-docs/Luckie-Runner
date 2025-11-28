@@ -21,6 +21,8 @@ class Projectile extends Entity {
         this.autoFadeOnImpact = true;
         this.throwSound = 'rock';
         this.hitSound = 'rock';
+        this.playedThrowSound = false;
+        this.playedHitSound = false;
         
         // Projectiles don't use gravity by default
         this.gravity = 0;
@@ -193,9 +195,11 @@ class Projectile extends Entity {
      * @param {Entity} target - What was hit
      */
     createHitEffect(target) {
+        if (this.playedHitSound) return;
         if (this.game && this.game.audioManager) {
             const key = this.hitSound || 'rock';
             this.game.audioManager.playSound(key, 0.6);
+            this.playedHitSound = true;
         }
     }
 
@@ -615,8 +619,6 @@ class Coconut extends Projectile {
     }
 
     createHitEffect(target) {
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('coconut', 0.6);
-        }
+        super.createHitEffect(target);
     }
 }

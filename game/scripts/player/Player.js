@@ -286,8 +286,9 @@ class Player extends Entity {
         this.game.projectiles.push(projectile);
 
         // Play throw sound if available
-        if (projectile.throwSound && this.game.audioManager) {
+        if (projectile.throwSound && this.game.audioManager && !projectile.playedThrowSound) {
             this.game.audioManager.playSound(projectile.throwSound, 0.7);
+            projectile.playedThrowSound = true;
         }
         
         // Use ammo and set cooldown
