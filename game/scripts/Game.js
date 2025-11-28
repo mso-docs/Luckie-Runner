@@ -25,6 +25,7 @@ class Game {
         this.testRoomMaxX = 0;
         this.softLandingTolerance = 20; // px window to allow top-only landings
         this.config = GameConfig;
+        this.collisionSystem = new CollisionSystem(this);
         
         // Game entities
         this.player = null;
@@ -1226,7 +1227,7 @@ class Game {
         if (this.player) {
             this.player.update(deltaTime);
             this.updateCamera();
-            this.checkPlayerCollisions();
+            this.collisionSystem?.checkPlayerCollisions();
         }
 
         // Update small palms (foreground interactive)
@@ -1253,7 +1254,7 @@ class Game {
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.active) {
                 enemy.update(deltaTime);
-                this.updateEnemyPhysics(enemy);
+                this.collisionSystem?.updateEnemyPhysics(enemy);
                 return true;
             } else {
                 // Enemy defeated
@@ -1266,7 +1267,7 @@ class Game {
         this.items = this.items.filter(item => {
             if (item.active) {
                 item.update(deltaTime);
-                this.updateItemPhysics(item, deltaTime);
+                this.collisionSystem?.updateItemPhysics(item, deltaTime);
                 
                 // Check player collection
                 if (this.player && item.checkCollision(this.player)) {
@@ -1283,7 +1284,7 @@ class Game {
         this.projectiles = this.projectiles.filter(projectile => {
             if (projectile.active) {
                 projectile.update(deltaTime);
-                this.updateProjectilePhysics(projectile);
+                this.collisionSystem?.updateProjectilePhysics(projectile);
                 return true;
             }
             return false;
@@ -1331,269 +1332,7 @@ class Game {
      * Check collisions between player and environment
      */
     checkPlayerCollisions() {
-        // Platform collisions
-        this.player.onGround = false;
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(p => p.playerOnTopCurrent = false);
-        }
-        this.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
-                CollisionDetection.getCollisionBounds(this.player),
-                platform
-            )) {
-                const result = this.resolvePlayerPlatformCollision(platform);
-            }
-        });
-
-        // Small palm collision (treat palm body as platform)
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(palm => {
-                const palmBounds = CollisionDetection.getCollisionBounds(palm);
-                const playerBounds = CollisionDetection.getCollisionBounds(this.player);
-                const landed = this.topOnlyLanding(palmBounds);
-                if (landed.onTop) {
-                    palm.setPlayerOnTop(true, landed.landed);
-                }
-            });
-        }
-
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(p => p.finalizeContactFrame());
-        }
-
-        // NPC collisions (solid talkers/shopkeepers)
-        this.handleNpcCollisions();
-        
-        // Enemy collisions (disabled in test mode)
-        if (!this.testMode) {
-            this.enemies.forEach(enemy => {
-                if (CollisionDetection.entityCollision(this.player, enemy)) {
-                    // Player takes damage from enemy contact
-                    this.player.takeDamage(enemy.attackDamage * 0.5, enemy);
-                }
-            });
-        }
-        
-        // Hazard collisions (disabled in test mode)
-        if (!this.testMode) {
-            this.hazards.forEach(hazard => {
-                if (hazard.checkPlayerCollision) {
-                    hazard.checkPlayerCollision();
-                }
-            });
-        }
-        
-        // World boundaries (disabled in test mode)
-        if (!this.testMode && this.player.y > this.level.height + 200) {
-            // Player fell off the world
-            this.player.takeDamage(this.player.health, null);
-        } else if (this.testMode && this.player.y > this.level.height + 500) {
-            // In test mode, teleport back to spawn instead of dying
-            this.player.x = this.level.spawnX;
-            this.player.y = this.level.spawnY;
-            this.player.velocity.x = 0;
-            this.player.velocity.y = 0;
-        }
-    }
-
-    /**
-     * Resolve collision between player and platform
-     * @param {Object} platform - Platform object
-     */
-    resolvePlayerPlatformCollision(platform) {
-        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
-        const result = { onTop: false, landed: false };
-        
-        // Calculate overlap
-        const overlapX = Math.min(
-            playerBounds.x + playerBounds.width - platform.x,
-            platform.x + platform.width - playerBounds.x
-        );
-        const overlapY = Math.min(
-            playerBounds.y + playerBounds.height - platform.y,
-            platform.y + platform.height - playerBounds.y
-        );
-        
-        // Resolve collision based on smallest overlap
-        if (overlapX < overlapY) {
-            // Horizontal collision
-            if (playerBounds.x < platform.x) {
-                // Hit from left
-                this.player.x = platform.x - this.player.width;
-                this.player.velocity.x = Math.min(0, this.player.velocity.x);
-            } else {
-                // Hit from right
-                this.player.x = platform.x + platform.width;
-                this.player.velocity.x = Math.max(0, this.player.velocity.x);
-            }
-        } else {
-            // Vertical collision
-            if (playerBounds.y < platform.y) {
-                // Landing on top
-                const wasFalling = this.player.velocity.y > 0;
-                this.player.y = platform.y - this.player.height;
-                this.player.velocity.y = Math.min(0, this.player.velocity.y);
-                this.player.onGround = true;
-                result.onTop = true;
-                result.landed = wasFalling;
-            } else {
-                // Hit from below
-                this.player.y = platform.y + platform.height;
-                this.player.velocity.y = Math.max(0, this.player.velocity.y);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Resolve collisions between the player and solid NPCs
-     */
-    handleNpcCollisions() {
-        if (!this.player || !Array.isArray(this.npcs)) return;
-        this.npcs.forEach(npc => {
-            if (!npc || npc.solid === false) return;
-            const npcBounds = CollisionDetection.getCollisionBounds(npc);
-            const landed = this.topOnlyLanding(npcBounds);
-            if (!landed.onTop) {
-                // Allow passing in front when not landing on top
-                return;
-            }
-        });
-    }
-
-    /**
-     * Push the player out of an NPC hitbox
-     * @param {Entity} entity
-     */
-    resolvePlayerEntityCollision(entity) {
-        const playerBounds = CollisionDetection.getCollisionBounds(this.player);
-        const entityBounds = CollisionDetection.getCollisionBounds(entity);
-        const offsetX = this.player.collisionOffset?.x || 0;
-        const offsetY = this.player.collisionOffset?.y || 0;
-
-        const overlapX = Math.min(
-            playerBounds.x + playerBounds.width - entityBounds.x,
-            entityBounds.x + entityBounds.width - playerBounds.x
-        );
-        const overlapY = Math.min(
-            playerBounds.y + playerBounds.height - entityBounds.y,
-            entityBounds.y + entityBounds.height - playerBounds.y
-        );
-
-        if (overlapX < overlapY) {
-            // Horizontal collision
-            if (playerBounds.x < entityBounds.x) {
-                // Hit from left
-                this.player.x = entityBounds.x - playerBounds.width - offsetX;
-                this.player.velocity.x = Math.min(0, this.player.velocity.x);
-            } else {
-                // Hit from right
-                this.player.x = entityBounds.x + entityBounds.width - offsetX;
-                this.player.velocity.x = Math.max(0, this.player.velocity.x);
-            }
-        } else {
-            // Vertical collision
-            if (playerBounds.y < entityBounds.y) {
-                // Landing on top
-                this.player.y = entityBounds.y - playerBounds.height - offsetY;
-                this.player.velocity.y = Math.min(0, this.player.velocity.y);
-                this.player.onGround = true;
-            } else {
-                // Hit from below
-                this.player.y = entityBounds.y + entityBounds.height - offsetY;
-                this.player.velocity.y = Math.max(0, this.player.velocity.y);
-            }
-        }
-    }
-
-    /**
-     * Update enemy physics and collisions
-     * @param {Enemy} enemy - Enemy to update
-     */
-    updateEnemyPhysics(enemy) {
-        // Platform collisions for enemies
-        enemy.onGround = false;
-        this.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
-                CollisionDetection.getCollisionBounds(enemy),
-                platform
-            )) {
-                this.resolveEnemyPlatformCollision(enemy, platform);
-            }
-        });
-    }
-
-    /**
-     * Resolve collision between enemy and platform
-     * @param {Enemy} enemy - Enemy object
-     * @param {Object} platform - Platform object
-     */
-    resolveEnemyPlatformCollision(enemy, platform) {
-        const enemyBounds = CollisionDetection.getCollisionBounds(enemy);
-        
-        // Simple ground detection for enemies
-        if (enemyBounds.y + enemyBounds.height > platform.y && 
-            enemyBounds.y < platform.y &&
-            enemyBounds.x < platform.x + platform.width &&
-            enemyBounds.x + enemyBounds.width > platform.x) {
-            
-            enemy.y = platform.y - enemy.height;
-            enemy.velocity.y = Math.min(0, enemy.velocity.y);
-            enemy.onGround = true;
-        }
-    }
-
-    /**
-     * Update item physics
-     * @param {Item} item - Item to update
-     */
-    updateItemPhysics(item, deltaTime) {
-        const dt = deltaTime / 1000;
-
-        // Apply simple gravity
-        if (!item.onGround) {
-            item.velocity.y += item.gravity * dt;
-        }
-
-        // Integrate position
-        item.x += item.velocity.x * dt;
-        item.y += item.velocity.y * dt;
-
-        // Simple ground collision for items
-        this.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
-                CollisionDetection.getCollisionBounds(item),
-                platform
-            )) {
-                if (item.y + item.height > platform.y && item.velocity.y >= 0) {
-                    item.y = platform.y - item.height;
-                    item.velocity.y = 0;
-                    item.onGround = true;
-                    item.originalY = item.y; // Update bobbing base position
-                }
-            }
-        });
-
-        // Light friction to slow horizontal drift
-        item.velocity.x *= 0.95;
-    }
-
-    /**
-     * Update projectile physics and collisions
-     * @param {Projectile} projectile - Projectile to update
-     */
-    updateProjectilePhysics(projectile) {
-        // Check collision with platforms
-        this.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
-                CollisionDetection.getCollisionBounds(projectile),
-                platform
-            )) {
-                // Projectile hit platform
-                projectile.hitObstacle(platform);
-            }
-        });
+        this.collisionSystem?.checkPlayerCollisions();
     }
 
     /**

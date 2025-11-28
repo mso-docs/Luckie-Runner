@@ -35,6 +35,7 @@ class UIManager {
     setupMenuAndControls() {
         const g = this.game;
         const sm = this.game.stateManager;
+        const controls = this.config.controls || {};
 
         // Start menu buttons
         document.getElementById('startButton')?.addEventListener('click', () => {
@@ -102,20 +103,20 @@ class UIManager {
             sm.handleKeyboardShortcuts(e.key);
 
             switch (e.key) {
-                case 'F1':
+                case (controls.toggleDebug?.[0] || 'F1'):
                     g.debug = !g.debug;
                     e.preventDefault();
                     break;
-                case 'F2':
+                case (controls.toggleTest?.[0] || 'F2'):
                     g.toggleTestMode();
                     e.preventDefault();
                     break;
-                case 'm':
-                case 'M':
+                case (controls.toggleMute?.[0] || 'm'):
+                case (controls.toggleMute?.[1] || 'M'):
                     g.toggleMute();
                     break;
-                case 'i':
-                case 'I':
+                case (controls.toggleInventory?.[0] || 'i'):
+                case (controls.toggleInventory?.[1] || 'I'):
                     this.toggleInventoryOverlay();
                     e.preventDefault();
                     break;

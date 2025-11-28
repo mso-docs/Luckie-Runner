@@ -15,5 +15,17 @@ const GameConfig = {
     timing: {
         timeScale: 0.6,
         fps: 60
+    },
+    audio: {
+        master: 1.0,
+        music: 0.6,
+        sfx: 0.8,
+        muted: false
+    },
+    controls: {
+        toggleDebug: ['F1'],
+        toggleTest: ['F2'],
+        toggleMute: ['m', 'M'],
+        toggleInventory: ['i', 'I']
     }
 };
