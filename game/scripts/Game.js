@@ -601,7 +601,8 @@ class Game {
             });
         }
 
-        const renderList = (target, entries, isItemList = false) => {
+        const renderList = (target, entries, options = {}) => {
+            const { isItemList = false, modalType = 'item' } = options;
             target.innerHTML = '';
             if (isItemList) {
                 this.inventoryUI.itemCache = entries.slice();
@@ -619,11 +620,13 @@ class Game {
                 if (item.isActive) {
                     row.classList.add('is-active');
                 }
-                if (isItemList) {
+                if (isItemList || modalType === 'gear') {
                     row.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (item.onSelect) {
+                        if (modalType === 'gear') {
+                            this.showThrowableModal(item);
+                        } else if (item.onSelect) {
                             item.onSelect();
                         } else {
                             this.showInventoryItemModal(item);
@@ -634,8 +637,8 @@ class Game {
             });
         };
 
-        renderList(statsList, statEntries, false);
-        renderList(list, itemEntries, true);
+        renderList(statsList, statEntries, { isItemList: false });
+        renderList(list, itemEntries, { isItemList: true, modalType: 'item' });
 
         // Gear tab: show throwables as selectable ammo
         const gearList = this.inventoryUI?.gearList;
@@ -650,10 +653,15 @@ class Game {
                 consumable: false,
                 isActive: this.player?.throwables?.getActiveType() === t.key,
                 onSelect: () => {
-                    this.player?.setActiveThrowable?.(t.key);
+                    this.showThrowableModal({
+                        name: t.displayName || t.key,
+                        key: t.key,
+                        icon: t.icon,
+                        description: t.description || 'Click to equip this ammo type.'
+                    });
                 }
             }));
-            renderList(gearList, gearEntries, true);
+            renderList(gearList, gearEntries, { isItemList: true, modalType: 'gear' });
         }
         if (this.badgeUI) {
             this.badgeUI.renderInventory();
@@ -720,6 +728,7 @@ class Game {
 
         if (useBtn) {
             useBtn.disabled = !item.consumable || (item.value <= 0);
+            useBtn.textContent = item.consumable ? 'Use' : 'OK';
             useBtn.onclick = () => {
                 const used = this.consumeInventoryItem(item);
                 if (used) {
@@ -731,6 +740,47 @@ class Game {
 
         // Force visibility even if a lingering hidden class exists
         modal.container.classList.remove('hidden');
+        modal.container.classList.remove('hidden');
+        modal.container.classList.add('active');
+        modal.container.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Show modal for equipping a throwable/ammo
+     * @param {Object} item
+     */
+    showThrowableModal(item) {
+        const modal = this.inventoryUI.modal;
+        if (!modal || !modal.container) return;
+
+        if (this.inventoryUI.overlay) {
+            this.inventoryUI.overlay.classList.remove('hidden');
+            this.inventoryUI.overlay.classList.add('active');
+            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
+            this.inventoryUI.isOpen = true;
+        }
+
+        const nameEl = modal.title;
+        const descEl = modal.description;
+        const iconEl = modal.icon;
+        const useBtn = modal.useBtn;
+
+        if (nameEl) nameEl.textContent = item.name || 'Ammo';
+        if (descEl) descEl.textContent = item.description || '';
+        if (iconEl) {
+            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
+        }
+
+        if (useBtn) {
+            useBtn.disabled = false;
+            useBtn.textContent = 'Equip';
+            useBtn.onclick = () => {
+                this.player?.setActiveThrowable?.(item.key);
+                this.hideInventoryItemModal();
+                this.updateInventoryOverlay();
+            };
+        }
+
         modal.container.classList.remove('hidden');
         modal.container.classList.add('active');
         modal.container.setAttribute('aria-hidden', 'false');
