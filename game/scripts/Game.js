@@ -34,6 +34,10 @@ class Game {
         this.softLandingTolerance = 20; // px window to allow top-only landings
         this.config = GameConfig;
         this.collisionSystem = new CollisionSystem(this);
+        // Level registry (global in browser)
+        if (typeof window !== 'undefined') {
+            window.levelRegistry = window.levelRegistry || new LevelRegistry();
+        }
         
         // Game entities
         this.player = null;
@@ -233,7 +237,13 @@ class Game {
         this.setupShopUI();
         
         // Create initial level
-        this.createLevel();
+        // Register bundled levels
+        if (typeof window !== 'undefined' && window.levelRegistry && window.LevelDefinitions) {
+            Object.entries(window.LevelDefinitions).forEach(([id, def]) => {
+                window.levelRegistry.register(id, def);
+            });
+        }
+        this.createLevel('testRoom');
         
         // Show start menu
         this.stateManager.showMenu('startMenu');

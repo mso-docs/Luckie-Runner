@@ -9,8 +9,15 @@ class WorldBuilder {
         this.config = game.config || GameConfig || {};
     }
 
-    createLevel() {
+    createLevel(levelId = 'testRoom') {
         const g = this.game;
+        const registry = (typeof window !== 'undefined' && window.levelRegistry) ? window.levelRegistry : null;
+        const levelDef = registry ? registry.get(levelId) : null;
+        const validated = registry ? registry.validate(levelDef) : { valid: true, errors: [] };
+        if (!validated.valid) {
+            console.warn('Level validation failed:', validated.errors);
+        }
+
         g.platforms = [];
         g.enemies = [];
         g.items = [];
@@ -24,12 +31,12 @@ class WorldBuilder {
         g.princess = null;
         g.balloonFan = null;
 
-        const defaultSpawn = this.config.level?.spawn || { x: 100, y: g.canvas.height - 150 };
+        const defaultSpawn = (levelDef && levelDef.spawn) || this.config.level?.spawn || { x: 100, y: g.canvas.height - 150 };
         const getTestSpawn = () => {
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.canvas.height - 50);
             const playerWidth = 45;
             const playerHeight = 66;
-            const defaultX = 140;
+            const defaultX = this.config.testRoom?.spawnAnchorX ?? 140;
             const signX = g.signBoard ? g.signBoard.x : defaultX + 40;
             return {
                 x: signX - 20 - playerWidth,
@@ -37,27 +44,51 @@ class WorldBuilder {
             };
         };
 
-        if (g.testMode) {
+        if (levelId === 'testRoom' || g.testMode) {
             this.createTestRoom();
         } else {
-            this.createGroundPlatforms();
-            this.createFloatingPlatforms();
-            this.spawnEnemies();
-            this.spawnItems();
+            // Fallback: if levelDef has platforms/enemies/items, build them
+            if (levelDef?.platforms) {
+                levelDef.platforms.forEach(p => {
+                    const plat = this.factory.create({ type: 'platform', ...p });
+                    if (plat) g.platforms.push(plat);
+                });
+            } else {
+                this.createGroundPlatforms();
+                this.createFloatingPlatforms();
+            }
+            if (levelDef?.enemies) {
+                levelDef.enemies.forEach(e => {
+                    const enemy = this.factory.create(e);
+                    if (enemy) g.enemies.push(enemy);
+                });
+            } else {
+                this.spawnEnemies();
+            }
+            if (levelDef?.items) {
+                levelDef.items.forEach(it => {
+                    const item = this.factory.create(it);
+                    if (item) g.items.push(item);
+                });
+            } else {
+                this.spawnItems();
+            }
         }
 
-        const spawn = g.testMode ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
-        const contentMaxX = g.testMode ? Math.max(4600, g.testRoomMaxX || 0) : (this.config.level?.width || g.canvas.width);
+        const spawn = (levelId === 'testRoom' || g.testMode) ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
+        const contentMaxX = (levelId === 'testRoom' || g.testMode)
+            ? Math.max(4600, g.testRoomMaxX || 0)
+            : (levelDef?.width || this.config.level?.width || g.canvas.width);
 
         g.level = {
             width: contentMaxX,
-            height: this.config.level?.height ?? g.canvas.height,
+            height: levelDef?.height ?? this.config.level?.height ?? g.canvas.height,
             spawnX: spawn.x,
             spawnY: spawn.y
         };
 
         this.createFlag();
-        if (g.testMode && !g.initialTestRoomState) {
+        if ((levelId === 'testRoom' || g.testMode) && !g.initialTestRoomState) {
             this.captureInitialTestRoomState();
         }
 

@@ -75,4 +75,37 @@ class EntityFactory {
         if (flag) flag.game = this.game;
         return flag;
     }
+
+    /**
+     * Generic creation by type key
+     */
+    create(def) {
+        if (!def || !def.type) return null;
+        switch (def.type) {
+            case 'platform':
+                return this.platform(def.x, def.y, def.width, def.height, def.subtype || def.kind);
+            case 'slime':
+                return this.slime(def.x, def.y);
+            case 'health_potion':
+                return this.healthPotion(def.x, def.y, def.healAmount);
+            case 'coffee':
+                return this.coffee(def.x, def.y);
+            case 'chest':
+                return this.chest(def.x, def.y, def.displayName, def.contents);
+            case 'small_palm':
+                return this.smallPalm(def.x, def.y);
+            case 'shopGhost':
+                return this.shopGhost(def.x, def.y);
+            case 'princess':
+                return this.princess(def.x, def.y, def.dialogueLines || null);
+            case 'balloonFan':
+                return this.balloonFan(def.x, def.y, def.dialogueLines || null);
+            case 'sign':
+                return this.sign(def.x, def.y, def.spriteSrc, def.dialogueLines || null);
+            case 'flag':
+                return this.flag(def.x, def.y);
+            default:
+                return null;
+        }
+    }
 }
