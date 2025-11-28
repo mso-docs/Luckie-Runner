@@ -21,6 +21,8 @@ class Game {
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
+        this.smallPalms = [];
+        this.testRoomMaxX = 0;
         
         // Game entities
         this.player = null;
@@ -1522,8 +1524,10 @@ class Game {
         // Set level properties
         const spawn = this.testMode ? getTestSpawn() : { x: 100, y: this.canvas.height - 150 };
 
+        const contentMaxX = this.testMode ? Math.max(4600, this.testRoomMaxX || 0) : this.canvas.width;
+
         this.level = {
-            width: this.testMode ? 4600 : this.canvas.width,
+            width: contentMaxX,
             height: this.canvas.height,
             spawnX: spawn.x,
             spawnY: spawn.y
@@ -1550,6 +1554,11 @@ class Game {
             y: chest.y,
             displayName: chest.displayName,
             contents: (chest.contents || []).map(entry => ({ ...entry, taken: false }))
+        }));
+
+        const smallPalmBlueprints = (this.smallPalms || []).map(palm => ({
+            x: palm.x,
+            y: palm.y
         }));
 
         const npcBlueprints = [];
@@ -1603,7 +1612,7 @@ class Game {
         this.initialTestRoomState = {
             level: { ...(this.level || {}) },
             testGroundY: this.testGroundY,
-            platforms: (this.platforms || []).map(p => ({
+            platforms: (this.platforms || []).filter(p => p.type !== 'palm').map(p => ({
                 x: p.x,
                 y: p.y,
                 width: p.width,
@@ -1613,6 +1622,7 @@ class Game {
             enemies: enemyBlueprints,
             items: itemBlueprints,
             chests: chestBlueprints,
+            smallPalms: smallPalmBlueprints,
             npcs: npcBlueprints,
             signBoard: this.signBoard ? {
                 x: this.signBoard.x,
@@ -1642,8 +1652,11 @@ class Game {
         this.testMode = true;
         this.level = { ...(blueprint.level || {}) };
         this.testGroundY = blueprint.testGroundY;
+        this.testRoomMaxX = Math.max(0, blueprint.level?.width || 0);
 
-        this.platforms = (blueprint.platforms || []).map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
+        this.platforms = (blueprint.platforms || [])
+            .filter(p => p.type !== 'palm')
+            .map(p => new Platform(p.x, p.y, p.width, p.height, p.type));
 
         this.enemies = (blueprint.enemies || []).map(def => {
             if (def.type === 'slime') {
@@ -1679,6 +1692,17 @@ class Game {
             chest.game = this;
             return chest;
         });
+
+        this.smallPalms = (blueprint.smallPalms || []).map(def => {
+            const palm = new SmallPalm(def.x, def.y);
+            palm.game = this;
+            this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, def.x + palm.width + 300);
+            return palm;
+        });
+
+        // Ensure level width accommodates all restored content
+        const contentMax = this.testRoomMaxX || this.level.width || 0;
+        this.level.width = Math.max(this.level.width || 0, contentMax);
 
         this.npcs = [];
         this.shopGhost = null;
@@ -2088,6 +2112,11 @@ class Game {
             this.checkPlayerCollisions();
         }
 
+        // Update small palms (foreground interactive)
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => palm.update(deltaTime));
+        }
+
         // Update chests (callouts + glow)
         this.updateChests(deltaTime);
         this.updateSignCallout();
@@ -2201,14 +2230,37 @@ class Game {
     checkPlayerCollisions() {
         // Platform collisions
         this.player.onGround = false;
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(p => p.playerOnTopCurrent = false);
+        }
         this.platforms.forEach(platform => {
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(this.player),
                 platform
             )) {
-                this.resolvePlayerPlatformCollision(platform);
+                const result = this.resolvePlayerPlatformCollision(platform);
             }
         });
+
+        // Small palm collision (treat palm body as platform)
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => {
+                const palmRect = { x: palm.x, y: palm.y, width: palm.width, height: palm.height };
+                if (CollisionDetection.rectangleCollision(
+                    CollisionDetection.getCollisionBounds(this.player),
+                    palmRect
+                )) {
+                    const result = this.resolvePlayerPlatformCollision(palmRect);
+                    if (result && result.onTop) {
+                        palm.setPlayerOnTop(true, result.landed);
+                    }
+                }
+            });
+        }
+
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(p => p.finalizeContactFrame());
+        }
 
         // NPC collisions (solid talkers/shopkeepers)
         this.handleNpcCollisions();
@@ -2251,6 +2303,7 @@ class Game {
      */
     resolvePlayerPlatformCollision(platform) {
         const playerBounds = CollisionDetection.getCollisionBounds(this.player);
+        const result = { onTop: false, landed: false };
         
         // Calculate overlap
         const overlapX = Math.min(
@@ -2278,15 +2331,20 @@ class Game {
             // Vertical collision
             if (playerBounds.y < platform.y) {
                 // Landing on top
+                const wasFalling = this.player.velocity.y > 0;
                 this.player.y = platform.y - this.player.height;
                 this.player.velocity.y = Math.min(0, this.player.velocity.y);
                 this.player.onGround = true;
+                result.onTop = true;
+                result.landed = wasFalling;
             } else {
                 // Hit from below
                 this.player.y = platform.y + platform.height;
                 this.player.velocity.y = Math.max(0, this.player.velocity.y);
             }
         }
+
+        return result;
     }
 
     /**
@@ -2493,6 +2551,11 @@ class Game {
 
         // Render chests
         this.renderChests();
+
+        // Render foreground small palms alongside other entities
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => palm.render(this.ctx, this.camera));
+        }
 
         // Render hazards
         this.hazards.forEach(hazard => {
@@ -3086,8 +3149,10 @@ class Game {
         this.items = [];
         this.platforms = [];
         this.hazards = [];
+        this.smallPalms = [];
         this.camera = { x: 0, y: 0 };
         this.backgroundLayers = [];
+        this.testRoomMaxX = 0;
         this.hideSpeechBubble(true);
         this.hideInventoryOverlay(true);
         this.hideChestOverlay(true);
@@ -3117,6 +3182,7 @@ class Game {
             this.chests.forEach(chest => chest.destroy && chest.destroy());
         }
         this.chests = [];
+        this.smallPalms = [];
         this.chestUI.currentChest = null;
         this.flag = null;
 
@@ -3239,7 +3305,6 @@ class Game {
         const groundY = this.canvas.height - groundHeight;
         this.testGroundY = groundY;
         const spawnAnchorX = 140;
-        
         // Create multiple ground segments for infinite running
         // Each segment is 2000px wide, create 10 segments = 20000px of ground
         for (let i = 0; i < 10; i++) {
@@ -3303,6 +3368,17 @@ class Game {
         balloonParkour.forEach(p => {
             this.platforms.push(new Platform(p.x, p.y, p.width, 14));
         });
+
+        // Foreground small palm (entity, no separate platform) just right of balloon parkour
+        const smallPalmHeight = 191;
+        const smallPalmWidth = 121;
+        const lastBalloon = balloonParkour[balloonParkour.length - 1];
+        const smallPalmX = lastBalloon.x + lastBalloon.width + 20; // keep within level bounds
+        const smallPalmY = groundY - smallPalmHeight;
+        const smallPalm = new SmallPalm(smallPalmX, smallPalmY);
+        smallPalm.game = this;
+        this.smallPalms.push(smallPalm);
+        this.testRoomMaxX = Math.max(this.testRoomMaxX || 0, smallPalmX + smallPalmWidth + 300);
 
         // Quick test spawns
         const slime = new Slime(300, groundY);
