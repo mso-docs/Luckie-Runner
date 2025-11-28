@@ -536,7 +536,7 @@ class Player extends Entity {
 
                 if (this.hitFlashDamage > 0) {
                     ctx.save();
-                    ctx.font = 'bold 26px Arial';
+                    ctx.font = 'bold 26px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
                     ctx.fillStyle = '#ff8c00';
                     ctx.lineWidth = 6;
                     ctx.strokeStyle = '#000000';

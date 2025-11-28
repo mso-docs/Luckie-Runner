@@ -30,6 +30,14 @@ body {
     overflow: hidden;
 }
 
+/* Force the custom font across UI surfaces */
+body, button, input, select, textarea,
+.menu, #gameUI, #inventoryContainer, #inventoryOverlay, .inventory,
+#shopOverlay, .shop-overlay, #chestOverlay, .chest-overlay,
+#speechBubble, .speech-bubble, .npc-bubble, #buffPanel, #inventoryPanel {
+    font-family: var(--font-main) !important;
+}
+
 #gameContainer {
     position: relative;
     border: 4px solid #333;

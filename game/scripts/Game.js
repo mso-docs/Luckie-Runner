@@ -3679,7 +3679,7 @@ class Game {
         this.ctx.fillRect(5, 15, 360, 70);
         
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px Arial';
+        this.ctx.font = '16px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
         this.ctx.fillText('TEST ROOM - Debug Environment', 10, 35);
         this.ctx.fillText('Press F2 to toggle back to main game', 10, 55);
         this.ctx.fillText('Grid: 100px squares', 10, 75);
