@@ -36,9 +36,12 @@ class Game {
         this.flag = null;
         
         // Camera system
-        this.camera = { x: 0, y: 0 };
-        this.cameraTarget = { x: 0, y: 0 };
         this.cameraLead = { x: 100, y: 50 }; // Look ahead distance
+        this.camera = new Camera({
+            viewportWidth: this.canvas.width,
+            viewportHeight: this.canvas.height,
+            lead: this.cameraLead
+        });
         
         // Level system
         this.level = {
@@ -54,16 +57,16 @@ class Game {
         this.initialTestRoomState = null;
         
         // Game timing
-        this.lastTime = 0;
         this.deltaTime = 0;
         this.gameTime = 0;
         this.frameCount = 0;
         this.timeScale = 0.6; // Slow down everything by 40%
-        this.gameTime = 0;
-        
-        this.frameCount = 0;
         this.fps = 60;
         this.targetFrameTime = 1000 / this.fps;
+        this.loop = new GameLoop({
+            timeScale: this.timeScale,
+            onUpdate: this.onTick.bind(this)
+        });
 
         // Intro dialogue UI
         this.dialogueState = {
@@ -123,6 +126,9 @@ class Game {
         };
         this.signSprite = new Image();
         this.signSprite.src = 'art/items/sign.png';
+
+        // UI manager (inventory overlays, tabs, item modals)
+        this.uiManager = new UIManager(this);
         
         // Game statistics
         this.stats = {
@@ -180,7 +186,7 @@ class Game {
                 distanceTraveled: 0,
                 timeElapsed: 0
             },
-            camera: { x: 0, y: 0 },
+            camera: this.camera?.getState ? this.camera.getState() : { x: 0, y: 0 },
             dialogue: {
                 messages: [],
                 index: 0,
@@ -447,55 +453,8 @@ class Game {
      * Prepare the inventory overlay UI state
      */
     setupInventoryUI() {
-        this.inventoryUI.overlay = document.getElementById('inventoryOverlay');
-        this.inventoryUI.list = document.getElementById('inventoryItems');
-        this.inventoryUI.statsList = document.getElementById('inventoryStats');
-        this.inventoryUI.badgesList = document.getElementById('inventoryBadges');
-        this.inventoryUI.badgesEmpty = document.getElementById('badgeEmptyState');
-        this.inventoryUI.gearList = document.getElementById('inventoryGear');
-        this.inventoryUI.itemCache = [];
-        this.inventoryUI.modal = {
-            container: document.getElementById('inventoryItemModal'),
-            icon: document.getElementById('itemModalIcon'),
-            title: document.getElementById('itemModalName'),
-            description: document.getElementById('itemModalDescription'),
-            useBtn: document.getElementById('itemModalUse'),
-            exitBtn: document.getElementById('itemModalExit')
-        };
-        this.inventoryUI.tabs = Array.from(document.querySelectorAll('.inventory-tab'));
-        this.inventoryUI.panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
-
-        // Wire tab switching
-        this.inventoryUI.tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const target = tab.getAttribute('data-tab-target');
-                this.switchInventoryTab(target);
-            });
-        });
-
-        // Default tab
-        this.switchInventoryTab('stats', true);
-        this.hideInventoryOverlay(true);
-
-        // Modal exit handlers
-        if (this.inventoryUI.modal.exitBtn) {
-            this.inventoryUI.modal.exitBtn.addEventListener('click', () => this.hideInventoryItemModal());
-        }
-        if (this.inventoryUI.modal.container) {
-            this.inventoryUI.modal.container.addEventListener('click', (e) => {
-                if (e.target === this.inventoryUI.modal.container) {
-                    this.hideInventoryItemModal();
-                }
-            });
-        }
-
-        // Keyboard navigation for the inventory item list (W/S or Arrow keys)
-        document.addEventListener('keydown', (e) => {
-            this.handleInventoryListNavigation(e);
-        });
-
-        if (this.badgeUI) {
-            this.badgeUI.cacheInventoryRefs();
+        if (this.uiManager?.setupInventoryUI) {
+            this.uiManager.setupInventoryUI();
         }
     }
 
@@ -505,206 +464,21 @@ class Game {
      * @param {boolean} silent - avoid sounds when true
      */
     switchInventoryTab(tabName = 'stats', silent = false) {
-        if (!this.inventoryUI) return;
-
-        const tabs = this.inventoryUI.tabs || [];
-        const panels = this.inventoryUI.panels || [];
-
-        tabs.forEach(tab => {
-            const isActive = tab.getAttribute('data-tab-target') === tabName;
-            tab.classList.toggle('is-active', isActive);
-            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-
-        panels.forEach(panel => {
-            const isActive = panel.getAttribute('data-tab-panel') === tabName;
-            panel.classList.toggle('active', isActive);
-            panel.classList.toggle('hidden', !isActive);
-        });
-
-        if (!silent && this.audioManager) {
-            this.playButtonSound();
-        }
+        return this.uiManager?.switchInventoryTab(tabName, silent);
     }
 
     /**
      * Populate the inventory overlay with live player stats/items
      */
     updateInventoryOverlay() {
-        const list = this.inventoryUI?.list;
-        const statsList = this.inventoryUI?.statsList;
-        if (!list || !statsList) return;
-
-        const player = this.player;
-        const stats = this.stats;
-        const statEntries = [];
-        const itemEntries = [];
-
-        if (player) {
-            // Stats panel
-            statEntries.push({
-                name: 'Score',
-                value: player.score ?? 0
-            });
-            statEntries.push({
-                name: 'HP',
-                value: `${Math.max(0, Math.floor(player.health))}/${player.maxHealth}`
-            });
-            if (stats && typeof stats.timeElapsed === 'number') {
-                const totalSeconds = Math.floor(stats.timeElapsed / 1000);
-                const minutes = Math.floor(totalSeconds / 60);
-                const seconds = totalSeconds % 60;
-                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                statEntries.push({
-                    name: 'Time',
-                    value: timeString
-                });
-            }
-            statEntries.push({
-                name: 'Coins',
-                value: player.coins ?? 0
-            });
-
-            // Items panel (restore classic items)
-            itemEntries.push({
-                name: 'Rocks',
-                value: player.throwables?.getAmmo('rock') ?? player.rocks ?? 0,
-                description: 'Ammo used for throwing. Found scattered along the course.',
-                icon: 'art/items/rock-item.png',
-                key: 'rocks',
-                consumable: false
-            });
-            itemEntries.push({
-                name: 'Coconuts',
-                value: player.throwables?.getAmmo('coconut') ?? 0,
-                description: 'Heavy rolling ammo dropped from palms.',
-                icon: 'art/items/coconut.png',
-                key: 'coconut',
-                consumable: false
-            });
-            itemEntries.push({
-                name: 'Health Potions',
-                value: player.healthPotions ?? 0,
-                description: 'A small health potion that restores 25 HP.',
-                icon: 'art/sprites/health-pot.png',
-                key: 'health_potion',
-                consumable: true
-            });
-            itemEntries.push({
-                name: 'Coffee',
-                value: player.coffeeDrinks ?? 0,
-                description: 'Gives a speed boost for a short time.',
-                icon: 'art/items/coffee.png',
-                key: 'coffee',
-                consumable: true
-            });
-        } else if (stats && typeof stats.timeElapsed === 'number') {
-            const totalSeconds = Math.floor(stats.timeElapsed / 1000);
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            statEntries.push({
-                name: 'Time',
-                value: timeString
-            });
-        }
-
-        const renderList = (target, entries, options = {}) => {
-            const { isItemList = false, modalType = 'item' } = options;
-            target.innerHTML = '';
-            if (isItemList) {
-                this.inventoryUI.itemCache = entries.slice();
-            }
-            entries.forEach(item => {
-                const row = document.createElement('button');
-                row.className = 'inventory-item';
-                row.type = 'button';
-                const iconHtml = item.icon ? `<span class="inventory-item__icon" style="background-image:url('${item.icon}')"></span>` : '';
-                row.innerHTML = `
-                    ${iconHtml}
-                    <span class="inventory-item__name">${item.name}</span>
-                    <span class="inventory-item__value">${item.value}</span>
-                `;
-                if (item.isActive) {
-                    row.classList.add('is-active');
-                }
-                if (isItemList || modalType === 'gear') {
-                    row.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (modalType === 'gear') {
-                            this.showThrowableModal(item);
-                        } else if (item.onSelect) {
-                            item.onSelect();
-                        } else {
-                            this.showInventoryItemModal(item);
-                        }
-                    });
-                }
-                target.appendChild(row);
-            });
-        };
-
-        renderList(statsList, statEntries, { isItemList: false });
-        renderList(list, itemEntries, { isItemList: true, modalType: 'item' });
-
-        // Gear tab: show throwables as selectable ammo
-        const gearList = this.inventoryUI?.gearList;
-        if (gearList) {
-            const throwableTypes = this.player?.throwables?.listTypesSortedByIcon?.() || [];
-            const gearEntries = throwableTypes.map(t => ({
-                name: t.displayName || t.key,
-                value: t.ammo ?? 0,
-                description: t.description || 'Throwable item',
-                icon: t.icon,
-                key: t.key,
-                consumable: false,
-                isActive: this.player?.throwables?.getActiveType() === t.key,
-                onSelect: () => {
-                    this.showThrowableModal({
-                        name: t.displayName || t.key,
-                        key: t.key,
-                        icon: t.icon,
-                        description: t.description || 'Click to equip this ammo type.'
-                    });
-                }
-            }));
-            renderList(gearList, gearEntries, { isItemList: true, modalType: 'gear' });
-        }
-        if (this.badgeUI) {
-            this.badgeUI.renderInventory();
-        }
+        return this.uiManager?.updateInventoryOverlay();
     }
 
     /**
      * Keyboard navigation for inventory items (W/S or ArrowUp/ArrowDown)
      */
     handleInventoryListNavigation(e) {
-        if (!this.inventoryUI?.isOpen) return;
-        if (!this.inventoryUI.list) return;
-
-        const key = e.key;
-        const isDown = key === 'ArrowDown' || key === 's' || key === 'S';
-        const isUp = key === 'ArrowUp' || key === 'w' || key === 'W';
-        if (!isDown && !isUp) return;
-
-        const buttons = Array.from(this.inventoryUI.list.querySelectorAll('.inventory-item'));
-        if (!buttons.length) return;
-
-        const activeEl = document.activeElement;
-        let currentIndex = buttons.indexOf(activeEl);
-
-        if (currentIndex === -1) {
-            currentIndex = isDown ? -1 : 0; // start at first on up, before first on down
-        }
-
-        const delta = isDown ? 1 : -1;
-        let nextIndex = currentIndex + delta;
-        if (nextIndex < 0) nextIndex = buttons.length - 1;
-        if (nextIndex >= buttons.length) nextIndex = 0;
-
-        buttons[nextIndex].focus();
-        e.preventDefault();
+        return this.uiManager?.handleInventoryListNavigation(e);
     }
 
     /**
@@ -712,45 +486,7 @@ class Game {
      * @param {Object} item
      */
     showInventoryItemModal(item) {
-        const modal = this.inventoryUI.modal;
-        if (!modal || !modal.container) return;
-
-        // Ensure overlay is visible so the modal can render
-        if (this.inventoryUI.overlay) {
-            this.inventoryUI.overlay.classList.remove('hidden');
-            this.inventoryUI.overlay.classList.add('active');
-            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
-            this.inventoryUI.isOpen = true;
-        }
-
-        const nameEl = modal.title;
-        const descEl = modal.description;
-        const iconEl = modal.icon;
-        const useBtn = modal.useBtn;
-
-        if (nameEl) nameEl.textContent = item.name || 'Item';
-        if (descEl) descEl.textContent = item.description || '';
-        if (iconEl) {
-            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
-        }
-
-        if (useBtn) {
-            useBtn.disabled = !item.consumable || (item.value <= 0);
-            useBtn.textContent = item.consumable ? 'Use' : 'OK';
-            useBtn.onclick = () => {
-                const used = this.consumeInventoryItem(item);
-                if (used) {
-                    this.hideInventoryItemModal();
-                    this.updateInventoryOverlay();
-                }
-            };
-        }
-
-        // Force visibility even if a lingering hidden class exists
-        modal.container.classList.remove('hidden');
-        modal.container.classList.remove('hidden');
-        modal.container.classList.add('active');
-        modal.container.setAttribute('aria-hidden', 'false');
+        return this.uiManager?.showInventoryItemModal(item);
     }
 
     /**
@@ -758,51 +494,14 @@ class Game {
      * @param {Object} item
      */
     showThrowableModal(item) {
-        const modal = this.inventoryUI.modal;
-        if (!modal || !modal.container) return;
-
-        if (this.inventoryUI.overlay) {
-            this.inventoryUI.overlay.classList.remove('hidden');
-            this.inventoryUI.overlay.classList.add('active');
-            this.inventoryUI.overlay.setAttribute('aria-hidden', 'false');
-            this.inventoryUI.isOpen = true;
-        }
-
-        const nameEl = modal.title;
-        const descEl = modal.description;
-        const iconEl = modal.icon;
-        const useBtn = modal.useBtn;
-
-        if (nameEl) nameEl.textContent = item.name || 'Ammo';
-        if (descEl) descEl.textContent = item.description || '';
-        if (iconEl) {
-            iconEl.style.backgroundImage = item.icon ? `url('${item.icon}')` : 'none';
-        }
-
-        if (useBtn) {
-            useBtn.disabled = false;
-            useBtn.textContent = 'Equip';
-            useBtn.onclick = () => {
-                this.player?.setActiveThrowable?.(item.key);
-                this.hideInventoryItemModal();
-                this.updateInventoryOverlay();
-            };
-        }
-
-        modal.container.classList.remove('hidden');
-        modal.container.classList.add('active');
-        modal.container.setAttribute('aria-hidden', 'false');
+        return this.uiManager?.showThrowableModal(item);
     }
 
     /**
      * Hide inventory item modal
      */
     hideInventoryItemModal() {
-        const modal = this.inventoryUI.modal;
-        if (!modal || !modal.container) return;
-        modal.container.classList.remove('active');
-        modal.container.classList.add('hidden');
-        modal.container.setAttribute('aria-hidden', 'true');
+        return this.uiManager?.hideInventoryItemModal();
     }
 
     /**
@@ -811,24 +510,7 @@ class Game {
      * @returns {boolean}
      */
     consumeInventoryItem(item) {
-        if (!item || !item.key || !this.player) return false;
-        switch (item.key) {
-            case 'health_potion':
-                if (this.player.healthPotions <= 0) return false;
-                return this.player.consumeHealthPotion(25);
-            case 'coffee':
-                if (this.player.coffeeDrinks <= 0) return false;
-                this.player.coffeeDrinks = Math.max(0, this.player.coffeeDrinks - 1);
-                if (typeof this.player.applyCoffeeBuff === 'function') {
-                    this.player.applyCoffeeBuff(2, 120000);
-                }
-                if (typeof this.player.updateUI === 'function') {
-                    this.player.updateUI();
-                }
-                return true;
-            default:
-                return false;
-        }
+        return this.uiManager?.consumeInventoryItem(item);
     }
 
     /**
@@ -909,14 +591,7 @@ class Game {
      * Show the inventory overlay
      */
     showInventoryOverlay() {
-        const overlay = this.inventoryUI.overlay;
-        if (!overlay) return;
-
-        overlay.classList.add('active');
-        overlay.classList.remove('hidden');
-        overlay.setAttribute('aria-hidden', 'false');
-        this.inventoryUI.isOpen = true;
-        this.playMenuEnterSound();
+        return this.uiManager?.showInventoryOverlay();
     }
 
     /**
@@ -924,17 +599,7 @@ class Game {
      * @param {boolean} immediate - Included for API symmetry; no animation currently
      */
     hideInventoryOverlay(immediate = false) {
-        const overlay = this.inventoryUI.overlay;
-        if (!overlay) return;
-
-        const wasOpen = this.inventoryUI.isOpen;
-        overlay.classList.remove('active');
-        overlay.classList.add('hidden');
-        overlay.setAttribute('aria-hidden', 'true');
-        this.inventoryUI.isOpen = false;
-        if (wasOpen) {
-            this.playMenuExitSound();
-        }
+        return this.uiManager?.hideInventoryOverlay(immediate);
     }
 
     /**
@@ -1174,11 +839,7 @@ class Game {
         if (!this.stateManager) return;
         if (!this.stateManager.isPlaying() && !this.stateManager.isPaused()) return;
 
-        if (this.inventoryUI.isOpen) {
-            this.hideInventoryOverlay();
-        } else {
-            this.showInventoryOverlay();
-        }
+        return this.uiManager?.toggleInventoryOverlay();
     }
 
     /**
@@ -2177,25 +1838,49 @@ class Game {
     }
 
     /**
-     * Main game loop
+     * Start/stop loop control (delegates to GameLoop)
      */
-    gameLoop(currentTime = 0) {
-        if (!this.running) return;
+    startLoop() {
+        if (!this.loop) {
+            this.loop = new GameLoop({
+                timeScale: this.timeScale,
+                onUpdate: this.onTick.bind(this)
+            });
+        }
+        this.loop.setTimeScale(this.timeScale);
+        this.loop.start();
+    }
+
+    stopLoop() {
+        if (this.loop) {
+            this.loop.stop();
+        }
+    }
+
+    /**
+     * Frame callback invoked by GameLoop
+     */
+    onTick(deltaTime = 0, info = {}) {
+        if (!this.running) {
+            this.stopLoop();
+            return;
+        }
+
+        this.deltaTime = deltaTime;
+        this.gameTime = info.gameTime ?? (this.gameTime + deltaTime);
+        this.frameCount = info.frame ?? (this.frameCount + 1);
         
-        // Calculate delta time with scaling
-        this.deltaTime = (currentTime - this.lastTime) * this.timeScale;
-        this.lastTime = currentTime;
-        this.gameTime += this.deltaTime;
-        this.frameCount++;
-        
-        // Update game state
         if (this.stateManager.isPlaying()) {
             this.update(this.deltaTime);
             this.render();
         }
-        
-        // Continue loop
-        requestAnimationFrame(this.gameLoop.bind(this));
+    }
+
+    /**
+     * Legacy alias to keep older call sites working
+     */
+    gameLoop() {
+        this.startLoop();
     }
 
     /**
@@ -2320,25 +2005,11 @@ class Game {
      * Update camera to follow player
      */
     updateCamera() {
-        if (!this.player) return;
+        if (!this.player || !this.camera) return;
         
-        if (this.testMode) {
-            // Test mode: Follow X axis only, keep player centered horizontally
-            this.camera.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
-            this.camera.y = 0;
-        } else {
-            // Normal mode: Smooth camera with level bounds
-            this.cameraTarget.x = this.player.x - this.canvas.width / 2 + this.player.width / 2;
-            this.cameraTarget.y = this.player.y - this.canvas.height / 2 + this.player.height / 2;
-            
-            const lerpSpeed = 0.15;
-            this.camera.x += (this.cameraTarget.x - this.camera.x) * lerpSpeed;
-            this.camera.y += (this.cameraTarget.y - this.camera.y) * lerpSpeed;
-            
-            // Keep camera in bounds
-            this.camera.x = Math.max(0, Math.min(this.level.width - this.canvas.width, this.camera.x));
-            this.camera.y = Math.max(0, Math.min(this.level.height - this.canvas.height, this.camera.y));
-        }
+        this.camera.setViewport(this.canvas.width, this.canvas.height);
+        this.camera.setBounds(this.level?.width, this.level?.height);
+        this.camera.followPlayer(this.player, { testMode: this.testMode });
     }
 
     /**
@@ -3260,11 +2931,18 @@ class Game {
             this.testMode = this.initialStateTemplate.testMode;
             this.level = { ...this.initialStateTemplate.level };
             this.stats = { ...this.initialStateTemplate.stats };
-            this.camera = { ...this.initialStateTemplate.camera };
+            if (this.camera?.reset) {
+                this.camera.reset(this.initialStateTemplate.camera);
+            } else {
+                this.camera = { ...this.initialStateTemplate.camera };
+            }
             this.dialogueState = { ...this.initialStateTemplate.dialogue };
             this.gameTime = 0;
             this.frameCount = 0;
-            this.lastTime = 0;
+            this.deltaTime = 0;
+            if (this.loop) {
+                this.loop.setTimeScale(this.timeScale);
+            }
         }
 
         // Clear transient state before rebuilding
@@ -3275,7 +2953,11 @@ class Game {
         this.platforms = [];
         this.hazards = [];
         this.smallPalms = [];
-        this.camera = { x: 0, y: 0 };
+        if (this.camera?.reset) {
+            this.camera.reset({ x: 0, y: 0 });
+        } else {
+            this.camera = { x: 0, y: 0 };
+        }
         this.backgroundLayers = [];
         this.testRoomMaxX = 0;
         this.hideSpeechBubble(true);

@@ -99,9 +99,9 @@ class GameStateManager {
         // Initialize game systems
         this.game.initializeGameSystems();
         
-        // Start game loop if not already running
-        if (!this.game.gameLoopRunning) {
-            this.game.gameLoop();
+        // Start game loop
+        if (typeof this.game.startLoop === 'function') {
+            this.game.startLoop();
         }
         
         // Play level music
@@ -153,6 +153,9 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.GAME_OVER);
         this.game.running = false;
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
         
         // Update game over screen
         const gameOverMenu = document.getElementById('gameOverMenu');
@@ -184,6 +187,9 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.VICTORY);
         this.game.running = false;
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
         
         // Bonus points for victory
         if (this.game.player) {
@@ -238,6 +244,9 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.MENU);
         this.game.running = false;
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
         
         // Stop music
         if (this.game.audioManager) {
