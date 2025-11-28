@@ -2667,6 +2667,15 @@ class Game {
             drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
         });
 
+        // Small palms
+        if (Array.isArray(this.smallPalms)) {
+            this.smallPalms.forEach(palm => {
+                if (!palm) return;
+                const r = rectForEntity(palm);
+                drawRect(r.x, r.y, r.w, r.h, 'rgba(0,128,0,0.25)', '#008000');
+            });
+        }
+
         // Platforms (not entities)
         this.platforms.forEach(p => {
             if (!p) return;

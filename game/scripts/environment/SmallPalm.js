@@ -41,16 +41,13 @@ class SmallPalm extends Entity {
             return frames;
         };
 
-        this.addAnimation('idle', buildFrames(0, 0), false);
-        this.addAnimation('occupied', buildFrames(8, 8), false); // frame 9 display while sitting
+        this.addAnimation('idle', buildFrames(0, 0), false);      // frame 1 idle
+        this.addAnimation('occupied', buildFrames(3, 3), false); // frame 4 when player on top
 
-        const landingFrames = buildFrames(1, 4); // frames 2-5 when landing
-        const leaveFrames = buildFrames(4, 8);   // frames 5-9 when leaving
-        this.addAnimation('land', landingFrames, false);
+        const leaveFrames = buildFrames(5, 8);   // frames 6-9 when leaving
         this.addAnimation('depart', leaveFrames, false);
 
         // Set per-animation speed
-        this.animations['land'].speed = this.animationSpeed;
         this.animations['depart'].speed = this.animationSpeed;
 
         this.playAnimation('idle', true);
@@ -80,12 +77,12 @@ class SmallPalm extends Entity {
             this.triggerDepart();
         }
 
-        // Staying on top
+        // Staying on top keeps the occupied frame locked
         if (this.playerOnTopCurrent) {
-            if (this.state !== 'landing' && this.state !== 'occupied') {
-                this.state = 'occupied';
-                this.playAnimation('occupied', true);
-            }
+            this.state = 'occupied';
+            this.playAnimation('occupied', true);
+            this.animationFrame = 0;
+            this.animationTime = 0;
         }
 
         this.wasOnTop = this.playerOnTopCurrent;
@@ -94,8 +91,8 @@ class SmallPalm extends Entity {
 
     triggerLand() {
         this.ensureAnimations();
-        this.state = 'landing';
-        this.playAnimation('land', true);
+        this.state = 'occupied';
+        this.playAnimation('occupied', true);
     }
 
     triggerDepart() {
@@ -105,15 +102,7 @@ class SmallPalm extends Entity {
     }
 
     onAnimationComplete(animationName) {
-        if (animationName === 'land') {
-            // If player stayed on, hold occupied frame; otherwise play depart
-            if (this.wasOnTop || this.playerOnTopCurrent) {
-                this.state = 'occupied';
-                this.playAnimation('occupied', true);
-            } else {
-                this.triggerDepart();
-            }
-        } else if (animationName === 'depart') {
+        if (animationName === 'depart') {
             this.state = 'idle';
             this.playAnimation('idle', true);
         }
