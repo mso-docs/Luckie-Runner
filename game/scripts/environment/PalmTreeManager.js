@@ -11,7 +11,7 @@ class PalmTreeManager {
             {
                 name: 'distant_mountains',
                 scrollSpeed: 0.15,
-                spacing: 800,
+                spacing: 1050,
                 heightRange: [100, 140],
                 trunkWidth: [4, 6],
                 frondCount: [3, 4],
@@ -26,7 +26,7 @@ class PalmTreeManager {
             {
                 name: 'mid_background',
                 scrollSpeed: 0.35,
-                spacing: 500,
+                spacing: 820,
                 heightRange: [150, 190],
                 trunkWidth: [7, 9],
                 frondCount: [4, 5],
@@ -41,7 +41,7 @@ class PalmTreeManager {
             {
                 name: 'near_midground',
                 scrollSpeed: 0.6,
-                spacing: 350,
+                spacing: 650,
                 heightRange: [200, 260],
                 trunkWidth: [10, 13],
                 frondCount: [5, 6],
@@ -56,7 +56,7 @@ class PalmTreeManager {
             {
                 name: 'foreground',
                 scrollSpeed: 0.85,
-                spacing: 250,
+                spacing: 520,
                 heightRange: [280, 350],
                 trunkWidth: [14, 18],
                 frondCount: [6, 8],
@@ -73,11 +73,11 @@ class PalmTreeManager {
         this.lastGeneratedX = 0;
         this.enabled = true;
         this.clouds = []; // persistent cloud field
+        this.offscreenBuffer = 900; // keep trees well offscreen to avoid pop-in
 
         // Palm sprite variants (loaded once)
         this.palmSpritePaths = [
             { key: 'palm', src: 'art/bg/palms/palm.png' },
-            { key: 'small', src: 'art/bg/palms/small-palm.png' },
             { key: 'tall', src: 'art/bg/palms/tall-palm.png' },
             { key: 'tall2', src: 'art/bg/palms/tall-palm-2.png' },
             { key: 'tall3', src: 'art/bg/palms/palm-3.png' }
@@ -173,19 +173,19 @@ class PalmTreeManager {
         
         this.layers.forEach(layer => {
             const parallaxX = cameraX * layer.scrollSpeed;
-            const viewportRight = parallaxX + canvasWidth + 500;
+            const viewportRight = parallaxX + canvasWidth + this.offscreenBuffer;
             
             // Generate new trees ahead
             const lastTreeX = layer.trees.length > 0 
                 ? Math.max(...layer.trees.map(t => t.x))
-                : -500;
+                : -this.offscreenBuffer;
             
             if (viewportRight > lastTreeX) {
-                this.generateLayerTrees(layer, lastTreeX, viewportRight + 500);
+                this.generateLayerTrees(layer, lastTreeX, viewportRight + this.offscreenBuffer);
             }
             
             // Cleanup trees behind viewport
-            const viewportLeft = parallaxX - 500;
+            const viewportLeft = parallaxX - this.offscreenBuffer * 1.2;
             layer.trees = layer.trees.filter(tree => tree.x > viewportLeft);
         });
     }
@@ -214,7 +214,7 @@ class PalmTreeManager {
                 spriteKey: this.getRandomSpriteKey()
             });
             
-            currentX += layer.spacing + Math.random() * 100 - 50; // Add variation
+            currentX += layer.spacing + Math.random() * 160 - 80; // Add wider variation while keeping average spacing
         }
     }
     
@@ -236,7 +236,7 @@ class PalmTreeManager {
                 const screenX = tree.x - parallaxOffset;
                 
                 // Only render visible trees
-                if (screenX > -400 && screenX < ctx.canvas.width + 400) {
+                if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
                     const swayOffset = Math.sin(time + tree.swayPhase) * 3;
                     const lean = tree.lean + swayOffset * 0.001;
                     this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, lean, layer, tree);
