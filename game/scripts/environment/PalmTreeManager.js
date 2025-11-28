@@ -13,10 +13,6 @@ class PalmTreeManager {
                 scrollSpeed: 0.15,
                 spacing: 1050,
                 heightRange: [100, 140],
-                trunkWidth: [4, 6],
-                frondCount: [3, 4],
-                trunkColor: '#4a5c4e',
-                frondColor: '#2a3d2e',
                 brightness: 0.4,
                 saturation: 0.6,
                 alpha: 0.6,
@@ -28,10 +24,6 @@ class PalmTreeManager {
                 scrollSpeed: 0.35,
                 spacing: 820,
                 heightRange: [150, 190],
-                trunkWidth: [7, 9],
-                frondCount: [4, 5],
-                trunkColor: '#6b7a5e',
-                frondColor: '#4a6844',
                 brightness: 0.55,
                 saturation: 0.75,
                 alpha: 0.75,
@@ -43,10 +35,6 @@ class PalmTreeManager {
                 scrollSpeed: 0.6,
                 spacing: 650,
                 heightRange: [200, 260],
-                trunkWidth: [10, 13],
-                frondCount: [5, 6],
-                trunkColor: '#8b6f47',
-                frondColor: '#5a8c4a',
                 brightness: 0.75,
                 saturation: 0.9,
                 alpha: 0.9,
@@ -58,10 +46,6 @@ class PalmTreeManager {
                 scrollSpeed: 0.85,
                 spacing: 520,
                 heightRange: [280, 350],
-                trunkWidth: [14, 18],
-                frondCount: [6, 8],
-                trunkColor: '#a87f56',
-                frondColor: '#68a355',
                 brightness: 1,
                 saturation: 1,
                 alpha: 1,
@@ -199,16 +183,10 @@ class PalmTreeManager {
         while (currentX < endX) {
             const height = layer.heightRange[0] + 
                          Math.random() * (layer.heightRange[1] - layer.heightRange[0]);
-            const trunkWidth = layer.trunkWidth[0] + 
-                             Math.random() * (layer.trunkWidth[1] - layer.trunkWidth[0]);
-            const frondCount = layer.frondCount[0] + 
-                             Math.floor(Math.random() * (layer.frondCount[1] - layer.frondCount[0] + 1));
             
             layer.trees.push({
                 x: currentX,
                 height: height,
-                trunkWidth: trunkWidth,
-                frondCount: frondCount,
                 lean: (Math.random() - 0.5) * 0.15,
                 swayPhase: Math.random() * Math.PI * 2,
                 spriteKey: this.getRandomSpriteKey()
@@ -512,168 +490,6 @@ class PalmTreeManager {
         ctx.filter = `brightness(${layer.brightness ?? 1}) saturate(${layer.saturation ?? 1})`;
         ctx.drawImage(sprite, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
-    }
-    
-    /**
-     * Draw detailed palm trunk with texture - pixel art style
-     */
-    drawSlenderTrunk(ctx, x, groundY, height, lean, trunkWidth, color) {
-        const segments = 12;
-        const segmentHeight = height / segments;
-        
-        // Draw trunk segments with horizontal rings (like reference images)
-        for (let i = 0; i < segments; i++) {
-            const progress = i / segments;
-            const segmentX = x + lean * progress * 50;
-            const segmentY = groundY - (i * segmentHeight);
-            const width = trunkWidth * (1 - progress * 0.4);
-            
-            // Main trunk segment - brown
-            ctx.fillStyle = color;
-            ctx.fillRect(
-                segmentX - width / 2,
-                segmentY - segmentHeight,
-                width,
-                segmentHeight - 2
-            );
-            
-            // Darker horizontal ring texture
-            const darkerColor = this.darkenColor(color, 0.2);
-            ctx.fillStyle = darkerColor;
-            ctx.fillRect(
-                segmentX - width / 2,
-                segmentY - segmentHeight,
-                width,
-                2
-            );
-            
-            // Highlight on one side for dimension
-            if (i > 0 && i < segments - 1) {
-                const lightColor = this.lightenColor(color, 0.15);
-                ctx.fillStyle = lightColor;
-                ctx.fillRect(
-                    segmentX - width / 2,
-                    segmentY - segmentHeight + 2,
-                    2,
-                    segmentHeight - 4
-                );
-            }
-        }
-    }
-    
-    /**
-     * Helper to darken colors
-     */
-    darkenColor(hex, percent) {
-        const num = parseInt(hex.replace('#', ''), 16);
-        const r = Math.max(0, Math.floor((num >> 16) * (1 - percent)));
-        const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - percent)));
-        const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - percent)));
-        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
-    }
-    
-    /**
-     * Helper to lighten colors
-     */
-    lightenColor(hex, percent) {
-        const num = parseInt(hex.replace('#', ''), 16);
-        const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
-        const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
-        const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
-        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
-    }
-    
-    /**
-     * Draw detailed palm frond canopy - pixel art style matching reference images
-     */
-    drawFrondCanopy(ctx, x, groundY, height, lean, frondCount, color) {
-        const topX = x + lean * 50;
-        const topY = groundY - height;
-        
-        // Create lush, full frond cluster (reference images show dense canopies)
-        const totalFronds = frondCount * 3; // Triple for fullness
-        const baseColor = color;
-        const darkColor = this.darkenColor(color, 0.25);
-        const lightColor = this.lightenColor(color, 0.15);
-        
-        // Draw fronds in layers for depth
-        for (let layer = 0; layer < 3; layer++) {
-            const layerColor = layer === 0 ? darkColor : (layer === 1 ? baseColor : lightColor);
-            ctx.strokeStyle = layerColor;
-            ctx.fillStyle = layerColor;
-            
-            const frondOffset = layer * (Math.PI / 18); // Slight rotation per layer
-            
-            for (let i = 0; i < totalFronds; i++) {
-                const angle = (i / totalFronds) * Math.PI * 2 + frondOffset;
-                const frondLength = height * 0.65;
-                
-                // Calculate droop based on angle (top fronds droop down)
-                const verticalComponent = Math.sin(angle);
-                const droop = 0.15 + Math.abs(verticalComponent) * 0.3;
-                
-                // Main frond stem end position
-                const stemEndX = topX + Math.cos(angle) * frondLength;
-                const stemEndY = topY + (verticalComponent * frondLength * droop) + Math.abs(verticalComponent) * 25;
-                
-                // Draw thick central stem
-                ctx.lineWidth = 5;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(topX, topY);
-                
-                // Curved frond stem
-                const midX = topX + Math.cos(angle) * frondLength * 0.5;
-                const midY = topY + verticalComponent * frondLength * 0.25;
-                ctx.quadraticCurveTo(midX, midY, stemEndX, stemEndY);
-                ctx.stroke();
-                
-                // Draw many small leaves along frond - DENSE like reference images
-                const leafCount = 12;
-                for (let j = 0; j < leafCount; j++) {
-                    const leafProgress = j / leafCount;
-                    
-                    // Position along curved stem
-                    const t = leafProgress;
-                    const leafBaseX = topX + Math.cos(angle) * frondLength * t * 0.5;
-                    const leafBaseY = topY + verticalComponent * frondLength * 0.25 * t;
-                    
-                    // Leaves alternate sides
-                    for (let side = -1; side <= 1; side += 2) {
-                        const leafAngle = angle + (Math.PI / 2.5) * side;
-                        const leafLength = 18 * (1 - leafProgress * 0.2);
-                        
-                        // Draw leaf as filled triangle/wedge
-                        ctx.beginPath();
-                        ctx.moveTo(leafBaseX, leafBaseY);
-                        
-                        const leafEndX = leafBaseX + Math.cos(leafAngle) * leafLength;
-                        const leafEndY = leafBaseY + Math.sin(leafAngle) * leafLength * 0.5;
-                        
-                        // Leaf with slight curve
-                        ctx.quadraticCurveTo(
-                            leafBaseX + Math.cos(leafAngle) * leafLength * 0.7,
-                            leafBaseY + Math.sin(leafAngle) * leafLength * 0.3,
-                            leafEndX,
-                            leafEndY
-                        );
-                        
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                        
-                        // Add small leaf tips
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(leafEndX, leafEndY);
-                        ctx.lineTo(
-                            leafEndX + Math.cos(leafAngle + 0.3) * 5,
-                            leafEndY + Math.sin(leafAngle + 0.3) * 5
-                        );
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
     }
     
     /**
