@@ -452,6 +452,7 @@ class Game {
         this.inventoryUI.statsList = document.getElementById('inventoryStats');
         this.inventoryUI.badgesList = document.getElementById('inventoryBadges');
         this.inventoryUI.badgesEmpty = document.getElementById('badgeEmptyState');
+        this.inventoryUI.gearList = document.getElementById('inventoryGear');
         this.inventoryUI.itemCache = [];
         this.inventoryUI.modal = {
             container: document.getElementById('inventoryItemModal'),
@@ -564,10 +565,10 @@ class Game {
                 value: player.coins ?? 0
             });
 
-            // Items panel
+            // Items panel (restore classic items)
             itemEntries.push({
                 name: 'Rocks',
-                value: player.throwables?.getAmmo('rock') ?? 0,
+                value: player.throwables?.getAmmo('rock') ?? player.rocks ?? 0,
                 description: 'Ammo used for throwing. Found scattered along the course.',
                 icon: 'art/items/rock-item.png',
                 key: 'rocks',
@@ -609,16 +610,24 @@ class Game {
                 const row = document.createElement('button');
                 row.className = 'inventory-item';
                 row.type = 'button';
+                const iconHtml = item.icon ? `<span class="inventory-item__icon" style="background-image:url('${item.icon}')"></span>` : '';
                 row.innerHTML = `
+                    ${iconHtml}
                     <span class="inventory-item__name">${item.name}</span>
                     <span class="inventory-item__value">${item.value}</span>
                 `;
+                if (item.isActive) {
+                    row.classList.add('is-active');
+                }
                 if (isItemList) {
                     row.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('[inventory] item clicked', item.name || item.key || item);
-                        this.showInventoryItemModal(item);
+                        if (item.onSelect) {
+                            item.onSelect();
+                        } else {
+                            this.showInventoryItemModal(item);
+                        }
                     });
                 }
                 target.appendChild(row);
@@ -627,6 +636,25 @@ class Game {
 
         renderList(statsList, statEntries, false);
         renderList(list, itemEntries, true);
+
+        // Gear tab: show throwables as selectable ammo
+        const gearList = this.inventoryUI?.gearList;
+        if (gearList) {
+            const throwableTypes = this.player?.throwables?.listTypesSortedByIcon?.() || [];
+            const gearEntries = throwableTypes.map(t => ({
+                name: t.displayName || t.key,
+                value: t.ammo ?? 0,
+                description: t.description || 'Throwable item',
+                icon: t.icon,
+                key: t.key,
+                consumable: false,
+                isActive: this.player?.throwables?.getActiveType() === t.key,
+                onSelect: () => {
+                    this.player?.setActiveThrowable?.(t.key);
+                }
+            }));
+            renderList(gearList, gearEntries, true);
+        }
         if (this.badgeUI) {
             this.badgeUI.renderInventory();
         }

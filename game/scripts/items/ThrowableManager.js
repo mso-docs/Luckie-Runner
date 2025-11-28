@@ -25,6 +25,11 @@ class ThrowableManager {
         return this.activeType;
     }
 
+    getActiveIcon() {
+        const t = this.types.get(this.activeType);
+        return t?.icon || null;
+    }
+
     getType(key = this.activeType) {
         return this.types.get(key);
     }
@@ -32,6 +37,14 @@ class ThrowableManager {
     getAmmo(key = this.activeType) {
         const t = this.types.get(key);
         return t ? (t.ammo || 0) : 0;
+    }
+
+    listTypesSortedByIcon() {
+        const arr = Array.from(this.types.entries()).map(([key, def]) => ({
+            key,
+            ...def
+        }));
+        return arr.sort((a, b) => (a.icon || '').localeCompare(b.icon || ''));
     }
 
     addAmmo(key, amount) {

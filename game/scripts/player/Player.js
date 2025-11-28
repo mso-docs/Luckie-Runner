@@ -597,6 +597,13 @@ class Player extends Entity {
         return newCount;
     }
 
+    setActiveThrowable(key) {
+        if (this.throwables) {
+            this.throwables.setActive(key);
+            this.updateUI();
+        }
+    }
+
     /**
      * Add coffee drinks to inventory (stored for use)
      * @param {number} amount
@@ -640,9 +647,16 @@ class Player extends Entity {
     updateUI() {
         const hudCoinsElement = document.getElementById('hudCoins');
         const hudRocksElement = document.getElementById('hudRocks');
+        const activeThrowIcon = this.throwables?.getActiveIcon?.();
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
         if (hudRocksElement) hudRocksElement.textContent = this.throwables?.getAmmo('rock') ?? 0;
+        if (hudRocksElement && activeThrowIcon) {
+            hudRocksElement.style.backgroundImage = `url(${activeThrowIcon})`;
+            hudRocksElement.style.backgroundRepeat = 'no-repeat';
+            hudRocksElement.style.backgroundPosition = 'left center';
+            hudRocksElement.style.paddingLeft = '24px';
+        }
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
         }
