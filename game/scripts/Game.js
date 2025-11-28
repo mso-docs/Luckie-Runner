@@ -16,23 +16,15 @@ class Game {
         this.testMode = true; // Start in test mode for debugging
         
         // Core systems
+        this.config = GameConfig;
         this.input = new InputManager();
-        this.audioManager = new AudioManager();
-        // Apply audio defaults from config
-        if (this.config?.audio && this.audioManager) {
-            const a = this.config.audio;
-            if (typeof a.master === 'number') this.audioManager.setMasterVolume(a.master);
-            if (typeof a.music === 'number') this.audioManager.setMusicVolume(a.music);
-            if (typeof a.sfx === 'number') this.audioManager.setSfxVolume(a.sfx);
-            if (a.muted) this.audioManager.toggleMute(true);
-        }
+        this.audioManager = new AudioManager(this.config);
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
         this.smallPalms = [];
         this.testRoomMaxX = 0;
         this.softLandingTolerance = 20; // px window to allow top-only landings
-        this.config = GameConfig;
         this.collisionSystem = new CollisionSystem(this);
         // Level registry (global in browser)
         if (typeof window !== 'undefined') {

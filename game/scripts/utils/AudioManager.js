@@ -3,13 +3,13 @@
  * Provides methods for loading, playing, and managing audio
  */
 class AudioManager {
-    constructor() {
+    constructor(config = null) {
         this.sounds = {};
         this.music = {};
-        this.masterVolume = 1.0;
-        this.sfxVolume = 0.8;
-        this.musicVolume = 0.6;
-        this.muted = false;
+        this.masterVolume = config?.audio?.master ?? 1.0;
+        this.sfxVolume = config?.audio?.sfx ?? 0.8;
+        this.musicVolume = config?.audio?.music ?? 0.6;
+        this.muted = config?.audio?.muted ?? false;
     }
 
     /**
@@ -120,8 +120,8 @@ class AudioManager {
     /**
      * Toggle mute state
      */
-    toggleMute() {
-        this.muted = !this.muted;
+    toggleMute(forceState = null) {
+        this.muted = forceState === null ? !this.muted : !!forceState;
         if (this.muted) {
             this.stopAllMusic();
         } else {
