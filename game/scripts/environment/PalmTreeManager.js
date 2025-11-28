@@ -13,9 +13,9 @@ class PalmTreeManager {
                 scrollSpeed: 0.15,
                 spacing: 1050,
                 heightRange: [100, 140],
-                brightness: 0.4,
+                brightness: 0.5,
                 saturation: 0.6,
-                alpha: 0.6,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
@@ -24,9 +24,9 @@ class PalmTreeManager {
                 scrollSpeed: 0.35,
                 spacing: 820,
                 heightRange: [150, 190],
-                brightness: 0.55,
+                brightness: 0.65,
                 saturation: 0.75,
-                alpha: 0.75,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
@@ -37,7 +37,7 @@ class PalmTreeManager {
                 heightRange: [200, 260],
                 brightness: 0.75,
                 saturation: 0.9,
-                alpha: 0.9,
+                alpha: 1,
                 groundY: null,
                 trees: []
             },
@@ -208,16 +208,13 @@ class PalmTreeManager {
         // Draw each layer from back to front
         this.layers.forEach(layer => {
             const parallaxOffset = camera.x * layer.scrollSpeed;
-            const time = gameTime * 0.0001;
             
             layer.trees.forEach(tree => {
                 const screenX = tree.x - parallaxOffset;
                 
                 // Only render visible trees
                 if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
-                    const swayOffset = Math.sin(time + tree.swayPhase) * 3;
-                    const lean = tree.lean + swayOffset * 0.001;
-                    this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, lean, layer, tree);
+                    this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, tree.lean, layer, tree);
                 }
             });
         });
