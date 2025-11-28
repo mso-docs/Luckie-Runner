@@ -42,13 +42,17 @@ class SmallPalm extends Entity {
         };
 
         this.addAnimation('idle', buildFrames(0, 0), false);      // frame 1 idle
-        this.addAnimation('occupied', buildFrames(3, 3), false); // frame 4 when player on top
+        this.addAnimation('occupied', buildFrames(4, 4), false); // frame 4 when player on top
 
-        const leaveFrames = buildFrames(5, 8);   // frames 6-9 when leaving
+        const leaveFrames = buildFrames(4, 8);   // frames 5-9 when leaving
         this.addAnimation('depart', leaveFrames, false);
 
         // Set per-animation speed
         this.animations['depart'].speed = this.animationSpeed;
+        // Freeze occupied by giving it a huge frame duration and single frame
+        if (this.animations['occupied']) {
+            this.animations['occupied'].speed = 999999;
+        }
 
         this.playAnimation('idle', true);
         this.animationBuilt = true;
@@ -93,6 +97,8 @@ class SmallPalm extends Entity {
         this.ensureAnimations();
         this.state = 'occupied';
         this.playAnimation('occupied', true);
+        this.animationFrame = 0;
+        this.animationTime = 0;
     }
 
     triggerDepart() {
@@ -113,6 +119,13 @@ class SmallPalm extends Entity {
 
     onUpdate() {
         this.ensureAnimations();
+
+        // Explicitly skip animation advancement while occupied
+        if (this.state === 'occupied') {
+            this.animationFrame = 0;
+            this.animationTime = 0;
+            return;
+        }
     }
 
     getShadowScale() {
