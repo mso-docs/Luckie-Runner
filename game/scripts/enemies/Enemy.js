@@ -72,6 +72,11 @@ class Enemy extends Entity {
         this.hitFlashParticles = [];
         this.hitFlashDamage = 0;
         this.hitRayDuration = 500; // ms for quick pow lines
+
+        // Damage praise (wavy text) timing
+        this.damagePraiseWaveSpeed = 0.003; // controls horizontal phase speed
+        this.damagePraiseAmplitude = 6;
+        this.damagePraiseSpacing = 16;
     }
 
     /**
@@ -304,6 +309,14 @@ class Enemy extends Entity {
                 ctx.textBaseline = 'middle';
                 ctx.strokeText(String(this.hitFlashDamage), sx, sy);
                 ctx.fillText(String(this.hitFlashDamage), sx, sy);
+
+                // Wavy pastel praise text above the stars
+                const praise = this.getDamagePraiseText(this.hitFlashDamage);
+                if (praise) {
+                    const waveY = sy - damageStarSize * 0.9;
+                    this.drawWavyPraise(ctx, praise, sx, waveY);
+                }
+
                 ctx.restore();
             }
         }
@@ -336,6 +349,53 @@ class Enemy extends Entity {
             ctx.lineWidth = 1.4;
             ctx.stroke();
         }
+        ctx.restore();
+    }
+
+    /**
+     * Map damage to a praise label
+     * @param {number} damage
+     * @returns {string}
+     */
+    getDamagePraiseText(damage) {
+        if (damage <= 0) return '';
+        if (damage <= 15) return 'Nice!';
+        if (damage <= 30) return 'Cool!';
+        if (damage <= 45) return 'Awesome!';
+        if (damage <= 60) return 'Radical!';
+        return 'Perfect!';
+    }
+
+    /**
+     * Draw wavy, pastel, rainbow-cycling praise text
+     */
+    drawWavyPraise(ctx, text, centerX, centerY) {
+        const time = performance.now();
+        const phase = time * this.damagePraiseWaveSpeed;
+        const chars = text.split('');
+
+        // Gentle pastel palette, cycle through over time
+        const pastel = ['#ffd1dc', '#ffeecf', '#c9f2ff', '#d6f5d6', '#e6d6ff', '#fff0e0'];
+        const colorIndex = Math.floor((time / 120) % pastel.length);
+
+        ctx.save();
+        ctx.font = '900 24px \"Hey Gorgeous\", \"Trebuchet MS\", \"Fredoka One\", \"Segoe UI\", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillStyle = pastel[colorIndex];
+
+        const totalWidth = (chars.length - 1) * this.damagePraiseSpacing;
+        let startX = centerX - totalWidth / 2;
+
+        chars.forEach((ch, i) => {
+            const x = startX + i * this.damagePraiseSpacing;
+            const y = centerY + Math.sin(phase + i * 0.7) * this.damagePraiseAmplitude;
+            ctx.strokeText(ch, x, y);
+            ctx.fillText(ch, x, y);
+        });
+
         ctx.restore();
     }
 
