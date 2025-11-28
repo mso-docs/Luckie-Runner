@@ -455,10 +455,10 @@ class Coconut extends Projectile {
     constructor(x, y, velocity) {
         super(x, y, 28, 28, velocity, 20);
         this.gravity = 900;
-        this.friction = 0.98;
-        this.rollFriction = 0.985;
-        this.maxDistance = 200;
-        this.lifeTime = 8000;
+        this.friction = 0.995;
+        this.rollFriction = 0.995;
+        this.maxDistance = 600;
+        this.lifeTime = 9000;
         this.startX = x;
         this.throwSound = 'coconut';
         this.loadSprite('art/items/coconut.png');
@@ -510,18 +510,18 @@ class Coconut extends Projectile {
             // Horizontal bounce with heavy damping
             const hitFromLeft = bounds.x < ob.x;
             this.x = hitFromLeft ? ob.x - bounds.width - 0.1 : ob.x + ob.width + 0.1;
-            this.velocity.x = -this.velocity.x * 0.3;
+            this.velocity.x = -this.velocity.x * 0.15;
         } else {
             // Vertical contact: small hop, more damping
             const hitFromAbove = bounds.y < ob.y;
             this.y = hitFromAbove ? ob.y - bounds.height - 0.1 : ob.y + ob.height + 0.1;
-            this.velocity.y = -Math.abs(this.velocity.y) * 0.2;
-            this.velocity.x *= 0.8;
+            this.velocity.y = -Math.abs(this.velocity.y) * 0.05;
+            this.velocity.x *= 0.92;
         }
 
         // Stop if energy is too low
         const speed = Math.hypot(this.velocity.x, this.velocity.y);
-        if (speed < 15) {
+        if (speed < 8) {
             this.disintegrate(obstacle);
         }
     }
