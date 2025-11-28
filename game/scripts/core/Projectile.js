@@ -179,10 +179,10 @@ class Projectile extends Entity {
     /**
      * Begin a fade-out timer before removal
      */
-    startFadeOut() {
+    startFadeOut(duration = 2000) {
         if (this.fadeOut) return;
         this.fadeOut = true;
-        this.fadeDuration = 2000; // 2 seconds
+        this.fadeDuration = duration; // ms
         this.fadeElapsed = 0;
     }
 
@@ -464,6 +464,8 @@ class Coconut extends Projectile {
         this.loadSprite('art/items/coconut.png');
         this.ownerType = 'player';
         this.autoFadeOnImpact = false; // use custom roll/disintegrate logic
+        this.groundLocked = false;
+        this.groundY = null;
     }
 
     onUpdate(deltaTime) {
@@ -472,11 +474,12 @@ class Coconut extends Projectile {
         // Apply rolling friction
         this.velocity.x *= this.rollFriction;
 
-        // Stop after distance or low speed
-        const dist = Math.abs(this.x - this.startX);
-        const speed = Math.hypot(this.velocity.x, this.velocity.y);
-        if (dist >= this.maxDistance || speed < 20) {
-            this.disintegrate();
+        // If we've made contact with a solid surface, apply slide friction and lock to ground plane
+        if (this.hasHitSurface && this.groundLocked && this.groundY !== null) {
+            this.y = this.groundY;
+            this.velocity.y = 0;
+            this.gravity = 0;
+            this.velocity.x *= 0.99; // slight additional drag while sliding
         }
     }
 
@@ -515,9 +518,19 @@ class Coconut extends Projectile {
             // Vertical contact: small hop, more damping
             const hitFromAbove = bounds.y < ob.y;
             this.y = hitFromAbove ? ob.y - bounds.height - 0.1 : ob.y + ob.height + 0.1;
-            this.velocity.y = -Math.abs(this.velocity.y) * 0.05;
-            this.velocity.x *= 0.92;
+            this.velocity.y = 0;
+            this.velocity.x *= 0.95;
         }
+
+        // Mark contact and start fade after a short slide window
+        this.hasHitSurface = true;
+        this.onGround = true;
+        this.groundLocked = true;
+        // Anchor to the top of the obstacle for rolling
+        this.groundY = ob.y - bounds.height;
+        this.y = this.groundY;
+        this.gravity = 0;
+        this.startFadeOut(1000);
 
         // Stop if energy is too low
         const speed = Math.hypot(this.velocity.x, this.velocity.y);
