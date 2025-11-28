@@ -509,7 +509,7 @@ class WorldBuilder {
             spawnAnchorX + 40,
             groundY - 52,
             'art/items/sign.png',
-            levelDef.defaultSignMessages ? [...levelDef.defaultSignMessages] : [...g.signDialogue.defaultMessages]
+            levelDef.defaultSignMessages ? [...levelDef.defaultSignMessages] : (g.signUI?.signDialogue?.defaultMessages ? [...g.signUI.signDialogue.defaultMessages] : [])
         );
         g.signBoards.push(g.signBoard);
 

@@ -120,19 +120,9 @@ class Game {
         this.balloonFan = null;
         this.signBoard = null;
         this.signBoards = [];
-        this.signCallout = null;
-        this.signDialogue = {
-            container: null,
-            bubble: null,
-            hint: null,
-            active: false,
-            target: null,
-            messages: [],
-            defaultMessages: [],
-            index: 0
-        };
         this.signSprite = new Image();
         this.signSprite.src = 'art/items/sign.png';
+        this.signUI = new SignUI(this);
 
         // UI manager (inventory overlays, tabs, item modals)
         this.uiManager = new UIManager(this);
@@ -222,7 +212,7 @@ class Game {
         // Set up event listeners
         this.setupEventListeners();
         this.setupSpeechBubbleUI();
-        this.setupSignDialogueUI();
+        this.signUI.setupSignDialogueUI();
         this.setupInventoryUI();
         this.badgeUI = new BadgeUI(this);
         this.setupChestUI();
@@ -356,50 +346,6 @@ class Game {
         this.hideSpeechBubble(true);
     }
 
-    /**
-     * Prepare simple sign dialogue UI (3 stacked bubbles)
-     */
-    setupSignDialogueUI() {
-        const container = document.createElement('div');
-        container.id = 'signDialogueContainer';
-        container.className = 'speech-bubble sign-speech-bubble';
-        container.setAttribute('aria-hidden', 'true');
-        container.style.position = 'absolute';
-        container.style.pointerEvents = 'none';
-        container.style.display = 'none';
-        const bubble = document.createElement('div');
-        bubble.className = 'dialog-bubble sign-dialogue-bubble';
-        bubble.style.marginBottom = '6px';
-
-        const textEl = document.createElement('p');
-        textEl.className = 'sign-dialogue-text';
-        textEl.style.margin = '0';
-        textEl.textContent = '';
-
-        const hint = document.createElement('div');
-        hint.className = 'speech-bubble__hint';
-        hint.textContent = 'Press Enter';
-
-        bubble.appendChild(textEl);
-        bubble.appendChild(hint);
-
-        container.appendChild(bubble);
-        const gameContainer = document.getElementById('gameContainer');
-        if (gameContainer) {
-            gameContainer.appendChild(container);
-            this.signDialogue.container = container;
-            this.signDialogue.bubble = bubble;
-        this.signDialogue.textEl = textEl;
-        this.signDialogue.hint = hint;
-        this.signDialogue.defaultMessages = [
-            '<<<~HOWDY!~>>> It is I, your #friendly# neighborhood signboard. I am here to provide you with %important% information as you embark on your adventure.',
-            'You _may_ find me scattered throughout the land, offering guidance, tips, and <<maybe>> even a joke or two to ^lighten^ your journey.',
-            'You also may find me in places where you %least% expect it, so keep your eyes #peeled#. Safe travels, ^adventurer^!',
-            'Also, you may want to #throw# some rocks at those ^slimes^. Just saying.'
-        ];
-        this.signDialogue.messages = [...this.signDialogue.defaultMessages];
-    }
-    }
 
     /**
      * Prepare the inventory overlay UI state
@@ -616,16 +562,13 @@ class Game {
             }
 
             // Sign interaction takes priority over chests
-            const nearbySign = this.getNearbySign();
+            const nearbySign = this.signUI.findNearbySign();
             if (nearbySign) {
-                this.signDialogue.target = nearbySign;
-                this.signDialogue.messages = (nearbySign.dialogueLines && nearbySign.dialogueLines.length)
-                    ? [...nearbySign.dialogueLines]
-                    : [...this.signDialogue.defaultMessages];
-                if (this.signDialogue.active) {
-                    this.advanceSignDialogue();
+                this.signUI.signDialogue.target = nearbySign;
+                if (this.signUI.signDialogue.active) {
+                    this.signUI.advanceSignDialogue();
                 } else {
-                    this.showSignDialogue();
+                    this.signUI.showSignDialogue();
                 }
                 return;
             }
@@ -1269,8 +1212,8 @@ class Game {
 
         // Update chests (callouts + glow)
         this.updateChests(deltaTime);
-        this.updateSignCallout();
-        this.updateSignDialoguePosition();
+        this.signUI.updateSignCallout();
+        this.signUI.updateSignDialoguePosition();
         
         // Update all background layers
         this.backgroundLayers.forEach(layer => {
@@ -1616,178 +1559,6 @@ class Game {
         });
     }
 
-    /**
-     * Check if player is near the sign
-     */
-    isPlayerNearSign(sign) {
-        if (!sign || !this.player) return false;
-        const px = this.player.x + this.player.width / 2;
-        const py = this.player.y + this.player.height / 2;
-        const sx = sign.x;
-        const sy = sign.y;
-        const dx = px - sx;
-        const dy = py - sy;
-        return Math.hypot(dx, dy) <= 120;
-    }
-
-    /**
-     * Find a nearby sign to interact with
-     */
-    getNearbySign() {
-        if (!this.player || !Array.isArray(this.signBoards)) return null;
-        return this.signBoards.find(sign => this.isPlayerNearSign(sign)) || null;
-    }
-
-    /**
-     * Toggle the sign dialogue bubble set
-     */
-    toggleSignDialogue() {
-        if (this.signDialogue.active) {
-            this.hideSignDialogue();
-        } else {
-            this.showSignDialogue();
-        }
-    }
-
-    /**
-     * Show the sign dialogue bubbles
-     */
-    showSignDialogue() {
-        const dlg = this.signDialogue;
-        if (!dlg.container) return;
-        if (!dlg.target) {
-            dlg.target = this.getNearbySign();
-        }
-        if (!dlg.target) return;
-        if (!dlg.messages || dlg.messages.length === 0) {
-            dlg.messages = dlg.defaultMessages ? [...dlg.defaultMessages] : [];
-        }
-        dlg.active = true;
-        dlg.index = 0;
-        dlg.container.style.display = 'block';
-        dlg.container.setAttribute('aria-hidden', 'false');
-        dlg.container.classList.add('show');
-        // Target the sign itself for positioning
-        this.setSignBubbleText(dlg.messages[dlg.index] || '');
-        this.updateSignDialoguePosition();
-
-        // Keep the hint visible inside the bubble
-        if (dlg.hint) {
-            dlg.hint.style.display = 'block';
-        }
-    }
-
-    /**
-     * Hide the sign dialogue bubbles
-     */
-    hideSignDialogue(immediate = false) {
-        const dlg = this.signDialogue;
-        if (!dlg.container) return;
-        dlg.active = false;
-        dlg.index = 0;
-        dlg.container.style.display = 'none';
-        dlg.container.setAttribute('aria-hidden', 'true');
-        dlg.container.classList.remove('show');
-
-        if (dlg.hint) {
-            dlg.hint.style.display = 'none';
-        }
-    }
-
-    /**
-     * Advance through sign dialogue messages
-     */
-    advanceSignDialogue() {
-        const dlg = this.signDialogue;
-        if (!dlg.active) return;
-        dlg.index++;
-        if (dlg.index >= dlg.messages.length) {
-            this.hideSignDialogue();
-            return;
-        }
-        this.setSignBubbleText(dlg.messages[dlg.index] || '');
-        this.updateSignDialoguePosition();
-    }
-
-    /**
-    * Set bubble text
-    */
-    setSignBubbleText(text) {
-        const textEl = this.signDialogue.textEl;
-        if (textEl) textEl.innerHTML = this.formatSpeechText(text ?? '');
-    }
-
-    /**
-     * Ensure callout exists
-     */
-    ensureSignCallout() {
-        if (this.signCallout) return;
-        const container = document.getElementById('gameContainer');
-        if (!container) return;
-        const bubble = document.createElement('div');
-        bubble.className = 'sign-callout hidden';
-        bubble.textContent = 'Press Enter to talk to me!';
-        bubble.setAttribute('aria-hidden', 'true');
-        container.appendChild(bubble);
-        this.signCallout = bubble;
-    }
-
-    /**
-     * Update sign callout visibility and position
-     */
-    updateSignCallout() {
-        this.ensureSignCallout();
-        if (!this.signCallout) return;
-
-        const nearbySign = this.getNearbySign();
-        const shouldShow = !this.signDialogue.active && nearbySign;
-        if (!shouldShow) {
-            this.signCallout.classList.add('hidden');
-            this.signCallout.setAttribute('aria-hidden', 'true');
-            return;
-        }
-
-        const sign = nearbySign;
-        const camera = this.camera || { x: 0, y: 0 };
-        const screenX = sign.x - camera.x + sign.width / 2;
-        const screenY = sign.y - camera.y;
-        const bottomFromCanvas = this.canvas.height - screenY + 44;
-
-        this.signCallout.style.left = `${screenX}px`;
-        this.signCallout.style.bottom = `${bottomFromCanvas}px`;
-        this.signCallout.classList.remove('hidden');
-        this.signCallout.setAttribute('aria-hidden', 'false');
-    }
-
-    /**
-     * Update dialogue bubble position
-     */
-    updateSignDialoguePosition() {
-        const dlg = this.signDialogue;
-        if (!dlg.active || !dlg.container) return;
-        const target = dlg.target;
-        if (!target) return;
-        let tx = target.x || 0;
-        let ty = target.y || 0;
-        let h = target.height || 0;
-        // If target is Entity, adjust to center
-        if (target.getCenter) {
-            const c = target.getCenter();
-            tx = c.x;
-            ty = c.y;
-            h = target.height || 0;
-        }
-        const camera = this.camera || { x: 0, y: 0 };
-        const screenX = tx - camera.x;
-        const screenY = ty - camera.y - h;
-        dlg.container.style.left = `${screenX}px`;
-        dlg.container.style.bottom = `${this.canvas.height - screenY}px`;
-        dlg.container.setAttribute('aria-hidden', 'false');
-    }
-
-    /**
-     * Render all placed signs
-     */
     renderSigns() {
         if (!Array.isArray(this.signBoards)) return;
         this.signBoards.forEach(sign => {
@@ -1845,11 +1616,7 @@ class Game {
         this.hideInventoryOverlay(true);
         this.hideChestOverlay(true);
         this.hideShopOverlay(true);
-        this.hideSignDialogue(true);
-        if (this.signCallout && this.signCallout.parentNode) {
-            this.signCallout.parentNode.removeChild(this.signCallout);
-        }
-        this.signCallout = null;
+        this.signUI.reset();
         const buffPanel = document.getElementById('buffPanel');
         const coffeeTimer = document.getElementById('coffeeTimer');
         if (buffPanel) buffPanel.classList.add('hidden');
