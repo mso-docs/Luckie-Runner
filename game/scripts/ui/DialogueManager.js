@@ -1,10 +1,18 @@
 /**
  * DialogueManager - central lookup and simple delivery for dialogues by id.
+ * Controls the main speech bubble (non-sign).
  */
 class DialogueManager {
     constructor(game, dialogueMap = {}) {
         this.game = game;
         this.dialogues = dialogueMap || {};
+        this.state = {
+            messages: [],
+            index: 0,
+            active: false,
+            anchor: null,
+            onClose: null
+        };
     }
 
     getLines(id) {
@@ -12,5 +20,105 @@ class DialogueManager {
         const lines = this.dialogues[id];
         if (!lines) return [];
         return Array.isArray(lines) ? lines.slice() : [];
+    }
+
+    startById(id, anchor = null, onClose = null) {
+        const msgs = this.getLines(id);
+        if (!msgs.length) return false;
+        return this.startDialog(msgs, anchor, onClose);
+    }
+
+    startDialog(messages = [], anchor = null, onClose = null) {
+        if (!messages.length) return false;
+        this.state.messages = messages.slice();
+        this.state.index = 0;
+        this.state.active = true;
+        this.state.anchor = anchor || this.game.player || null;
+        this.state.onClose = onClose;
+        this.showCurrent();
+        return true;
+    }
+
+    advance() {
+        if (!this.state.active) return false;
+        if (this.state.index < this.state.messages.length - 1) {
+            this.state.index++;
+            this.showCurrent();
+            return true;
+        }
+        this.close();
+        return false;
+    }
+
+    showCurrent() {
+        const msg = this.state.messages[this.state.index];
+        this.renderBubble(msg);
+        this.updatePosition();
+    }
+
+    renderBubble(message) {
+        const bubble = this.game.speechBubble.container;
+        const text = this.game.speechBubble.text;
+        const hint = this.game.speechBubble.hint;
+        if (!bubble || !text) return;
+        text.innerHTML = this.game.formatSpeechText ? this.game.formatSpeechText(message) : (message || '');
+        bubble.classList.remove('hidden');
+        bubble.classList.add('show');
+        bubble.setAttribute('aria-hidden', 'false');
+        if (hint) hint.classList.remove('hidden');
+        bubble.style.display = 'block';
+    }
+
+    updatePosition() {
+        const bubble = this.game.speechBubble.container;
+        if (!bubble) return;
+        const anchor = this.state.anchor || this.game.player;
+        const camera = this.game.camera || { x: 0, y: 0 };
+        let targetX = this.game.canvas.width / 2;
+        let headY = this.game.canvas.height / 2;
+        let anchorWidth = 0;
+        let facingDir = 1;
+        if (anchor) {
+            const center = anchor.getCenter ? anchor.getCenter() : { x: anchor.x + (anchor.width || 0) / 2, y: anchor.y + (anchor.height || 0) / 2 };
+            targetX = center.x - camera.x;
+            headY = anchor.y - camera.y;
+            anchorWidth = anchor.width || 0;
+            facingDir = anchor.facing || 1;
+        }
+        bubble.style.left = `${targetX}px`;
+        const aboveHeadOffset = 20;
+        const bottomFromCanvas = this.game.canvas.height - headY + aboveHeadOffset;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+        const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
+        bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+    }
+
+    close() {
+        const bubble = this.game.speechBubble.container;
+        const hint = this.game.speechBubble.hint;
+        if (bubble) {
+            bubble.style.display = 'none';
+            bubble.classList.add('hidden');
+            bubble.classList.remove('show');
+            bubble.setAttribute('aria-hidden', 'true');
+        }
+        if (hint) hint.classList.add('hidden');
+        const onClose = this.state.onClose;
+        this.state = {
+            messages: [],
+            index: 0,
+            active: false,
+            anchor: null,
+            onClose: null
+        };
+        if (typeof onClose === 'function') onClose();
+    }
+
+    isActive() {
+        return this.state.active;
+    }
+
+    reset() {
+        this.close();
     }
 }

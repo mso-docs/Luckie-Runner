@@ -77,16 +77,6 @@ class Game {
         });
 
         // Intro dialogue UI
-        this.dialogueState = {
-            messages: [],
-            index: 0,
-            active: false,
-            dismissing: false,
-            hideTimeout: null,
-            speaker: null,
-            anchor: null,
-            onClose: null
-        };
         this.speechBubble = {
             container: null,
             text: null,
@@ -127,6 +117,7 @@ class Game {
 
         // UI managers
         this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {});
+        this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this);
         this.entityFactory = new EntityFactory(this);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory);
@@ -531,27 +522,17 @@ class Game {
             return;
         }
 
-        this.dialogueState.messages = [
-            "Hey, I'm Luckie Puppie. !Welcome! #to# the %test% ^room^.",
-            "#Click# the ~mouse~ button to ~throw~ !a! #rock#. `Try` hitting that slime!"
-        ];
-        this.dialogueState.index = 0;
-        this.dialogueState.active = true;
-        this.dialogueState.dismissing = false;
-        this.dialogueState.speaker = null;
-        this.dialogueState.anchor = null;
-        this.dialogueState.onClose = null;
-        this.showSpeechBubble(this.dialogueState.messages[0]);
+        this.dialogueManager.startById('test_room_intro', null, null);
     }
 
     /**
      * Advance or dismiss dialogue when Enter is pressed
      */
     handleSpeechBubbleInput() {
-        if (!this.dialogueState.active || this.dialogueState.dismissing) return;
+        if (!this.dialogueManager?.isActive()) return;
 
         if (this.input.consumeKeyPress('enter') || this.input.consumeKeyPress('numpadenter')) {
-            this.advanceSpeechBubble();
+            this.dialogueManager.advance();
         }
     }
 
@@ -690,22 +671,14 @@ class Game {
      */
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
-        if (this.dialogueState.active) return;
-
-        this.dialogueState.messages = npc.dialogueLines.slice();
-        this.dialogueState.index = 0;
-        this.dialogueState.speaker = npc;
-        this.dialogueState.anchor = npc;
-        this.dialogueState.onClose = () => {
-            if (typeof npc.onDialogueClosed === 'function') {
-                npc.onDialogueClosed();
-            }
-        };
-        this.dialogueState.dismissing = false;
         if (typeof npc.setTalking === 'function') {
             npc.setTalking(true);
         }
-        this.showSpeechBubble(this.dialogueState.messages[0]);
+        this.dialogueManager.startDialog(npc.dialogueLines, npc, () => {
+            if (typeof npc.onDialogueClosed === 'function') {
+                npc.onDialogueClosed();
+            }
+        });
     }
 
     /**
@@ -713,35 +686,14 @@ class Game {
      * @param {string} text - Dialogue text to display
      */
     showSpeechBubble(text) {
-        const bubble = this.speechBubble.container;
-        const bubbleText = this.speechBubble.text;
-        if (!bubble || !bubbleText) return;
-
-        if (this.dialogueState.hideTimeout) {
-            clearTimeout(this.dialogueState.hideTimeout);
-            this.dialogueState.hideTimeout = null;
-        }
-
-        bubbleText.innerHTML = this.formatSpeechText(text);
-        bubble.classList.add('show');
-        bubble.setAttribute('aria-hidden', 'false');
-        this.dialogueState.active = true;
-        this.dialogueState.dismissing = false;
-        this.updateSpeechBubblePosition();
+        this.dialogueManager.startDialog([text], this.dialogueManager.state.anchor || this.player);
     }
 
     /**
      * Move to the next line or hide the bubble
      */
     advanceSpeechBubble() {
-        if (!this.dialogueState.active) return;
-
-        if (this.dialogueState.index < this.dialogueState.messages.length - 1) {
-            this.dialogueState.index++;
-            this.showSpeechBubble(this.dialogueState.messages[this.dialogueState.index]);
-        } else {
-            this.hideSpeechBubble();
-        }
+        this.dialogueManager?.advance();
     }
 
     /**
@@ -749,86 +701,14 @@ class Game {
      * @param {boolean} immediate - Skip fade when true
      */
     hideSpeechBubble(immediate = false) {
-        const bubble = this.speechBubble.container;
-        const runCloseHook = () => {
-            if (typeof this.dialogueState.onClose === 'function') {
-                this.dialogueState.onClose();
-            } else if (this.dialogueState.speaker && typeof this.dialogueState.speaker.onDialogueClosed === 'function') {
-                this.dialogueState.speaker.onDialogueClosed();
-            }
-        };
-        const resetDialogueState = () => {
-            runCloseHook();
-            this.dialogueState.active = false;
-            this.dialogueState.dismissing = false;
-            this.dialogueState.hideTimeout = null;
-            this.dialogueState.speaker = null;
-            this.dialogueState.anchor = null;
-            this.dialogueState.onClose = null;
-        };
-        if (this.dialogueState.hideTimeout) {
-            clearTimeout(this.dialogueState.hideTimeout);
-            this.dialogueState.hideTimeout = null;
-        }
-
-        if (!bubble) {
-            resetDialogueState();
-            return;
-        }
-
-        if (immediate) {
-            bubble.classList.remove('show');
-            bubble.setAttribute('aria-hidden', 'true');
-            resetDialogueState();
-            return;
-        }
-
-        this.dialogueState.dismissing = true;
-        bubble.classList.remove('show');
-        this.dialogueState.hideTimeout = setTimeout(() => {
-            bubble.setAttribute('aria-hidden', 'true');
-            resetDialogueState();
-        }, 250);
+        this.dialogueManager?.close();
     }
 
     /**
      * Keep the bubble anchored to the active speaker (player or NPC)
      */
     updateSpeechBubblePosition() {
-        const bubble = this.speechBubble.container;
-        if (!bubble) return;
-
-        const camera = this.camera || { x: 0, y: 0 };
-        const anchor = this.dialogueState.anchor;
-        let targetX = this.canvas.width / 2;
-        let headY = this.canvas.height / 2;
-        let anchorWidth = 0;
-        let facingDir = 1;
-
-        if (anchor) {
-            const center = anchor.getCenter ? anchor.getCenter() : { x: anchor.x + (anchor.width || 0) / 2, y: anchor.y + (anchor.height || 0) / 2 };
-            targetX = center.x - camera.x;
-            headY = anchor.y - camera.y;
-            anchorWidth = anchor.width || 0;
-            facingDir = anchor.facing || 1;
-        } else if (this.player) {
-            targetX = this.player.x - camera.x + this.player.width / 2;
-            headY = this.player.y - camera.y;
-            anchorWidth = this.player.width;
-            facingDir = this.player.facing || 1;
-        }
-
-        bubble.style.left = `${targetX}px`;
-
-        // Position bubble just above the player's head
-        const aboveHeadOffset = 20; // pixels above the top of the sprite
-        const bottomFromCanvas = this.canvas.height - headY + aboveHeadOffset;
-        bubble.style.bottom = `${bottomFromCanvas}px`;
-
-        // Offset tail toward the player's mouth (slight bias toward facing direction)
-        // Nudge tail 20px further right relative to previous anchor
-        const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
-        bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
+        this.dialogueManager?.updatePosition();
     }
 
     /**
@@ -1417,7 +1297,7 @@ class Game {
         }
 
         // Keep speech bubble following player
-        if (this.dialogueState.active) {
+        if (this.dialogueManager?.isActive()) {
             this.updateSpeechBubblePosition();
         }
 
@@ -1600,7 +1480,7 @@ class Game {
             } else {
                 this.camera = { ...this.initialStateTemplate.camera };
             }
-            this.dialogueState = { ...this.initialStateTemplate.dialogue };
+            this.dialogueManager.reset();
             this.gameTime = 0;
             this.frameCount = 0;
             this.deltaTime = 0;
@@ -1633,11 +1513,7 @@ class Game {
         const coffeeTimer = document.getElementById('coffeeTimer');
         if (buffPanel) buffPanel.classList.add('hidden');
         if (coffeeTimer) coffeeTimer.textContent = '--:--';
-        this.dialogueState.messages = [];
-        this.dialogueState.active = false;
-        this.dialogueState.speaker = null;
-        this.dialogueState.anchor = null;
-        this.dialogueState.onClose = null;
+        this.dialogueManager.reset();
         this.testGroundY = null;
         this.signBoard = null;
         this.signBoards = [];
