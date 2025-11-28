@@ -177,8 +177,9 @@ class SmallPalm extends Entity {
         if (now - this.lastDropTime < this.dropCooldown) return;
         if (Math.random() > this.dropChance) return;
 
-        // Spawn at the base of the palm (near trunk foot)
-        const dropX = this.x + (this.width / 2) - 12;
+        // Spawn near the base with a small horizontal spread so coconuts don't stack
+        const baseX = this.x + (this.width / 2) - 12;
+        const dropX = baseX + (Math.random() * 56 - 28); // wider +/- 28px spread
         const dropY = this.y + this.height - 24;
         const coconut = new CoconutItem(dropX, dropY, 1);
         coconut.game = this.game;
