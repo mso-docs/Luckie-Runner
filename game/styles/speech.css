@@ -27,7 +27,7 @@
     width: 460px;
     max-width: 90vw;
     color: #2b2b2b;
-    font-family: 'Comic Sans MS', 'Baloo 2', 'Trebuchet MS', cursive;
+    font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif);
     font-size: 20px;
     line-height: 1.25;
     letter-spacing: 0.3px;
@@ -111,7 +111,7 @@
 
 .speech-bold { font-weight: 800; }
 .speech-italic { font-style: italic; }
-.speech-mono { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.05); padding: 0 2px; border-radius: 2px; }
+.speech-mono { font-family: var(--font-main, 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif); background: rgba(0,0,0,0.05); padding: 0 2px; border-radius: 2px; }
 
 .speech-big { font-size: 24px; }
 .speech-bigger { font-size: 28px; }
