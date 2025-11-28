@@ -52,7 +52,33 @@ class Player extends Entity {
         
         // Rock throwing
         this.maxRocks = 10;
-        this.rocks = 10;
+        this.throwables = new ThrowableManager(this);
+        this.throwables.registerType('rock', {
+            maxAmmo: this.maxRocks,
+            ammo: this.maxRocks,
+            icon: 'art/items/rock-item.png',
+            displayName: 'Rocks',
+            createProjectile: (player, worldTarget) => {
+                const playerCenter = player.getCenter();
+                const dirX = worldTarget.x - playerCenter.x;
+                const dirY = worldTarget.y - playerCenter.y;
+                const len = Math.hypot(dirX, dirY) || 1;
+                const normalized = { x: dirX / len, y: dirY / len };
+                
+                const throwSpeed = player.moveSpeed * 1.2; // px/sec
+                const velocity = {
+                    x: normalized.x * throwSpeed,
+                    y: normalized.y * throwSpeed * 0.6
+                };
+                
+                const rock = new Rock(playerCenter.x - 4, playerCenter.y - 4, velocity);
+                rock.setOwner(player, 'player');
+                rock.game = player.game;
+                rock.maxDistance = player.width * 4;
+                return rock;
+            }
+        });
+        this.throwables.setActive('rock');
         this.attackCooldown = 0;
         this.attackCooldownTime = 500; // 500ms cooldown
 
@@ -157,8 +183,8 @@ class Player extends Entity {
             this.attackCooldown -= deltaTime;
         }
         
-        if (input.isMouseClicked() && this.rocks > 0 && this.attackCooldown <= 0) {
-            this.throwRock(input.getMousePosition());
+        if (input.isMouseClicked() && this.throwables?.canThrow() && this.attackCooldown <= 0) {
+            this.throwActive(input.getMousePosition());
         }
         
         // GRAVITY - Always pull down when not on ground
@@ -216,41 +242,24 @@ class Player extends Entity {
     }
 
     /**
-     * Throw a rock projectile
-     * @param {Object} mousePos - Mouse position (unused in new system)
+     * Throw active throwable
+     * @param {Object} mousePos
      */
-    throwRock(mousePos) {
+    throwActive(mousePos) {
         const playerCenter = this.getCenter();
         const worldMouse = {
             x: this.game.camera.x + mousePos.x,
             y: this.game.camera.y + mousePos.y
         };
         
-        // Aim toward the cursor; dampen Y a bit for a flatter arc
-        const dirX = worldMouse.x - playerCenter.x;
-        const dirY = worldMouse.y - playerCenter.y;
-        const len = Math.hypot(dirX, dirY) || 1;
-        const normalized = { x: dirX / len, y: dirY / len };
-        
-        // Speed tuned to travel about 4x player length, with a gentle arc
-        const throwSpeed = this.moveSpeed * 1.2; // px/sec
-        const velocity = {
-            x: normalized.x * throwSpeed,
-            y: normalized.y * throwSpeed * 0.6
-        };
-        
-        const rock = new Rock(playerCenter.x - 4, playerCenter.y - 4, velocity);
-        rock.setOwner(this, 'player');
-        rock.game = this.game;
-        
-        // Range about 4x the player's body length
-        rock.maxDistance = this.width * 4;
-        
+        const projectile = this.throwables?.createActiveProjectile(worldMouse);
+        if (!projectile) return;
+
         // Add to game projectiles
-        this.game.projectiles.push(rock);
+        this.game.projectiles.push(projectile);
         
-        // Use rock and set cooldown
-        this.rocks = Math.max(0, this.rocks - 1);
+        // Use ammo and set cooldown
+        this.throwables.consumeActive(1);
         this.attackCooldown = this.attackCooldownTime;
         
         // Update UI to show rock count
@@ -579,14 +588,13 @@ class Player extends Entity {
      * @param {number} amount - Number of rocks to add
      */
     addRocks(amount) {
-        this.rocks = Math.min(this.maxRocks, this.rocks + amount);
+        const newCount = this.throwables?.addAmmo('rock', amount);
         
-        // Play special pickup sound for rocks
         if (this.game.audioManager) {
             this.game.audioManager.playSound('special', 0.7);
         }
-        
         this.updateUI();
+        return newCount;
     }
 
     /**
@@ -634,7 +642,7 @@ class Player extends Entity {
         const hudRocksElement = document.getElementById('hudRocks');
         
         if (hudCoinsElement) hudCoinsElement.textContent = this.coins;
-        if (hudRocksElement) hudRocksElement.textContent = this.rocks;
+        if (hudRocksElement) hudRocksElement.textContent = this.throwables?.getAmmo('rock') ?? 0;
         if (this.game && typeof this.game.updateInventoryOverlay === 'function') {
             this.game.updateInventoryOverlay();
         }
@@ -804,7 +812,10 @@ class Player extends Entity {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
-        this.rocks = this.maxRocks;
+        if (this.throwables) {
+            this.throwables.reset();
+            this.throwables.setActive('rock');
+        }
         this.healthPotions = 0;
         this.attackCooldown = 0;
         this.velocity = { x: 0, y: 0 };

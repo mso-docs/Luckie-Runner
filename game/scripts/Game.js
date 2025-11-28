@@ -567,7 +567,7 @@ class Game {
             // Items panel
             itemEntries.push({
                 name: 'Rocks',
-                value: player.rocks ?? 0,
+                value: player.throwables?.getAmmo('rock') ?? 0,
                 description: 'Ammo used for throwing. Found scattered along the course.',
                 icon: 'art/items/rock-item.png',
                 key: 'rocks',
@@ -995,7 +995,7 @@ class Game {
             ui.hpValue.textContent = `${current}/${max}`;
         }
         if (ui.rockValue && player) {
-            ui.rockValue.textContent = player.rocks ?? 0;
+            ui.rockValue.textContent = player.throwables?.getAmmo('rock') ?? 0;
         }
         if (ui.levelValue && player) {
             ui.levelValue.textContent = player.level ?? 1;
