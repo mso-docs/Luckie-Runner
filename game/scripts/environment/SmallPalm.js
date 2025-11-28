@@ -21,6 +21,9 @@ class SmallPalm extends Entity {
         this.collisionBox = new CollisionBox(this.width, this.height, { x: 0, y: 0 });
         this.collisionReduced = false;
         this.resetCollisionBox();
+        this.lastDropTime = 0;
+        this.dropCooldown = 1500; // ms between drops
+        this.dropChance = 0.2; // 1 in 5 chance on landing
     }
 
     resetCollisionBox() {
@@ -85,7 +88,11 @@ class SmallPalm extends Entity {
         this.playerOnTopCurrent = this.playerOnTopCurrent || isOnTop;
         if (isOnTop && (landedThisFrame || !this.wasOnTop)) {
             this.triggerLand();
+            if (landedThisFrame) {
+                this.tryDropCoconut();
+            }
         }
+        // When the player leaves the top, allow another drop chance on the next landing
         if (isOnTop) {
             // Adjust collision to sit lower while occupied so the player appears to stand on top
             this.applyOccupiedCollision();
@@ -101,6 +108,8 @@ class SmallPalm extends Entity {
         // Leaving detection
         if (!this.playerOnTopCurrent && this.wasOnTop) {
             this.triggerDepart();
+            // Chance to drop when leaving the collision box
+            this.tryDropCoconut();
         }
 
         // Staying on top keeps the occupied frame locked
@@ -158,5 +167,20 @@ class SmallPalm extends Entity {
 
     getShadowScale() {
         return { x: 0.7, y: 0.4 };
+    }
+
+    tryDropCoconut() {
+        if (!this.game) return;
+        const now = Date.now();
+        if (now - this.lastDropTime < this.dropCooldown) return;
+        if (Math.random() > this.dropChance) return;
+
+        // Spawn at the base of the palm (near trunk foot)
+        const dropX = this.x + (this.width / 2) - 12;
+        const dropY = this.y + this.height - 24;
+        const coconut = new CoconutItem(dropX, dropY, 1);
+        coconut.game = this.game;
+        this.game.items.push(coconut);
+        this.lastDropTime = now;
     }
 }

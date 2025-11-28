@@ -630,6 +630,15 @@ class Player extends Entity {
         return newCount;
     }
 
+    addCoconuts(amount) {
+        const newCount = this.throwables?.addAmmo('coconut', amount);
+        if (this.game?.audioManager) {
+            this.game.audioManager.playSound('special', 0.7);
+        }
+        this.updateUI();
+        return newCount;
+    }
+
     setActiveThrowable(key) {
         if (this.throwables) {
             this.throwables.setActive(key);
