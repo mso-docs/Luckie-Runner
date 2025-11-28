@@ -231,10 +231,13 @@ class CollisionSystem {
         if (!g.player) return;
         g.hazards.forEach(hazard => {
             if (hazard.checkPlayerCollision) {
-                hazard.checkPlayerCollision();
-            } else if (hazard.bounds && CollisionDetection.rectangleCollision(
+                hazard.checkPlayerCollision(g.player);
+                return;
+            }
+            const hazardBounds = hazard.bounds || CollisionDetection.getCollisionBounds(hazard);
+            if (hazardBounds && CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(g.player),
-                hazard.bounds
+                hazardBounds
             )) {
                 if (typeof hazard.onPlayerHit === 'function') {
                     hazard.onPlayerHit(g.player);

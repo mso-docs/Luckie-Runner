@@ -407,8 +407,7 @@ class PoisonPuddle extends Entity {
             this.active = false;
         }
         
-        // Check for player collision
-        this.checkPlayerCollision();
+        // Collision handled via collision system
         
         // Pulse effect
         const pulsePhase = (this.pulseTimer % this.pulsePeriod) / this.pulsePeriod;
@@ -418,12 +417,12 @@ class PoisonPuddle extends Entity {
     /**
      * Check for collision with player
      */
-    checkPlayerCollision() {
-        if (!this.game || !this.game.player) return;
+    checkPlayerCollision(player) {
+        const target = player || this.game?.player;
+        if (!target) return;
         
-        const player = this.game.player;
-        if (CollisionDetection.entityCollision(this, player) && !player.invulnerable) {
-            this.applyPoisonEffect(player);
+        if (CollisionDetection.entityCollision(this, target) && !target.invulnerable) {
+            this.applyPoisonEffect(target);
         }
     }
 
