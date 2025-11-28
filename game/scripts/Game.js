@@ -575,6 +575,14 @@ class Game {
                 consumable: false
             });
             itemEntries.push({
+                name: 'Coconuts',
+                value: player.throwables?.getAmmo('coconut') ?? 0,
+                description: 'Heavy rolling ammo dropped from palms.',
+                icon: 'art/items/coconut.png',
+                key: 'coconut',
+                consumable: false
+            });
+            itemEntries.push({
                 name: 'Health Potions',
                 value: player.healthPotions ?? 0,
                 description: 'A small health potion that restores 25 HP.',

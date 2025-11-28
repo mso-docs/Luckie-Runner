@@ -80,7 +80,7 @@ class Player extends Entity {
             }
         });
         this.throwables.registerType('coconut', {
-            maxAmmo: 10,
+            maxAmmo: 99,
             ammo: 10,
             initialAmmo: 10,
             icon: 'art/items/coconut.png',

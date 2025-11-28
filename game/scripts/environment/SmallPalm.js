@@ -24,6 +24,7 @@ class SmallPalm extends Entity {
         this.lastDropTime = 0;
         this.dropCooldown = 1500; // ms between drops
         this.dropChance = 0.2; // 1 in 5 chance on landing
+        this.lowerHitActive = false;
     }
 
     resetCollisionBox() {
@@ -122,6 +123,7 @@ class SmallPalm extends Entity {
 
         this.wasOnTop = this.playerOnTopCurrent;
         this.playerOnTopCurrent = false;
+        this.lowerHitActive = false;
     }
 
     triggerLand() {

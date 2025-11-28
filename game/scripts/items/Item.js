@@ -429,12 +429,17 @@ class CoconutItem extends Item {
         this.fallbackColor = '#c49a6c'; // coconut shell tone
         this.bobHeight = 2;
         this.bobSpeed = 1.5;
+        this.solid = false; // do not block or affect environment
+        this.autoCollect = false;
         this.loadSprite('art/items/coconut.png');
     }
 
     onCollected(collector) {
         if (collector && typeof collector.addCoconuts === 'function') {
             collector.addCoconuts(this.value);
+        }
+        if (collector?.updateUI) {
+            collector.updateUI();
         }
         return true;
     }
