@@ -457,10 +457,10 @@ class Coconut extends Projectile {
         this.gravity = 900;
         this.friction = 0.995;
         this.rollFriction = 0.995;
-        this.maxDistance = 600;
+        this.maxDistance = 3000;
         this.lifeTime = 9000;
         this.startX = x;
-        this.throwSound = 'coconut';
+        this.throwSound = 'sfx/coconut.mp3';
         this.loadSprite('art/items/coconut.png');
         this.ownerType = 'player';
         this.autoFadeOnImpact = false; // use custom roll/disintegrate logic
@@ -480,6 +480,15 @@ class Coconut extends Projectile {
             this.velocity.y = 0;
             this.gravity = 0;
             this.velocity.x *= 0.99; // slight additional drag while sliding
+        }
+
+        // Stop if we've rolled far enough or slowed to a crawl after contact
+        if (this.hasHitSurface) {
+            const dist = Math.abs(this.x - this.startX);
+            const speed = Math.hypot(this.velocity.x, this.velocity.y);
+            if (dist >= this.maxDistance || speed < 5) {
+                this.disintegrate(null, 2000);
+            }
         }
     }
 
@@ -530,7 +539,6 @@ class Coconut extends Projectile {
         this.groundY = ob.y - bounds.height;
         this.y = this.groundY;
         this.gravity = 0;
-        this.startFadeOut(1000);
 
         // Stop if energy is too low
         const speed = Math.hypot(this.velocity.x, this.velocity.y);
@@ -539,10 +547,10 @@ class Coconut extends Projectile {
         }
     }
 
-    disintegrate() {
+    disintegrate(target = null, fadeMs = 2000) {
         this.active = false;
         if (typeof this.startFadeOut === 'function') {
-            this.startFadeOut();
+            this.startFadeOut(fadeMs);
         } else {
             this.active = false;
         }
