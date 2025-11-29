@@ -38,6 +38,7 @@ class TownManager {
 
         this.updateMusicTransition(deltaTime);
         this.updateBuildingDoors(deltaTime);
+        this.updateSetpieceAnimation(deltaTime);
     }
 
     /**
@@ -48,9 +49,32 @@ class TownManager {
         if (!town) return;
         const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
-        // Keep metadata but skip spawning renderable sprites for now
-        this.game.townDecor = [];
         this.activeContent = { buildings, setpieces };
+
+        // Build renderable sprites so SceneRenderer can draw town content
+        const decor = [];
+        const addRenderable = (def) => {
+            const renderable = this.buildDecorRenderable(def);
+            if (renderable) decor.push(renderable);
+        };
+
+        buildings.forEach(b => addRenderable({
+            x: b.exterior?.x ?? 0,
+            y: b.exterior?.y ?? 0,
+            width: b.displayWidth ?? b.exterior?.displayWidth ?? b.exterior?.width ?? b.width ?? b.frameWidth,
+            height: b.displayHeight ?? b.exterior?.displayHeight ?? b.exterior?.height ?? b.height ?? b.frameHeight,
+            sprite: b.sprite || b.exterior?.sprite,
+            frames: b.frames,
+            frameHeight: b.frameHeight,
+            frameWidth: b.frameWidth,
+            frameDirection: b.frameDirection,
+            frameIndexRef: b,
+            layer: b.exterior?.layer || 'foreground'
+        }));
+
+        setpieces.forEach(sp => addRenderable(sp));
+
+        this.game.townDecor = decor;
     }
 
     resetTownContent() {
@@ -59,23 +83,64 @@ class TownManager {
     }
 
     createBuilding(def = {}) {
+        const frames = def.exterior?.frames ?? 2;
+        const frameDirection = def.exterior?.frameDirection || 'vertical'; // 'vertical' or 'horizontal'
+        const scale = def.exterior?.scale ?? 1;
+
+        const autoAlignToGround = def.exterior?.autoAlignToGround ?? true;
+        let exteriorY = def.exterior?.y ?? 0;
+        const exteriorHeight = ((def.exterior?.height ?? def.exterior?.frameHeight ?? 0) * scale) || 0;
+        if (autoAlignToGround && exteriorHeight) {
+            const groundY = this.getGroundY();
+            if (groundY !== null && groundY !== undefined) {
+                exteriorY = groundY - exteriorHeight;
+            }
+        }
+
+        const exterior = { ...(def.exterior || {}), y: exteriorY };
+        const frameHeight = def.exterior?.frameHeight ?? (() => {
+            if (frameDirection === 'horizontal') return def.exterior?.height || 0;
+            const h = def.exterior?.height || 0;
+            return Math.max(1, Math.floor(h / Math.max(1, frames)));
+        })();
+        const frameWidth = def.exterior?.frameWidth ?? (() => {
+            if (frameDirection === 'horizontal') {
+                const w = def.exterior?.width || 0;
+                return Math.max(1, Math.floor(w / Math.max(1, frames)));
+            }
+            return def.exterior?.width || 0;
+        })();
+
+        const displayWidth = (def.exterior?.width ?? frameWidth) * scale;
+        const displayHeight = (def.exterior?.height ?? frameHeight) * scale;
+        exterior.displayWidth = displayWidth;
+        exterior.displayHeight = displayHeight;
+        exterior.scale = scale;
+
+        const doorWidth = (def.door?.width ?? def.exterior?.doorWidth ?? 36) * scale;
+        const doorHeight = (def.door?.height ?? def.exterior?.doorHeight ?? 48) * scale;
+        const exteriorBottom = (exterior?.y ?? 0) + displayHeight;
+        const doorXDefault = (exterior?.x ?? 0) + ((displayWidth - doorWidth) / 2);
+        const doorYDefault = exteriorBottom - doorHeight;
+        const interactRadiusDefault = (def.door?.interactRadius ?? Math.max(doorWidth, doorHeight) * 0.6);
+
         return {
             id: def.id || null,
             name: def.name || 'Building',
-            exterior: def.exterior || {},
-            frames: def.exterior?.frames ?? 2,
-            frameHeight: def.exterior?.frameHeight ?? (() => {
-                const frames = def.exterior?.frames ?? 2;
-                const h = def.exterior?.height || 0;
-                return Math.max(1, Math.floor(h / Math.max(1, frames)));
-            })(),
+            exterior,
+            frames,
+            frameDirection,
+            frameHeight,
+            frameWidth,
+            displayWidth,
+            displayHeight,
             frameIndex: 0, // 0 = door closed, 1 = door open
             door: {
-                x: def.door?.x ?? def.exterior?.x ?? 0,
-                y: def.door?.y ?? def.exterior?.y ?? 0,
-                width: def.door?.width ?? def.exterior?.doorWidth ?? 36,
-                height: def.door?.height ?? def.exterior?.doorHeight ?? 48,
-                interactRadius: def.door?.interactRadius ?? 32
+                x: def.door?.x ?? doorXDefault,
+                y: def.door?.y ?? doorYDefault,
+                width: doorWidth,
+                height: doorHeight,
+                interactRadius: interactRadiusDefault
             },
             sprite: def.exterior?.sprite || null,
             interiorId: def.interiorId || null,
@@ -86,15 +151,39 @@ class TownManager {
     }
 
     createSetpiece(def = {}) {
+        const scale = def.scale ?? 1;
+        const frames = def.frames ?? 1;
+        const frameDirection = def.frameDirection || 'vertical';
+        const frameHeight = def.frameHeight || null;
+        const frameWidth = def.frameWidth || null;
+        const baseWidth = def.width ?? frameWidth;
+        const baseHeight = def.height ?? frameHeight;
+        const displayWidth = (baseWidth || frameWidth || 0) * scale || (def.width ?? 64);
+        const displayHeight = (baseHeight || frameHeight || 0) * scale || (def.height ?? 64);
+        const autoAlignToGround = def.autoAlignToGround ?? true;
+        let y = def.y ?? 0;
+        if (autoAlignToGround && displayHeight) {
+            const groundY = this.getGroundY();
+            if (groundY !== null && groundY !== undefined) {
+                y = groundY - displayHeight;
+            }
+        }
         return {
             id: def.id || null,
             name: def.name || 'Setpiece',
             x: def.x ?? 0,
-            y: def.y ?? 0,
-            width: def.width ?? 64,
-            height: def.height ?? 64,
+            y,
+            width: displayWidth,
+            height: displayHeight,
             layer: def.layer || 'foreground',
-            sprite: def.sprite || null
+            sprite: def.sprite || null,
+            frames,
+            frameHeight: frameHeight || null,
+            frameWidth: frameWidth || null,
+            frameDirection,
+            frameIndex: 0,
+            frameTimeMs: def.frameTimeMs ?? 120,
+            scale
         };
     }
 
@@ -115,7 +204,6 @@ class TownManager {
     handleTownExit() {
         if (!this.currentTownId) return;
         this.handleTownMusic(null);
-        this.resetTownContent();
         this.currentTownId = null;
     }
 
@@ -263,14 +351,30 @@ class TownManager {
         });
     }
 
+    updateSetpieceAnimation(deltaTime = 0) {
+        if (!Array.isArray(this.activeContent?.setpieces)) return;
+        this.activeContent.setpieces.forEach(sp => {
+            if (!sp.frames || sp.frames <= 1) return;
+            const frameTime = sp.frameTimeMs ?? 120;
+            sp._frameTimer = (sp._frameTimer || 0) + deltaTime;
+            if (sp._frameTimer >= frameTime) {
+                const advance = Math.floor(sp._frameTimer / frameTime);
+                sp._frameTimer -= advance * frameTime;
+                sp.frameIndex = ((sp.frameIndex || 0) + advance) % sp.frames;
+            }
+        });
+    }
+
     buildDecorRenderable(def = {}) {
         const spritePath = def.sprite;
         const img = this.getSprite(spritePath);
         if (!img) return null;
         const frames = Math.max(1, def.frames || 1);
-        const frameHeight = def.frameHeight || (img.height / frames);
-        const width = def.width || img.width;
-        const height = def.height || frameHeight;
+        const frameDirection = def.frameDirection || 'vertical';
+        const frameWidth = def.frameWidth ?? (frameDirection === 'horizontal' ? (img.width / frames) : img.width);
+        const frameHeight = def.frameHeight ?? (frameDirection === 'vertical' ? (img.height / frames) : img.height);
+        const width = def.width ?? (frameDirection === 'horizontal' ? frameWidth : (def.frameWidth ?? frameWidth));
+        const height = def.height ?? (frameDirection === 'vertical' ? frameHeight : (def.frameHeight ?? frameHeight));
         const ref = def.frameIndexRef;
         return {
             x: def.x || 0,
@@ -282,12 +386,13 @@ class TownManager {
             render: (ctx, camera) => {
                 if (!ctx || !img.complete) return;
                 const frameIdx = ref?.frameIndex ?? def.frameIndex ?? 0;
-                const sx = 0;
-                const sy = frameIdx * frameHeight;
+                const sx = frameDirection === 'horizontal' ? frameIdx * frameWidth : 0;
+                const sy = frameDirection === 'vertical' ? frameIdx * frameHeight : 0;
                 ctx.drawImage(
                     img,
                     sx, sy,
-                    img.width, frameHeight,
+                    frameDirection === 'horizontal' ? frameWidth : img.width,
+                    frameDirection === 'vertical' ? frameHeight : img.height,
                     (def.x || 0) - (camera?.x || 0),
                     (def.y || 0) - (camera?.y || 0),
                     width,
@@ -295,6 +400,24 @@ class TownManager {
                 );
             }
         };
+    }
+
+    getGroundY() {
+        const g = this.game;
+        if (typeof g.testGroundY === 'number') return g.testGroundY;
+        if (Array.isArray(g.platforms)) {
+            const ground = g.platforms.find(p => p?.type === 'ground');
+            if (ground) return ground.y;
+        }
+        if (g.canvas?.height) {
+            const groundHeight = g.config?.testRoom?.groundHeight ?? 50;
+            return g.canvas.height - groundHeight;
+        }
+        if (g.level?.height) {
+            const groundHeight = g.config?.testRoom?.groundHeight ?? 50;
+            return g.level.height - groundHeight;
+        }
+        return null;
     }
 
     getSprite(path) {
