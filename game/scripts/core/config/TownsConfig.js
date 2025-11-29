@@ -45,7 +45,7 @@ const TownsConfig = {
             ],
             setpieces: [
                 // Town center fountain with benches
-                { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png' },
+                { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, scale: 0.4, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png' },
                 { id: 'bench_west', name: 'Bench', x: 8060, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
                 { id: 'bench_east', name: 'Bench', x: 8340, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
 

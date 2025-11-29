@@ -16,6 +16,7 @@ class TownManager {
         this.doorAutoCloseMs = 2200;
 
         this.spriteCache = {};
+        this.townCache = {};
 
         this.preloadTownMusic();
     }
@@ -47,6 +48,12 @@ class TownManager {
     loadTownContent(town) {
         this.resetTownContent();
         if (!town) return;
+        const cached = this.townCache[town.id];
+        if (cached) {
+            this.activeContent = cached.activeContent;
+            this.game.townDecor = cached.decor;
+            return;
+        }
         const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
         this.activeContent = { buildings, setpieces };
@@ -75,6 +82,7 @@ class TownManager {
         setpieces.forEach(sp => addRenderable(sp));
 
         this.game.townDecor = decor;
+        this.townCache[town.id] = { activeContent: this.activeContent, decor };
     }
 
     resetTownContent() {
