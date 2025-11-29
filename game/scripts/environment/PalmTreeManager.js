@@ -70,6 +70,27 @@ class PalmTreeManager {
         this.palmSpritesReady = false;
         this.spriteLoadAttempted = false;
 
+        // Cloud sprites
+        this.cloudSpritePaths = [
+            { key: 'c1', src: 'art/bg/sky/clouds/cloud1.png' },
+            { key: 'c2', src: 'art/bg/sky/clouds/cloud2.png' },
+            { key: 'c3', src: 'art/bg/sky/clouds/cloud3.png' },
+            { key: 'c4', src: 'art/bg/sky/clouds/cloud4.png' },
+            { key: 'c5', src: 'art/bg/sky/clouds/cloud5.png' },
+            { key: 'c6', src: 'art/bg/sky/clouds/cloud6.png' },
+            { key: 'c7', src: 'art/bg/sky/clouds/cloud7.png' },
+            { key: 'c8', src: 'art/bg/sky/clouds/cloud8.png' },
+            { key: 'c9', src: 'art/bg/sky/clouds/cloud9.png' },
+            { key: 'c10', src: 'art/bg/sky/clouds/cloud10.png' },
+            { key: 'c11', src: 'art/bg/sky/clouds/cloud11.png' },
+            { key: 'c12', src: 'art/bg/sky/clouds/cloud12.png' },
+            { key: 'c13', src: 'art/bg/sky/clouds/cloud13.png' },
+            { key: 'c14', src: 'art/bg/sky/clouds/cloud14.png' }
+        ];
+        this.cloudSprites = [];
+        this.cloudSpritesReady = false;
+        this.cloudSpriteLoadAttempted = false;
+
         // Mountain texture
         this.mountainTexture = null;
         this.mountainTextureReady = false;
@@ -152,6 +173,7 @@ class PalmTreeManager {
 
         // Begin loading sprite assets
         this.loadPalmSprites();
+        this.loadCloudSprites();
         this.loadMountainTexture();
     }
     
@@ -292,6 +314,42 @@ class PalmTreeManager {
         };
         img.src = 'art/bg/mountains/coastal-mountains.png';
         this.mountainTexture = img;
+    }
+
+    /**
+     * Load cloud sprite variants once so clouds can pick random textures.
+     */
+    loadCloudSprites() {
+        if (this.cloudSpriteLoadAttempted) return;
+        this.cloudSpriteLoadAttempted = true;
+        const pending = [];
+        let loaded = 0;
+
+        const finalize = () => {
+            if (loaded < this.cloudSpritePaths.length) return;
+            this.cloudSprites = pending.filter(entry => entry.img && entry.img.complete && entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0);
+            if (this.cloudSprites.length === 0) {
+                this.cloudSprites = pending;
+            }
+            this.cloudSpritesReady = this.cloudSprites.length > 0;
+        };
+
+        this.cloudSpritePaths.forEach(entry => {
+            const img = new Image();
+            img.onload = () => { loaded += 1; finalize(); };
+            img.onerror = () => { loaded += 1; finalize(); };
+            img.src = entry.src;
+            pending.push({ key: entry.key, img });
+        });
+    }
+
+    /**
+     * Pick a random cloud sprite image.
+     */
+    getRandomCloudSprite() {
+        if (!this.cloudSpritesReady || this.cloudSprites.length === 0) return null;
+        const idx = Math.floor(Math.random() * this.cloudSprites.length);
+        return this.cloudSprites[idx]?.img || null;
     }
 
     /**
@@ -466,7 +524,8 @@ class PalmTreeManager {
                 height,
                 parallax,
                 driftSpeed,
-                blobs
+                blobs,
+                sprite: this.getRandomCloudSprite()
             });
         }
     }
@@ -491,6 +550,10 @@ class PalmTreeManager {
             let screenX = cloud.baseX + drift - parallaxOffset;
             screenX = ((screenX + wrapSpan) % wrapSpan) - 400;
 
+            if (!cloud.sprite && this.cloudSpritesReady) {
+                cloud.sprite = this.getRandomCloudSprite();
+            }
+
             if (screenX > -cloud.width && screenX < canvasWidth + cloud.width) {
                 this.drawCloud(ctx, screenX, cloud.y, cloud);
             }
@@ -504,20 +567,27 @@ class PalmTreeManager {
      */
     drawCloud(ctx, x, y, cloud) {
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+        const sprite = (cloud && this.cloudSpritesReady) ? cloud.sprite : null;
 
-        // Draw precomputed blobs for a stable fluffy shape
-        cloud.blobs.forEach(blob => {
-            ctx.beginPath();
-            ctx.arc(
-                x + blob.x,
-                y + blob.y,
-                blob.r,
-                0,
-                Math.PI * 2
-            );
-            ctx.fill();
-        });
+        if (sprite && sprite.complete && sprite.naturalWidth > 0 && sprite.naturalHeight > 0) {
+            // Scale sprite to the procedural cloud's size to preserve spacing/density.
+            ctx.drawImage(sprite, x - cloud.width * 0.5, y - cloud.height * 0.5, cloud.width, cloud.height);
+        } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+
+            // Draw precomputed blobs for a stable fluffy shape
+            cloud.blobs.forEach(blob => {
+                ctx.beginPath();
+                ctx.arc(
+                    x + blob.x,
+                    y + blob.y,
+                    blob.r,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            });
+        }
         
         ctx.restore();
     }
