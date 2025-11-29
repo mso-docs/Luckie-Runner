@@ -69,6 +69,11 @@ class PalmTreeManager {
         this.palmSprites = [];
         this.palmSpritesReady = false;
         this.spriteLoadAttempted = false;
+
+        // Mountain texture
+        this.mountainTexture = null;
+        this.mountainTextureReady = false;
+        this.mountainTextureLoading = false;
     }
     
     /**
@@ -147,6 +152,7 @@ class PalmTreeManager {
 
         // Begin loading sprite assets
         this.loadPalmSprites();
+        this.loadMountainTexture();
     }
     
     /**
@@ -242,7 +248,7 @@ class PalmTreeManager {
         ctx.save();
         const mountainParallax = camera.x * 0.1;
         ctx.translate(-mountainParallax, 0);
-        this.drawMountainSilhouettes(ctx, h * 0.45, h * 0.55, w, mountainParallax);
+        this.drawMountainLayer(ctx, h * 0.55, w, h);
         ctx.restore();
         
         // Ocean water - turquoise blue gradient (static background)
@@ -266,6 +272,62 @@ class PalmTreeManager {
         
         ctx.fillStyle = sandGradient;
         ctx.fillRect(0, h * 0.68, w, h * 0.32);
+    }
+
+    /**
+     * Ensure the coastal mountain texture is loaded once.
+     */
+    loadMountainTexture() {
+        if (this.mountainTextureLoading || this.mountainTextureReady) return;
+        this.mountainTextureLoading = true;
+
+        const img = new Image();
+        img.onload = () => {
+            this.mountainTextureReady = true;
+            this.mountainTextureLoading = false;
+        };
+        img.onerror = () => {
+            this.mountainTextureReady = false;
+            this.mountainTextureLoading = false;
+        };
+        img.src = 'art/bg/mountains/coastal-mountains.png';
+        this.mountainTexture = img;
+    }
+
+    /**
+     * Draw the mountain layer using the coastal-mountains tile, falling back to silhouettes if not ready.
+     */
+    drawMountainLayer(ctx, baseY, canvasWidth, canvasHeight) {
+        if (!this.mountainTextureReady || !this.mountainTexture || !this.mountainTexture.complete) {
+            // Ensure load is kicked off even if render hits first.
+            this.loadMountainTexture();
+            this.drawMountainSilhouettes(ctx, canvasHeight * 0.45, baseY, canvasWidth, 0);
+            return;
+        }
+
+        const img = this.mountainTexture;
+        const naturalWidth = img.naturalWidth || img.width || 1;
+        const naturalHeight = img.naturalHeight || img.height || 1;
+
+        // Scale to occupy the same band as the old silhouettes.
+        const targetHeight = canvasHeight * 0.22;
+        const scale = targetHeight / naturalHeight;
+        const targetWidth = naturalWidth * scale;
+
+        // Overlap tiles slightly to hide seams from subpixel scaling.
+        const tileWidth = Math.ceil(targetWidth);
+        const overlap = 2;
+        const step = tileWidth - overlap;
+
+        // Draw wide enough to cover parallax translation.
+        const startX = -500;
+        const extendedWidth = canvasWidth + 1000;
+        const tiles = Math.ceil((extendedWidth + overlap) / step) + 2;
+
+        for (let i = -1; i < tiles; i++) {
+            const drawX = startX + i * step;
+            ctx.drawImage(img, drawX, baseY - targetHeight, tileWidth, targetHeight);
+        }
     }
     
     /**
