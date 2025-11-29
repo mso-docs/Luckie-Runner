@@ -10,7 +10,7 @@ class SceneRenderer {
         if (!ctx || !canvas) return;
         const g = this.game;
 
-        // Background
+        // Background (farthest)
         // Use camera X/Y for world-aligned layers; parallax managers ignore Y internally
         const bgCamera = { x: g.camera?.x || 0, y: g.camera?.y || 0 };
 
@@ -24,11 +24,20 @@ class SceneRenderer {
             });
         }
 
-        // Canvas-based palms just behind platforms
+        // Palms (should sit behind fronds/town elements)
         g.palmTreeManager.render(ctx, bgCamera, g.gameTime);
 
-        // Platforms
+        // Town fronds/backdrop layer (in front of palms/background, behind ground/town elements)
+        g.townDecor.filter(d => d.layer === 'backdrop' || d.layer === 'midground').forEach(decor => decor?.render?.(ctx, g.camera));
+
+        // Platforms (ground/floating)
         g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera, g));
+
+        // Town ground setpieces (e.g., town-specific ground tiles)
+        g.townDecor.filter(d => d.layer === 'ground').forEach(decor => decor?.render?.(ctx, g.camera));
+
+        // Foreground town elements (buildings, lamps, benches, etc.)
+        g.townDecor.filter(d => d.layer === 'foreground' || d.layer === undefined || d.layer === null).forEach(decor => decor?.render?.(ctx, g.camera));
 
         // Signs
         g.signBoards.forEach(sign => sign?.render?.(ctx, g.camera));
@@ -39,11 +48,8 @@ class SceneRenderer {
         // Chests
         g.chests.forEach(chest => chest?.render?.(ctx, g.camera));
 
-        // Small palms
+        // Small palms (if any)
         g.smallPalms.forEach(palm => palm?.render?.(ctx, g.camera));
-
-        // Town decor (foreground setpieces/building exteriors)
-        g.townDecor.forEach(decor => decor?.render?.(ctx, g.camera));
 
         // Hazards
         g.hazards.forEach(hazard => hazard?.render?.(ctx, g.camera));

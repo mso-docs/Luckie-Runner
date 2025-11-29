@@ -82,7 +82,8 @@ class TownManager {
         setpieces.forEach(sp => addRenderable(sp));
 
         // Layer ordering: ground -> background -> foreground -> default
-        const layerOrder = { ground: 0, background: 1, foreground: 2, overlay: 3 };
+        // Lower numbers are drawn first (farthest); higher numbers are on top (closest)
+        const layerOrder = { background: 0, backdrop: 0.5, midground: 1, ground: 2, foreground: 3, overlay: 4 };
         decor.sort((a, b) => (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3));
 
         this.game.townDecor = decor;

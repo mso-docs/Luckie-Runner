@@ -59,7 +59,9 @@ const TownsConfig = {
                 { id: 'lamp_east', name: 'Street Lamp', x: 9500, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
 
                 // Town overlay fronds (in front of palms/bushes)
-                ,{ id: 'shore_fronds', name: 'Fronds Overlay', x: 6500, y: 0, width: 3500, height: 395, frameWidth: 1022, frameHeight: 988, tileX: true, layer: 'overlay', autoAlignToGround: true, scale: 0.4, sprite: 'art/bg/town backdrop/fronds.png' }
+                ,{ id: 'shore_fronds_start', name: 'Fronds Start', x: 6500, y: 0, width: 409, height: 395, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.4, sprite: 'art/bg/town backdrop/frond-start.png' }
+                ,{ id: 'shore_fronds_mid', name: 'Fronds Mid', x: 6909, y: 0, width: 2682, height: 395, frameWidth: 1022, frameHeight: 988, tileX: true, layer: 'midground', autoAlignToGround: true, scale: 0.4, sprite: 'art/bg/town backdrop/fronds.png' , tileWidth: 409 }
+                ,{ id: 'shore_fronds_end', name: 'Fronds End', x: 9591, y: 0, width: 409, height: 395, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.4, sprite: 'art/bg/town backdrop/frond-end.png' }
             ],
             interiors: []
         }
