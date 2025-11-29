@@ -44,16 +44,19 @@ const TownsConfig = {
                 }
             ],
             setpieces: [
+                // Ground tiling across town region (replaces platform texture)
+                { id: 'shore_ground', name: 'Cobble Ground', x: 6500, y: 0, width: 3500, height: 40, frameWidth: 1024, frameHeight: 1024, tileX: true, layer: 'ground', autoAlignToGround: true, scale: 0.04, sprite: 'art/bg/tiles/beach-cobble.png' },
+
                 // Fountain (animated, scales with player)
                 { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, scale: 0.4, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png' },
 
                 // Fixed bench
-                { id: 'bench_center', name: 'Bench', x: 8100, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png' },
+                { id: 'bench_center', name: 'Bench', x: 8000, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png' },
 
                 // Three fixed street lamps
-                { id: 'lamp_west', name: 'Street Lamp', x: 7000, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
+                { id: 'lamp_west', name: 'Street Lamp', x: 6900, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
                 { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_east', name: 'Street Lamp', x: 9400, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
+                { id: 'lamp_east', name: 'Street Lamp', x: 9500, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
             ],
             interiors: []
         }

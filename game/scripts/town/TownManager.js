@@ -81,6 +81,10 @@ class TownManager {
 
         setpieces.forEach(sp => addRenderable(sp));
 
+        // Layer ordering: ground -> background -> foreground -> default
+        const layerOrder = { ground: 0, background: 1, foreground: 2 };
+        decor.sort((a, b) => (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3));
+
         this.game.townDecor = decor;
         this.townCache[town.id] = { activeContent: this.activeContent, decor };
     }
@@ -173,7 +177,12 @@ class TownManager {
         if (autoAlignToGround && displayHeight) {
             const groundY = this.getGroundY();
             if (groundY !== null && groundY !== undefined) {
-                y = groundY - displayHeight;
+                // For ground-layer props, align to ground top; otherwise sit on top of ground
+                if (def.layer === 'ground') {
+                    y = groundY;
+                } else {
+                    y = groundY - displayHeight;
+                }
             }
         }
         return {
@@ -191,7 +200,9 @@ class TownManager {
             frameDirection,
             frameIndex: 0,
             frameTimeMs: def.frameTimeMs ?? 120,
-            scale
+            scale,
+            tileX: def.tileX || false,
+            tileWidth: def.tileWidth || null
         };
     }
 
@@ -379,11 +390,14 @@ class TownManager {
         if (!img) return null;
         const frames = Math.max(1, def.frames || 1);
         const frameDirection = def.frameDirection || 'vertical';
+        const scale = def.scale ?? 1;
         const frameWidth = def.frameWidth ?? (frameDirection === 'horizontal' ? (img.width / frames) : img.width);
         const frameHeight = def.frameHeight ?? (frameDirection === 'vertical' ? (img.height / frames) : img.height);
-        const width = def.width ?? (frameDirection === 'horizontal' ? frameWidth : (def.frameWidth ?? frameWidth));
-        const height = def.height ?? (frameDirection === 'vertical' ? frameHeight : (def.frameHeight ?? frameHeight));
+        const width = def.width ?? ((frameDirection === 'horizontal' ? frameWidth : (def.frameWidth ?? frameWidth)) * scale);
+        const height = def.height ?? ((frameDirection === 'vertical' ? frameHeight : (def.frameHeight ?? frameHeight)) * scale);
         const ref = def.frameIndexRef;
+        const tileX = !!def.tileX;
+        const tileWidth = def.tileWidth || (frameWidth * scale);
         return {
             x: def.x || 0,
             y: def.y || 0,
@@ -396,16 +410,36 @@ class TownManager {
                 const frameIdx = ref?.frameIndex ?? def.frameIndex ?? 0;
                 const sx = frameDirection === 'horizontal' ? frameIdx * frameWidth : 0;
                 const sy = frameDirection === 'vertical' ? frameIdx * frameHeight : 0;
-                ctx.drawImage(
-                    img,
-                    sx, sy,
-                    frameDirection === 'horizontal' ? frameWidth : img.width,
-                    frameDirection === 'vertical' ? frameHeight : img.height,
-                    (def.x || 0) - (camera?.x || 0),
-                    (def.y || 0) - (camera?.y || 0),
-                    width,
-                    height
-                );
+                const destX = (def.x || 0) - (camera?.x || 0);
+                const destY = (def.y || 0) - (camera?.y || 0);
+                const srcW = frameDirection === 'horizontal' ? frameWidth : img.width;
+                const srcH = frameDirection === 'vertical' ? frameHeight : img.height;
+
+                if (tileX) {
+                    for (let x = 0; x < width; x += tileWidth) {
+                        const drawWidth = Math.min(tileWidth, width - x);
+                        ctx.drawImage(
+                            img,
+                            sx, sy,
+                            srcW, srcH,
+                            destX + x,
+                            destY,
+                            drawWidth,
+                            height
+                        );
+                    }
+                } else {
+                    ctx.drawImage(
+                        img,
+                        sx, sy,
+                        srcW,
+                        srcH,
+                        destX,
+                        destY,
+                        width,
+                        height
+                    );
+                }
             }
         };
     }
