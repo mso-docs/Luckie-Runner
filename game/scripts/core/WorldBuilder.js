@@ -82,7 +82,10 @@ class WorldBuilder {
 
         const spawn = (levelId === 'testRoom' || g.testMode) ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
         const contentMaxX = (levelId === 'testRoom' || g.testMode)
-            ? Math.max(4600, g.testRoomMaxX || 0)
+            ? Math.max(
+                6000,
+                (g.testRoomMaxX || 0) + (g.canvas?.width || 800) // give the camera room to scroll past the edge content
+            )
             : (levelDef?.width || this.config.level?.width || g.canvas.width);
 
         g.level = {
@@ -509,6 +512,7 @@ class WorldBuilder {
         const palmPlatformX = smallPalmX + (smallPalmWidth / 2) - (palmPlatformWidth / 2) - 90;
         const palmPlatformY = smallPalmY + 88;
         g.platforms.push(this.factory.platform(palmPlatformX, palmPlatformY, palmPlatformWidth, palmPlatformHeight));
+        g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, palmPlatformX + palmPlatformWidth + 300);
 
         const slime = this.factory.slime(300, groundY);
         const slimeGroundY = groundY - slime.height;
