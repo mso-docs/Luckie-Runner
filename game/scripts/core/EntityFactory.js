@@ -2,10 +2,11 @@
  * EntityFactory - central place to construct entities/items with game wiring.
  */
 class EntityFactory {
-    constructor(game) {
+    constructor(game, config = {}) {
         this.game = game;
         this.registry = {};
         this.bootstrapDefaults();
+        this.registerTypesFromConfig(config.entities);
     }
 
     platform(x, y, width, height, type) {
@@ -102,6 +103,18 @@ class EntityFactory {
         this.registerType('balloonFan', (def) => this.balloonFan(def.x, def.y, def.dialogueLines || null));
         this.registerType('sign', (def) => this.sign(def.x, def.y, def.spriteSrc, def.dialogueLines || null));
         this.registerType('flag', (def) => this.flag(def.x, def.y));
+    }
+
+    /**
+     * Bulk register from config object: { typeName: builderFn }
+     */
+    registerTypesFromConfig(map) {
+        if (!map || typeof map !== 'object') return;
+        Object.entries(map).forEach(([key, fn]) => {
+            if (typeof fn === 'function') {
+                this.registerType(key, fn.bind(null, this.game));
+            }
+        });
     }
 
     /**

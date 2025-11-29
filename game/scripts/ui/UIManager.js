@@ -29,6 +29,7 @@ class UIManager {
 
         this.config = game.config || GameConfig || {};
         this.services = services || {};
+        this.uiConfig = (typeof window !== 'undefined' && window.UIConfig) ? window.UIConfig : {};
     }
 
     /**
@@ -1079,7 +1080,7 @@ class UIManager {
             if (!this.shopGhostBubble) {
                 const bubble = document.createElement('div');
                 bubble.className = 'npc-bubble hidden';
-                bubble.textContent = 'Press Z to trade';
+                bubble.textContent = this.uiConfig?.shop?.bubble || 'Press Z to trade';
                 bubble.setAttribute('aria-hidden', 'true');
                 const gameContainer = document.getElementById('gameContainer');
                 if (gameContainer) {

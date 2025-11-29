@@ -6,3 +6,5 @@
 - [x] Push dialogue/interaction handling fully into `UIManager/DialogueManager` (start/advance/hide bubble, NPC talk), with `Game` only routing signals.
 - [x] Extract test-room/reset snapshot utilities into `TestRoomManager` (or extend `ResetService`) for debug mode toggles and state restore.
 - [x] Create `StatsManager` to handle enemy/item events, badges/HUD updates, and stats accumulation.
+- [x] Extend factories/registries to be data-driven (pluggable builders, config-driven types).
+- [x] Move UI strings into `UIConfig`; centralize dialogue formatting in `DialogueManager` and keep speech/NPC/sign dialogue routed through it.

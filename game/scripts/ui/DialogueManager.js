@@ -58,8 +58,7 @@ class DialogueManager {
     }
 
     renderBubble(message) {
-        const formatter = this.game.formatSpeechText ? this.game.formatSpeechText.bind(this.game) : (txt) => txt || '';
-        const html = formatter(message);
+        const html = this.formatSpeechText(message);
 
         if (this.bubble) {
             this.bubble.show(html);
@@ -141,5 +140,45 @@ class DialogueManager {
 
     reset() {
         this.close();
+    }
+
+    /**
+     * Lightweight styling parser for speech text.
+     */
+    formatSpeechText(text) {
+        if (typeof text !== 'string') return '';
+
+        const escape = (str) => str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        let safe = escape(text);
+        const apply = (pattern, cls) => {
+            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
+        };
+
+        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
+        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
+        apply(/&lt;(.+?)&gt;/g, 'speech-big');
+        apply(/_(.+?)_/g, 'speech-tiny');
+
+        apply(/\*(.+?)\*/g, 'speech-bold');
+        apply(/%(.+?)%/g, 'speech-shake');
+        apply(/~(.+?)~/g, 'speech-rainbow');
+        apply(/\^(.+?)\^/g, 'speech-glow');
+        apply(/!(.+?)!/g, 'speech-bounce');
+        apply(/`(.+?)`/g, 'speech-mono');
+        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
+
+        return safe;
+    }
+
+    wrapWaveText(inner) {
+        const letters = Array.from(inner);
+        return letters.map((ch, i) => {
+            const delay = (i * 0.06).toFixed(2);
+            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
+        }).join('');
     }
 }

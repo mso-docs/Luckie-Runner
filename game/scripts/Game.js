@@ -699,7 +699,7 @@ class Game {
      * @returns {string}
      */
     wrapWaveText(inner) {
-        return this.uiManager?.wrapWaveText(inner) ?? inner;
+        return this.dialogueManager?.wrapWaveText(inner) ?? inner;
     }
 
     /**

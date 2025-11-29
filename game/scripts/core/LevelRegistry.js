@@ -10,6 +10,10 @@ class LevelRegistry {
         this.levels[id] = def;
     }
 
+    registerAll(map = {}) {
+        Object.entries(map).forEach(([id, def]) => this.register(id, def));
+    }
+
     get(id) {
         return this.levels[id] || null;
     }
