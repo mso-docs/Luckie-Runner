@@ -74,14 +74,11 @@ class TownManager {
             if (!townMusicId) return;
             this.ensureTownMusicLoaded(town);
             this.ensureTrackPlaying(baseId, baseVolume);
-            this.ensureTrackPlaying(townMusicId, 0);
             this.activeTownMusicId = townMusicId;
-            this.beginCrossFade({
+            this.beginTownEntryTransition({
                 baseId,
                 townId: townMusicId,
                 fromBase: audio.getTrackVolume?.(baseId) ?? baseVolume,
-                toBase: 0,
-                fromTown: audio.getTrackVolume?.(townMusicId) ?? 0,
                 toTown: this.getTownMusicVolume(town)
             });
             return;
@@ -89,14 +86,11 @@ class TownManager {
 
         if (this.activeTownMusicId) {
             const townMusicId = this.activeTownMusicId;
-            this.ensureTrackPlaying(baseId, baseVolume);
-            this.beginCrossFade({
+            this.beginTownExitTransition({
                 baseId,
                 townId: townMusicId,
-                fromBase: audio.getTrackVolume?.(baseId) ?? 0,
-                toBase: baseVolume,
-                fromTown: audio.getTrackVolume?.(townMusicId) ?? this.getTownMusicVolume(),
-                toTown: 0
+                fromTown: audio.getTrackVolume?.(townMusicId) ?? this.getTownMusicVolume(town),
+                toBase: baseVolume
             });
             this.activeTownMusicId = null;
         }
@@ -104,12 +98,41 @@ class TownManager {
 
     beginCrossFade({ baseId = null, townId = null, fromBase = 0, toBase = 0, fromTown = 0, toTown = 0 }) {
         this.musicTransition = {
+            stage: 'cross',
             baseId,
             townId,
             fromBase,
             toBase,
             fromTown,
             toTown,
+            elapsed: 0,
+            duration: this.fadeDuration
+        };
+    }
+
+    beginTownEntryTransition({ baseId = null, townId = null, fromBase = 0, toTown = 0 }) {
+        this.musicTransition = {
+            stage: 'fadeOutBase',
+            baseId,
+            townId,
+            fromBase,
+            toBase: 0,
+            fromTown: 0,
+            toTown,
+            elapsed: 0,
+            duration: this.fadeDuration
+        };
+    }
+
+    beginTownExitTransition({ baseId = null, townId = null, fromTown = 0, toBase = 0 }) {
+        this.musicTransition = {
+            stage: 'fadeOutTown',
+            baseId,
+            townId,
+            fromBase: 0,
+            toBase,
+            fromTown,
+            toTown: 0,
             elapsed: 0,
             duration: this.fadeDuration
         };
@@ -123,6 +146,70 @@ class TownManager {
         const progress = Math.min(1, t.elapsed / t.duration);
         const lerp = (a, b) => a + (b - a) * progress;
 
+        if (t.stage === 'fadeOutBase') {
+            if (t.baseId) {
+                audio.setTrackVolume?.(t.baseId, lerp(t.fromBase, t.toBase));
+            }
+            if (progress >= 1) {
+                if (t.baseId && audio.music?.[t.baseId]) {
+                    audio.setTrackVolume?.(t.baseId, 0);
+                }
+                // Immediately start town theme at 0 then fade it in (no pause)
+                this.ensureTrackPlaying(t.townId, 0);
+                this.musicTransition = {
+                    ...t,
+                    stage: 'fadeInTown',
+                    fromTown: 0,
+                    elapsed: 0,
+                    duration: this.fadeDuration
+                };
+            }
+            return;
+        }
+
+        if (t.stage === 'fadeInTown') {
+            if (t.townId) {
+                audio.setTrackVolume?.(t.townId, lerp(t.fromTown ?? 0, t.toTown ?? 0));
+            }
+            if (progress >= 1) {
+                this.musicTransition = null;
+            }
+            return;
+        }
+
+        if (t.stage === 'fadeOutTown') {
+            if (t.townId) {
+                audio.setTrackVolume?.(t.townId, lerp(t.fromTown, t.toTown));
+            }
+            if (progress >= 1) {
+                if (t.townId && audio.music?.[t.townId]) {
+                    audio.setTrackVolume?.(t.townId, 0);
+                    audio.music[t.townId].pause();
+                }
+                // Bring base back only after town is fully silent
+                this.ensureTrackPlaying(t.baseId, 0);
+                this.musicTransition = {
+                    ...t,
+                    stage: 'fadeInBase',
+                    fromBase: 0,
+                    elapsed: 0,
+                    duration: this.fadeDuration
+                };
+            }
+            return;
+        }
+
+        if (t.stage === 'fadeInBase') {
+            if (t.baseId) {
+                audio.setTrackVolume?.(t.baseId, lerp(t.fromBase ?? 0, t.toBase ?? 0));
+            }
+            if (progress >= 1) {
+                this.musicTransition = null;
+            }
+            return;
+        }
+
+        // Default cross-fade stage (legacy fallback)
         if (t.baseId) {
             audio.setTrackVolume?.(t.baseId, lerp(t.fromBase, t.toBase));
         }
