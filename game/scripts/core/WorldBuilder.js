@@ -27,6 +27,7 @@ class WorldBuilder {
         g.enemies = [];
         g.items = [];
         g.hazards = [];
+        g.townDecor = [];
         g.chests = [];
         g.flag = null;
         g.signBoards = [];

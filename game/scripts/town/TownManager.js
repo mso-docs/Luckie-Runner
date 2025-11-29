@@ -15,6 +15,8 @@ class TownManager {
         this.activeContent = { buildings: [], setpieces: [] };
         this.doorAutoCloseMs = 2200;
 
+        this.spriteCache = {};
+
         this.preloadTownMusic();
     }
 
@@ -46,11 +48,14 @@ class TownManager {
         if (!town) return;
         const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
+        // Keep metadata but skip spawning renderable sprites for now
+        this.game.townDecor = [];
         this.activeContent = { buildings, setpieces };
     }
 
     resetTownContent() {
         this.activeContent = { buildings: [], setpieces: [] };
+        this.game.townDecor = [];
     }
 
     createBuilding(def = {}) {
@@ -72,6 +77,7 @@ class TownManager {
                 height: def.door?.height ?? def.exterior?.doorHeight ?? 48,
                 interactRadius: def.door?.interactRadius ?? 32
             },
+            sprite: def.exterior?.sprite || null,
             interiorId: def.interiorId || null,
             npcs: Array.isArray(def.npcs) ? [...def.npcs] : [],
             doorTimer: 0,
@@ -255,6 +261,49 @@ class TownManager {
                 this.closeBuildingDoor(b);
             }
         });
+    }
+
+    buildDecorRenderable(def = {}) {
+        const spritePath = def.sprite;
+        const img = this.getSprite(spritePath);
+        if (!img) return null;
+        const frames = Math.max(1, def.frames || 1);
+        const frameHeight = def.frameHeight || (img.height / frames);
+        const width = def.width || img.width;
+        const height = def.height || frameHeight;
+        const ref = def.frameIndexRef;
+        return {
+            x: def.x || 0,
+            y: def.y || 0,
+            width,
+            height,
+            layer: def.layer || 'foreground',
+            sprite: spritePath,
+            render: (ctx, camera) => {
+                if (!ctx || !img.complete) return;
+                const frameIdx = ref?.frameIndex ?? def.frameIndex ?? 0;
+                const sx = 0;
+                const sy = frameIdx * frameHeight;
+                ctx.drawImage(
+                    img,
+                    sx, sy,
+                    img.width, frameHeight,
+                    (def.x || 0) - (camera?.x || 0),
+                    (def.y || 0) - (camera?.y || 0),
+                    width,
+                    height
+                );
+            }
+        };
+    }
+
+    getSprite(path) {
+        if (!path) return null;
+        if (this.spriteCache[path]) return this.spriteCache[path];
+        const img = new Image();
+        img.src = path;
+        this.spriteCache[path] = img;
+        return img;
     }
 
     updateMusicTransition(deltaTime = 0) {

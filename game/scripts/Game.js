@@ -40,6 +40,7 @@ class Game {
         this.projectiles = [];
         this.hazards = [];
         this.platforms = [];
+        this.townDecor = [];
         this.chests = [];
         this.flag = null;
         
@@ -1138,6 +1139,7 @@ class Game {
         this.items = [];
         this.platforms = [];
         this.hazards = [];
+        this.townDecor = [];
         this.smallPalms = [];
         if (this.camera?.reset) {
             this.camera.reset({ x: 0, y: 0 });

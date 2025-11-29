@@ -42,6 +42,9 @@ class SceneRenderer {
         // Small palms
         g.smallPalms.forEach(palm => palm?.render?.(ctx, g.camera));
 
+        // Town decor (foreground setpieces/building exteriors)
+        g.townDecor.forEach(decor => decor?.render?.(ctx, g.camera));
+
         // Hazards
         g.hazards.forEach(hazard => hazard?.render?.(ctx, g.camera));
 
