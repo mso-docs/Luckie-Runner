@@ -93,6 +93,7 @@ class Game {
         };
         this.services.reset = new ResetService(this);
         this.services.save = new SaveService(persistence);
+        this.progress = new ProgressManager(this, this.services.save);
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -125,8 +126,6 @@ class Game {
         this.signSprite = new Image();
         this.signSprite.src = 'art/items/sign.png';
         this.signUI = new SignUI(this);
-        this.pendingLoadSnapshot = null;
-        this.pendingLevelId = null;
 
         // UI managers
         this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
@@ -240,7 +239,7 @@ class Game {
                 window.levelRegistry.register(id, def);
             });
         }
-        const targetLevel = this.pendingLevelId || 'testRoom';
+        const targetLevel = this.progress?.consumePendingLevelId?.('testRoom') || 'testRoom';
         this.createLevel(targetLevel);
 
         // Register scenes
@@ -708,8 +707,7 @@ class Game {
      * Create the game level with platforms, enemies, and items
      */
     createLevel(levelId = null) {
-        const target = levelId || this.pendingLevelId || this.currentLevelId || 'testRoom';
-        this.pendingLevelId = null;
+        const target = levelId || this.progress?.consumePendingLevelId?.(this.currentLevelId || 'testRoom') || this.currentLevelId || 'testRoom';
         return this.worldBuilder?.createLevel(target);
     }
 
@@ -831,8 +829,7 @@ class Game {
      * @param {string} name
      */
     saveProgress(slotId = 'slot1', name = 'Auto Save') {
-        const save = this.buildSaveSnapshot(name);
-        return this.services?.save?.saveSlot(slotId, save);
+        return this.progress?.save(slotId, name);
     }
 
     /**
@@ -840,12 +837,7 @@ class Game {
      * @param {string} slotId
      */
     loadProgress(slotId) {
-        const snap = this.services?.save?.getSlot?.(slotId);
-        if (!snap) return false;
-        this.pendingLoadSnapshot = snap;
-        this.pendingLevelId = snap.levelId || 'testRoom';
-        this.stateManager.startGame();
-        return true;
+        return this.progress?.load(slotId);
     }
 
     /**
@@ -853,49 +845,7 @@ class Game {
      * @param {string} name
      */
     buildSaveSnapshot(name = 'Auto Save') {
-        const player = this.player || {};
-        const badgeCount = Array.isArray(this.badgeUI?.getEarnedBadges?.())
-            ? this.badgeUI.getEarnedBadges().length
-            : 0;
-
-        const levelState = {
-        enemies: (this.enemies || []).map(e => ({
-            type: e.type || 'enemy',
-            x: e.x,
-            y: e.y,
-            health: e.health,
-            active: e.active !== false,
-            spawnIndex: e.spawnIndex ?? null
-        })),
-        items: (this.items || []).map(it => ({
-            type: it.type || 'item',
-            x: it.x,
-            y: it.y,
-            active: it.active !== false,
-            spawnIndex: it.spawnIndex ?? null
-        }))
-        };
-
-        return {
-            id: Date.now().toString(),
-            name,
-            levelId: this.currentLevelId || 'testRoom',
-            updatedAt: Date.now(),
-            timeElapsed: this.stats?.timeElapsed || 0,
-            player: {
-                x: player.x || 0,
-                y: player.y || 0,
-                health: player.health || player.maxHealth || 100,
-                coins: player.coins || 0,
-                score: player.score || 0
-            },
-            stats: { ...(this.stats || {}) },
-            collectibles: {
-                coins: this.stats?.coinsCollected || 0,
-                badges: badgeCount
-            },
-            levelState
-        };
+        return this.progress?.buildSnapshot(name);
     }
 
     /**
@@ -904,81 +854,7 @@ class Game {
      * @param {Object} snap
      */
     applySaveSnapshot(snap) {
-        if (!snap) return;
-        if (snap.levelId && snap.levelId !== this.currentLevelId) {
-            this.currentLevelId = snap.levelId;
-        }
-        if (snap.stats) {
-            this.stats = { ...snap.stats };
-        }
-        if (typeof snap.timeElapsed === 'number') {
-            this.stats.timeElapsed = snap.timeElapsed;
-        }
-        if (snap.player && this.player) {
-            this.player.x = snap.player.x ?? this.player.x;
-            this.player.y = snap.player.y ?? this.player.y;
-            if (typeof snap.player.health === 'number') {
-                this.player.health = snap.player.health;
-            }
-            if (typeof snap.player.coins === 'number') {
-                this.player.coins = snap.player.coins;
-            }
-            if (typeof snap.player.score === 'number') {
-                this.player.score = snap.player.score;
-            }
-            this.player.updateHealthUI?.();
-            this.player.updateUI?.();
-        }
-        if (this.badgeUI?.reset) {
-            // When loading, we still respect saved badge counts by not adding any yet (they're not persisted here)
-            this.badgeUI.reset(false);
-        }
-
-        // Apply level state (enemies/items) with loose matching to avoid resets
-        if (snap.levelState) {
-            const applyEntities = (savedArr, liveArr) => {
-                if (!Array.isArray(savedArr) || !Array.isArray(liveArr)) return;
-                const used = new Set();
-                const findMatch = (saved) => {
-                    // 1) exact index
-                    const idx = typeof saved.spawnIndex === 'number' ? saved.spawnIndex : null;
-                    if (idx !== null && liveArr[idx] && !used.has(idx) && (!saved.type || liveArr[idx].type === saved.type)) {
-                        return idx;
-                    }
-                    // 2) first unused of same type
-                    for (let i = 0; i < liveArr.length; i++) {
-                        if (used.has(i)) continue;
-                        if (!saved.type || liveArr[i].type === saved.type) {
-                            return i;
-                        }
-                    }
-                    return null;
-                };
-
-                savedArr.forEach(saved => {
-                    const matchIdx = findMatch(saved);
-                    if (matchIdx === null) return;
-                    const entity = liveArr[matchIdx];
-                    used.add(matchIdx);
-                    if (typeof saved.x === 'number') entity.x = saved.x;
-                    if (typeof saved.y === 'number') entity.y = saved.y;
-                    if (typeof saved.health === 'number' && entity.health !== undefined) {
-                        entity.health = saved.health;
-                    }
-                    entity.active = saved.active !== false;
-                });
-
-                // Any live entities not present in saved should be inactive (collected/defeated)
-                for (let i = 0; i < liveArr.length; i++) {
-                    if (!used.has(i)) {
-                        liveArr[i].active = false;
-                    }
-                }
-            };
-
-            applyEntities(snap.levelState.enemies, this.enemies);
-            applyEntities(snap.levelState.items, this.items);
-        }
+        return this.progress?.applySnapshot(snap);
     }
     
     /**
@@ -1012,10 +888,7 @@ class Game {
         }
 
         // Apply pending save snapshot after player/world exists
-        if (this.pendingLoadSnapshot) {
-            this.applySaveSnapshot(this.pendingLoadSnapshot);
-            this.pendingLoadSnapshot = null;
-        }
+        this.progress?.applyPendingSnapshot();
 
         this.updateInventoryOverlay();
         
