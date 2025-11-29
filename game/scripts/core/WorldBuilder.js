@@ -87,7 +87,7 @@ class WorldBuilder {
 
         g.level = {
             width: contentMaxX,
-            height: levelDef?.height ?? this.config.level?.height ?? g.canvas.height,
+            height: levelDef?.height ?? this.config.level?.height ?? (g.canvas.height + 1200),
             spawnX: spawn.x,
             spawnY: spawn.y
         };
@@ -431,8 +431,15 @@ class WorldBuilder {
 
         if (g.testMode) {
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.level.height - 50);
-            flagY = groundY - flagHeight;
-            flagX = 3880;
+            const endPlatform = g.testBalloonEnd;
+            if (endPlatform) {
+                flagY = endPlatform.y - flagHeight;
+                flagX = endPlatform.x + (endPlatform.width / 2) - 32; // center-ish
+                g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, flagX + 300);
+            } else {
+                flagY = groundY - flagHeight;
+                flagX = (g.testRoomMaxX || g.level.width || 4000) - 200;
+            }
         }
 
         g.flag = this.factory.flag(flagX, flagY);
@@ -483,7 +490,9 @@ class WorldBuilder {
         }));
         balloonParkour.forEach(p => {
             g.platforms.push(this.factory.platform(p.x, p.y, p.width, 14));
+            g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, p.x + p.width + 300);
         });
+        g.testBalloonEnd = balloonParkour[balloonParkour.length - 1] || null;
 
         const smallPalmHeight = 191;
         const smallPalmWidth = 121;

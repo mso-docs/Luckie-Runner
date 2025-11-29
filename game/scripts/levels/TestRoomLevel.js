@@ -31,11 +31,14 @@ window.LevelDefinitions.testRoom = {
         { x: 3680, yOffset: 32, width: 180, height: 32 }
     ],
     balloonParkour: [
-        { x: 3960, width: 110, yOffset: 90 },
-        { x: 4080, width: 100, yOffset: 150 },
-        { x: 4220, width: 90, yOffset: 205 },
-        { x: 4340, width: 110, yOffset: 255 },
-        { x: 4420, width: 140, yOffset: 245 }
+        { x: 3960, width: 110, yOffset: 120 },
+        { x: 4120, width: 100, yOffset: 190 },
+        { x: 4300, width: 100, yOffset: 270 },
+        { x: 4480, width: 110, yOffset: 360 },
+        { x: 4680, width: 110, yOffset: 460 },
+        { x: 4900, width: 120, yOffset: 560 },
+        { x: 5120, width: 120, yOffset: 660 },
+        { x: 5350, width: 130, yOffset: 760 }
     ],
     defaultSignMessages: [
         '<<<~HOWDY!~>>> It is I, your #friendly# neighborhood signboard. I am here to provide you with %important% information as you embark on your adventure.',
