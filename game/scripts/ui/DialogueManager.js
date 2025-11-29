@@ -3,9 +3,10 @@
  * Controls the main speech bubble (non-sign).
  */
 class DialogueManager {
-    constructor(game, dialogueMap = {}) {
+    constructor(game, dialogueMap = {}, bubble = null) {
         this.game = game;
         this.dialogues = dialogueMap || {};
+        this.bubble = bubble;
         this.state = {
             messages: [],
             index: 0,
@@ -57,11 +58,19 @@ class DialogueManager {
     }
 
     renderBubble(message) {
-        const bubble = this.game.speechBubble.container;
-        const text = this.game.speechBubble.text;
-        const hint = this.game.speechBubble.hint;
+        const formatter = this.game.formatSpeechText ? this.game.formatSpeechText.bind(this.game) : (txt) => txt || '';
+        const html = formatter(message);
+
+        if (this.bubble) {
+            this.bubble.show(html);
+            return;
+        }
+
+        const bubble = this.game.speechBubble?.container;
+        const text = this.game.speechBubble?.text;
+        const hint = this.game.speechBubble?.hint;
         if (!bubble || !text) return;
-        text.innerHTML = this.game.formatSpeechText ? this.game.formatSpeechText(message) : (message || '');
+        text.innerHTML = html;
         bubble.classList.remove('hidden');
         bubble.classList.add('show');
         bubble.setAttribute('aria-hidden', 'false');
@@ -70,7 +79,12 @@ class DialogueManager {
     }
 
     updatePosition() {
-        const bubble = this.game.speechBubble.container;
+        if (this.bubble) {
+            this.bubble.setPosition(this.state.anchor || this.game.player, this.game.camera, this.game.canvas);
+            return;
+        }
+
+        const bubble = this.game.speechBubble?.container;
         if (!bubble) return;
         const anchor = this.state.anchor || this.game.player;
         const camera = this.game.camera || { x: 0, y: 0 };
@@ -94,15 +108,20 @@ class DialogueManager {
     }
 
     close() {
-        const bubble = this.game.speechBubble.container;
-        const hint = this.game.speechBubble.hint;
-        if (bubble) {
-            bubble.style.display = 'none';
-            bubble.classList.add('hidden');
-            bubble.classList.remove('show');
-            bubble.setAttribute('aria-hidden', 'true');
+        if (this.bubble) {
+            this.bubble.hide(true);
+        } else {
+            const bubble = this.game.speechBubble?.container;
+            const hint = this.game.speechBubble?.hint;
+            if (bubble) {
+                bubble.style.display = 'none';
+                bubble.classList.add('hidden');
+                bubble.classList.remove('show');
+                bubble.setAttribute('aria-hidden', 'true');
+            }
+            if (hint) hint.classList.add('hidden');
         }
-        if (hint) hint.classList.add('hidden');
+
         const onClose = this.state.onClose;
         this.state = {
             messages: [],

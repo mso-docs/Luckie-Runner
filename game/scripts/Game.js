@@ -77,11 +77,9 @@ class Game {
         });
 
         // Intro dialogue UI
-        this.speechBubble = {
-            container: null,
-            text: null,
-            hint: null
-        };
+        this.speechBubbleUI = new SpeechBubble(document);
+        this.speechBubbleUI.init();
+        this.speechBubble = this.speechBubbleUI.refs;
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -116,7 +114,7 @@ class Game {
         this.signUI = new SignUI(this);
 
         // UI managers
-        this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {});
+        this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this);
         this.entityFactory = new EntityFactory(this);
@@ -343,9 +341,7 @@ class Game {
      * Prepare DOM references for the speech bubble overlay
      */
     setupSpeechBubbleUI() {
-        this.speechBubble.container = document.getElementById('speechBubble');
-        this.speechBubble.text = document.getElementById('speechText');
-        this.speechBubble.hint = this.speechBubble.container ? this.speechBubble.container.querySelector('.speech-bubble__hint') : null;
+        this.speechBubbleUI.init();
         this.hideSpeechBubble(true);
     }
 
