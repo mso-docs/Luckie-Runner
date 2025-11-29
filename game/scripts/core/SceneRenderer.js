@@ -28,7 +28,7 @@ class SceneRenderer {
         g.palmTreeManager.render(ctx, bgCamera, g.gameTime);
 
         // Platforms
-        g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera));
+        g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera, g));
 
         // Signs
         g.signBoards.forEach(sign => sign?.render?.(ctx, g.camera));
