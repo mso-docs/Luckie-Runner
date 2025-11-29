@@ -503,6 +503,13 @@ class WorldBuilder {
         g.smallPalms.push(smallPalm);
         g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, smallPalmX + smallPalmWidth + 300);
 
+        // Add a small platform beside the palm so players can climb up
+        const palmPlatformWidth = 90;
+        const palmPlatformHeight = 14;
+        const palmPlatformX = smallPalmX + (smallPalmWidth / 2) - (palmPlatformWidth / 2) - 90;
+        const palmPlatformY = smallPalmY + 88;
+        g.platforms.push(this.factory.platform(palmPlatformX, palmPlatformY, palmPlatformWidth, palmPlatformHeight));
+
         const slime = this.factory.slime(300, groundY);
         const slimeGroundY = groundY - slime.height;
         slime.y = slimeGroundY;
@@ -532,7 +539,7 @@ class WorldBuilder {
         g.princess = this.factory.princess(princessX, princessY, 'princess.default');
         g.npcs.push(g.princess);
 
-        const balloonPerch = balloonParkour[balloonParkour.length - 1];
+        const balloonPerch = balloonParkour[Math.max(0, balloonParkour.length - 2)]; // one platform lower than the last
         const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
         const balloonFanY = balloonPerch.y - 63;
         g.balloonFan = this.factory.balloonFan(balloonFanX, balloonFanY, 'balloon.default');
