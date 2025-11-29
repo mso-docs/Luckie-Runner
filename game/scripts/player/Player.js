@@ -146,7 +146,7 @@ class Player extends Entity {
      */
     onUpdate(deltaTime) {
         const dt = deltaTime / 1000; // Convert to seconds
-        const input = this.game.input;
+        const input = this.game.services?.input || this.game.input;
 
         // Update timed buffs
         this.updateCoffeeBuff(deltaTime);
@@ -286,8 +286,9 @@ class Player extends Entity {
         this.game.projectiles.push(projectile);
 
         // Play throw sound if available
-        if (projectile.throwSound && this.game.audioManager && !projectile.playedThrowSound) {
-            this.game.audioManager.playSound(projectile.throwSound, 0.7);
+        const audio = this.getAudio();
+        if (projectile.throwSound && audio && !projectile.playedThrowSound) {
+            audio.playSound?.(projectile.throwSound, 0.7);
             projectile.playedThrowSound = true;
         }
         
@@ -299,8 +300,8 @@ class Player extends Entity {
         this.updateUI();
         
         // Play attack sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('rock', 0.6);
+        if (audio) {
+            audio.playSound?.('rock', 0.6);
         }
     }
 
@@ -311,9 +312,13 @@ class Player extends Entity {
      */
     updateCamera() {
         if (!this.game.camera) return;
-        
-        const targetX = this.x - this.game.canvas.width / 2 + this.width / 2;
-        const targetY = this.y - this.game.canvas.height / 2 + this.height / 2;
+        const render = this.game?.services?.render;
+        const canvas = render?.canvas || this.game.canvas;
+        const canvasWidth = render?.width ? render.width() : (canvas?.width || 0);
+        const canvasHeight = render?.height ? render.height() : (canvas?.height || 0);
+
+        const targetX = this.x - canvasWidth / 2 + this.width / 2;
+        const targetY = this.y - canvasHeight / 2 + this.height / 2;
         
         // Smooth camera following with better responsiveness
         const lerpSpeed = 0.12;
@@ -363,8 +368,9 @@ class Player extends Entity {
      */
     onTakeDamage(amount, source) {
         // Play hurt sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('hurt', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('hurt', 0.8);
         }
 
         // Star burst hit flash
@@ -607,10 +613,11 @@ class Player extends Entity {
         const oldMilestone = Math.floor(oldScore / 1000);
         const newMilestone = Math.floor(this.score / 1000);
         
-        if (newMilestone > oldMilestone && this.game.audioManager) {
-            this.game.audioManager.playSound('high_score', 0.9);
-        } else if (this.game.audioManager) {
-            this.game.audioManager.playSound('coin', 0.7);
+        const audio = this.getAudio();
+        if (newMilestone > oldMilestone && audio) {
+            audio.playSound?.('high_score', 0.9);
+        } else if (audio) {
+            audio.playSound?.('coin', 0.7);
         }
         
         this.updateUI();
@@ -623,8 +630,9 @@ class Player extends Entity {
     addRocks(amount) {
         const newCount = this.throwables?.addAmmo('rock', amount);
         
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('special', 0.7);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('special', 0.7);
         }
         this.updateUI();
         return newCount;
@@ -632,8 +640,9 @@ class Player extends Entity {
 
     addCoconuts(amount) {
         const newCount = this.throwables?.addAmmo('coconut', amount);
-        if (this.game?.audioManager) {
-            this.game.audioManager.playSound('special', 0.7);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('special', 0.7);
         }
         this.updateUI();
         return newCount;
@@ -652,8 +661,9 @@ class Player extends Entity {
      */
     addCoffee(amount = 1) {
         this.coffeeDrinks = Math.max(0, this.coffeeDrinks + amount);
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('special', 0.7);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('special', 0.7);
         }
         this.updateUI();
     }
@@ -664,8 +674,9 @@ class Player extends Entity {
      */
     addHealthPotion(amount = 1) {
         this.healthPotions = Math.max(0, this.healthPotions + amount);
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('health', 0.7);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('health', 0.7);
         }
         this.updateUI();
     }
@@ -773,8 +784,9 @@ class Player extends Entity {
         };
         this.maxAirJumps = extraJumps;
         this.remainingAirJumps = this.maxAirJumps;
-        if (this.game?.audioManager) {
-            this.game.audioManager.playSound('coffee', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playSound?.('coffee', 0.8);
         }
         this.updateBuffHUD();
     }
@@ -868,6 +880,10 @@ class Player extends Entity {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    getAudio() {
+        return this.game?.services?.audio || this.game?.audioManager || null;
     }
 
     /**

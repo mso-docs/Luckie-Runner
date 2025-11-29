@@ -295,6 +295,7 @@
             <h1>Luckie Runner!</h1>
             <p>Help Luckie Puppy get to Beachside Boba Cafe on time!</p>
             <button id="startButton">Start Game</button>
+            <button id="loadButton">Load Game</button>
             <button id="instructionsButton">Instructions</button>
         </div>
 
@@ -325,6 +326,7 @@
         <div id="pauseMenu" class="menu hidden">
             <h2>Paused!</h2>
             <button id="resumeButton">Resume?</button>
+            <button id="pauseSaveButton">Save Game</button>
             
             <!-- Audio Controls -->
             <div class="audio-controls">
@@ -352,13 +354,46 @@
             
             <button id="pauseMainMenuButton">Main Menu</button>
         </div>
+
+        <!-- Load Menu -->
+        <div id="loadMenu" class="menu hidden">
+            <h2>Load Game</h2>
+            <div id="saveSlotsList" class="save-slot-list">
+                <!-- Populated via UIManager -->
+            </div>
+            <button id="loadBackButton">Back</button>
+        </div>
     </div>
 
     <!-- Core Game Scripts -->
     <script src="scripts/utils/InputManager.js"></script>
     <script src="scripts/utils/AudioManager.js"></script>
     <script src="scripts/utils/CollisionDetection.js"></script>
+    <script src="scripts/core/config/ControlsConfig.js"></script>
+    <script src="scripts/core/config/AudioConfig.js"></script>
+    <script src="scripts/core/config/CameraConfig.js"></script>
+    <script src="scripts/core/config/LevelDefaultsConfig.js"></script>
+    <script src="scripts/core/config/ThemesConfig.js"></script>
     <script src="scripts/core/CollisionBox.js"></script>
+    <script src="scripts/core/GameConfig.js"></script>
+    <script src="scripts/core/EventBus.js"></script>
+    <script src="scripts/core/ServiceLocator.js"></script>
+    <script src="scripts/core/GameLoop.js"></script>
+    <script src="scripts/core/Camera.js"></script>
+    <script src="scripts/core/LevelRegistry.js"></script>
+    <script src="scripts/core/SceneManager.js"></script>
+    <script src="scripts/core/CollisionSystem.js"></script>
+    <script src="scripts/core/services/InputService.js"></script>
+    <script src="scripts/core/services/AudioService.js"></script>
+    <script src="scripts/core/services/RenderContext.js"></script>
+    <script src="scripts/core/services/PersistenceService.js"></script>
+    <script src="scripts/core/services/ResetService.js"></script>
+    <script src="scripts/core/services/SaveService.js"></script>
+    <script src="scripts/core/RenderTarget.js"></script>
+    <script src="scripts/core/AudioController.js"></script>
+    <script src="scripts/dialogue/SpeechBubble.js"></script>
+    <script src="scripts/dialogue/Dialogues.js"></script>
+    <script src="scripts/dialogue/NPCDialogues.js"></script>
     
     <!-- Base Entity Classes -->
     <script src="scripts/core/Entity.js"></script>
@@ -368,6 +403,14 @@
     <!-- Manager Classes -->
     <script src="scripts/core/GameStateManager.js"></script>
     <script src="scripts/ui/BadgeUI.js"></script>
+    <script src="scripts/ui/DialogueManager.js"></script>
+    <script src="scripts/ui/SignUI.js"></script>
+    <script src="scripts/ui/UIConfig.js"></script>
+    <script src="scripts/ui/UIInputController.js"></script>
+    <script src="scripts/ui/UIManager.js"></script>
+    <script src="scripts/core/scene/MenuScene.js"></script>
+    <script src="scripts/core/scene/PlayScene.js"></script>
+    <script src="scripts/core/scene/PauseScene.js"></script>
     
     <!-- Player System -->
     <script src="scripts/player/Player.js"></script>
@@ -386,6 +429,7 @@
     <script src="scripts/environment/SmallPalm.js"></script>
     <script src="scripts/environment/TestRoom.js"></script>
     <script src="scripts/environment/Sign.js"></script>
+    <script src="scripts/environment/ThemeRegistry.js"></script>
     
     <!-- Items and Collectibles -->
     <script src="scripts/items/Item.js"></script>
@@ -400,6 +444,23 @@
     <script src="scripts/npcs/ShopGhost.js"></script>
     <script src="scripts/npcs/PrincessNPC.js"></script>
     <script src="scripts/npcs/BalloonNPC.js"></script>
+
+    <!-- Level definitions -->
+    <script src="scripts/levels/TestRoomLevel.js"></script>
+
+    <!-- Rendering -->
+    <script src="scripts/core/SceneRenderer.js"></script>
+    <script src="scripts/core/UIRenderer.js"></script>
+    <script src="scripts/core/DebugRenderer.js"></script>
+    <script src="scripts/core/Renderer.js"></script>
+    <script src="scripts/core/GameSystems.js"></script>
+    <script src="scripts/core/ProgressManager.js"></script>
+    <script src="scripts/core/TestRoomManager.js"></script>
+    <script src="scripts/core/StatsManager.js"></script>
+
+    <!-- World construction helpers -->
+    <script src="scripts/core/EntityFactory.js"></script>
+    <script src="scripts/core/WorldBuilder.js"></script>
     
     <!-- Game Logic -->
     <script src="scripts/Game.js"></script>

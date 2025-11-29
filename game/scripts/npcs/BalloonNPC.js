@@ -2,7 +2,7 @@
  * BalloonNPC - Cheerful balloon fan perched atop optional parkour
  */
 class BalloonNPC extends Entity {
-    constructor(x, y) {
+    constructor(x, y, dialogueId = 'balloon.default') {
         super(x, y, 55, 63);
 
         this.loadSprite('art/sprites/balloon.png');
@@ -11,11 +11,7 @@ class BalloonNPC extends Entity {
         this.baseY = y;
         this.bobTime = 0;
         this.bobAmount = 7;
-        this.dialogueLines = [
-            'Oh hey! I hauled all these balloons up here just to feel the breeze.',
-            'Balloons make everything better. Races, mountain tops, even waiting around.',
-            'If you ever find more balloons, send them my way—I can never have enough!'
-        ];
+        this.dialogueId = dialogueId;
     }
 
     /**

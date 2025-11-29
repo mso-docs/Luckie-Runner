@@ -1,0 +1,3 @@
+const ThemesConfig = {
+    defaultTheme: 'beach'
+};

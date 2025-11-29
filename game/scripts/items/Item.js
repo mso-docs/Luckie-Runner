@@ -205,8 +205,9 @@ class Item extends Entity {
             this.createCollectionEffect();
             
             // Play collection sound
-            if (this.game.audioManager && this.collectSound) {
-                this.game.audioManager.playSound(this.collectSound, 0.7);
+            const audio = this.game?.services?.audio || this.game?.audioManager;
+            if (audio && this.collectSound) {
+                audio.playSound?.(this.collectSound, 0.7);
             }
             
             // Show collection message

@@ -374,9 +374,9 @@ class MagicArrowSlime extends Enemy {
         // Create magic effect
         this.createMagicCastEffect();
         
-        // Play arrow sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('magic_arrow', 0.5);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('magic_arrow', 0.5);
         }
     }
 
@@ -426,18 +426,19 @@ class MagicArrowSlime extends Enemy {
     onStateChange(newState, oldState) {
         super.onStateChange(newState, oldState);
         
-        if (this.game.audioManager) {
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
             switch (newState) {
                 case 'chase':
                     if (oldState === 'patrol') {
-                        this.game.audioManager.playSound('magic_slime_alert', 0.4);
+                        audio.playSound?.('magic_slime_alert', 0.4);
                     }
                     break;
                 case 'attack':
-                    this.game.audioManager.playSound('magic_charge', 0.6);
+                    audio.playSound?.('magic_charge', 0.6);
                     break;
                 case 'hurt':
-                    this.game.audioManager.playSound('magic_hurt', 0.6);
+                    audio.playSound?.('magic_hurt', 0.6);
                     break;
             }
         }

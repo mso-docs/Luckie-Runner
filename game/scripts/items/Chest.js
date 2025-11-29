@@ -62,8 +62,9 @@ class Chest extends Entity {
         this.isOpen = true;
         this.glowTime = 0;
 
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('chest', 1);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('chest', 1);
         }
     }
 

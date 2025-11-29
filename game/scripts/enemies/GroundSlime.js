@@ -220,20 +220,20 @@ class GroundSlime extends Enemy {
         super.onStateChange(newState, oldState);
         
         // Play appropriate sounds for state changes
-        if (this.game.audioManager) {
-            switch (newState) {
-                case 'chase':
-                    if (oldState === 'patrol') {
-                        this.game.audioManager.playSound('slime_alert', 0.4);
-                    }
-                    break;
-                case 'attack':
-                    this.game.audioManager.playSound('slime_attack', 0.5);
-                    break;
-                case 'hurt':
-                    this.game.audioManager.playSound('slime_hurt', 0.6);
-                    break;
-            }
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (!audio) return;
+        switch (newState) {
+            case 'chase':
+                if (oldState === 'patrol') {
+                    audio.playSound?.('slime_alert', 0.4);
+                }
+                break;
+            case 'attack':
+                audio.playSound?.('slime_attack', 0.5);
+                break;
+            case 'hurt':
+                audio.playSound?.('slime_hurt', 0.6);
+                break;
         }
     }
 

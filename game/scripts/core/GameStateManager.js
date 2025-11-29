@@ -43,6 +43,7 @@ class GameStateManager {
         
         this.previousState = this.currentState;
         this.currentState = newState;
+        this.game.currentStateLabel = newState;
         
         // State changed
         return true;
@@ -87,7 +88,13 @@ class GameStateManager {
      * Start the game
      */
     startGame() {
-        // Always rebuild world for a fresh start (items/entities reset)
+        if (this.game?.sceneManager) {
+            this.setState(this.states.PLAYING);
+            this.game.sceneManager.change('play');
+            return;
+        }
+
+        // Legacy flow
         if (this.game && typeof this.game.resetGame === 'function') {
             this.game.resetGame();
         }
@@ -95,21 +102,17 @@ class GameStateManager {
         this.setState(this.states.PLAYING);
         this.game.running = true;
         this.hideAllMenus();
-        
-        // Initialize game systems
+
         this.game.initializeGameSystems();
-        
-        // Start game loop if not already running
-        if (!this.game.gameLoopRunning) {
-            this.game.gameLoop();
+        if (typeof this.game.startLoop === 'function') {
+            this.game.startLoop();
         }
-        
-        // Play level music
-        if (this.game.audioManager) {
-            this.game.audioManager.playMusic('level1', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playMusic?.('level1', 0.8);
         }
-        
-        // Game started
+        // Auto-save on start (so we always have at least one slot)
+        this.game.saveProgress?.('slot1', 'Auto Save');
     }
     
     /**
@@ -117,16 +120,24 @@ class GameStateManager {
      */
     pauseGame() {
         if (!this.isState(this.states.PLAYING)) return;
-        
+
+        if (this.game?.sceneManager) {
+            this.setState(this.states.PAUSED);
+            this.game.sceneManager.change('pause');
+            return;
+        }
+
         this.setState(this.states.PAUSED);
         this.showMenu('pauseMenu');
-        
-        // Lower music volume when paused
-        if (this.game.audioManager) {
-            this.game.audioManager.setMusicVolume(this.game.audioManager.getMusicVolume() * 0.3);
+        const audio = this.getAudio();
+        if (audio) {
+            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            if (audio.setMusic) {
+                audio.setMusic(current * 0.3);
+            } else if (audio.setMusicVolume) {
+                audio.setMusicVolume(current * 0.3);
+            }
         }
-        
-        // Game paused
     }
     
     /**
@@ -134,16 +145,25 @@ class GameStateManager {
      */
     resumeGame() {
         if (!this.isState(this.states.PAUSED)) return;
-        
+
+        if (this.game?.sceneManager) {
+            this.setState(this.states.PLAYING);
+            this.game.sceneManager.change('play');
+            return;
+        }
+
         this.setState(this.states.PLAYING);
         this.hideAllMenus();
-        
-        // Restore music volume
-        if (this.game.audioManager) {
-            this.game.audioManager.setMusicVolume(this.game.audioManager.getMusicVolume() / 0.3);
+        const audio = this.getAudio();
+        if (audio) {
+            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            const restored = current / 0.3;
+            if (audio.setMusic) {
+                audio.setMusic(restored);
+            } else if (audio.setMusicVolume) {
+                audio.setMusicVolume(restored);
+            }
         }
-        
-        // Game resumed
     }
     
     /**
@@ -153,6 +173,9 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.GAME_OVER);
         this.game.running = false;
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
         
         // Update game over screen
         const gameOverMenu = document.getElementById('gameOverMenu');
@@ -169,9 +192,10 @@ class GameStateManager {
         this.showMenu('gameOverMenu');
         
         // Play game over sound
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
-            this.game.audioManager.playSound('game_over', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
+            audio.playSound?.('game_over', 0.8);
         }
         
         // Game Over
@@ -184,6 +208,9 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.VICTORY);
         this.game.running = false;
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
         
         // Bonus points for victory
         if (this.game.player) {
@@ -205,9 +232,10 @@ class GameStateManager {
         this.showMenu('gameOverMenu');
         
         // Play victory sound
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
-            this.game.audioManager.playSound('level', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
+            audio.playSound?.('level', 0.8);
         }
         
         // Victory!
@@ -238,22 +266,25 @@ class GameStateManager {
         this.captureRunStats();
         this.setState(this.states.MENU);
         this.game.running = false;
-        
-        // Stop music
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
+
+        if (this.game?.sceneManager) {
+            this.game.sceneManager.change('menu');
+            return;
         }
-        
-        // Reset everything
+
+        if (typeof this.game.stopLoop === 'function') {
+            this.game.stopLoop();
+        }
+        this.game.saveProgress?.('slot1', 'Auto Save');
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
+        }
         this.game.resetGame();
         this.showMenu('startMenu');
-        
-        // Play title music
-        if (this.game.audioManager) {
+        if (audio) {
             this.game.playTitleMusic();
         }
-        
-        // Returned to main menu
     }
     
     /**
@@ -299,6 +330,10 @@ class GameStateManager {
         if (finalCoinsElement) {
             finalCoinsElement.textContent = this.lastRunStats.coins || 0;
         }
+    }
+
+    getAudio() {
+        return this.game?.services?.audio || this.game?.audioManager || null;
     }
     
     /**
