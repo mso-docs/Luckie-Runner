@@ -328,9 +328,11 @@ body, button, input, select, textarea,
     bottom: 12px;
     right: 12px;
     transform: translateX(0);
-    width: 400px;
-    height: 160px;
-    display: flex;
+    min-width: 280px;
+    max-width: 90vw;
+    min-height: 140px;
+    padding: 18px 40px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
@@ -345,7 +347,7 @@ body, button, input, select, textarea,
     background-image: url('../art/ui/scroll.png');
     background-position: center;
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 100% 100%;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
 }
 
