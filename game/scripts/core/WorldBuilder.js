@@ -474,7 +474,7 @@ class WorldBuilder {
             y: p.y !== null && p.y !== undefined ? p.y : baseY - ((p.yOffset || 0))
         }));
         parkour.forEach(p => {
-            g.platforms.push(this.factory.platform(p.x, p.y, p.width, 12));
+            g.platforms.push(this.factory.platform(p.x, p.y, p.width, 12, 'floating'));
         });
 
         const mountainSteps = (levelDef.mountainSteps || []).map(step => ({
@@ -484,7 +484,7 @@ class WorldBuilder {
             height: step.height
         }));
         mountainSteps.forEach(step => {
-            g.platforms.push(this.factory.platform(step.x, step.y, step.width, step.height));
+            g.platforms.push(this.factory.platform(step.x, step.y, step.width, step.height, 'floating'));
         });
 
         const balloonParkour = (levelDef.balloonParkour || []).map(p => ({
@@ -493,7 +493,7 @@ class WorldBuilder {
             y: groundY - (p.yOffset || 0)
         }));
         balloonParkour.forEach(p => {
-            g.platforms.push(this.factory.platform(p.x, p.y, p.width, 14));
+            g.platforms.push(this.factory.platform(p.x, p.y, p.width, 14, 'floating'));
             g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, p.x + p.width + 300);
         });
         g.testBalloonEnd = balloonParkour[balloonParkour.length - 1] || null;
@@ -512,7 +512,7 @@ class WorldBuilder {
         const palmPlatformHeight = 14;
         const palmPlatformX = smallPalmX + (smallPalmWidth / 2) - (palmPlatformWidth / 2) - 90;
         const palmPlatformY = smallPalmY + 88;
-        g.platforms.push(this.factory.platform(palmPlatformX, palmPlatformY, palmPlatformWidth, palmPlatformHeight));
+        g.platforms.push(this.factory.platform(palmPlatformX, palmPlatformY, palmPlatformWidth, palmPlatformHeight, 'floating'));
         g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, palmPlatformX + palmPlatformWidth + 300);
 
         const slime = this.factory.slime(300, groundY);

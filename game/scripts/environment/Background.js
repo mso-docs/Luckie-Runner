@@ -548,9 +548,12 @@ class BackgroundGenerators {
 class StylizedPlatform {
     static defaultGroundTexture = 'art/bg/tiles/ground-plane.png';
     static townGroundTexture = 'art/bg/tiles/beach-cobble.png';
+    static floatingTexture = 'art/bg/tiles/platform.png';
     static textureCache = {};
+    static texturesPreloaded = false;
 
     static renderPlatform(ctx, platform, camera, game = null) {
+        StylizedPlatform.preloadDefaults();
         const screenX = platform.x - camera.x;
         const screenY = platform.y - camera.y;
 
@@ -564,6 +567,14 @@ class StylizedPlatform {
                 StylizedPlatform.drawFloatingPlatform(ctx, screenX, screenY, platform.width, platform.height);
             }
         }
+    }
+
+    static preloadDefaults() {
+        if (StylizedPlatform.texturesPreloaded) return;
+        StylizedPlatform.getTexture(StylizedPlatform.defaultGroundTexture);
+        StylizedPlatform.getTexture(StylizedPlatform.townGroundTexture);
+        StylizedPlatform.getTexture(StylizedPlatform.floatingTexture);
+        StylizedPlatform.texturesPreloaded = true;
     }
 
     static getGroundTexture(game = null, worldX = 0) {
@@ -584,12 +595,15 @@ class StylizedPlatform {
         if (StylizedPlatform.textureCache[path]) return StylizedPlatform.textureCache[path];
         const img = new Image();
         img.src = path;
+        img.onload = () => { img._ready = true; };
+        img.onerror = () => { img._failed = true; };
         StylizedPlatform.textureCache[path] = img;
         return img;
     }
 
     static drawTexturedPlatform(ctx, x, y, width, height, texture) {
-        if (!texture || !texture.complete) return false;
+        if (!texture || texture._failed) return false;
+        if (!texture.complete && !texture.naturalWidth) return false;
         const scale = height / texture.height;
         const tileW = texture.width * scale;
         const tileH = height;
@@ -636,41 +650,12 @@ class StylizedPlatform {
     }
     
     static drawFloatingPlatform(ctx, x, y, width, height) {
-        // Wooden platform look
-        const woodGradient = ctx.createLinearGradient(0, y, 0, y + height);
-        woodGradient.addColorStop(0, '#DEB887');  // Light wood
-        woodGradient.addColorStop(0.5, '#CD853F'); // Medium wood
-        woodGradient.addColorStop(1, '#A0522D');   // Darker wood
-        
-        ctx.fillStyle = woodGradient;
-        ctx.fillRect(x, y, width, height);
-        
-        // Add wood planks
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 1;
-        const plankWidth = 32;
-        for (let i = 0; i < width; i += plankWidth) {
-            ctx.beginPath();
-            ctx.moveTo(x + i, y);
-            ctx.lineTo(x + i, y + height);
-            ctx.stroke();
+        const tex = StylizedPlatform.getTexture(StylizedPlatform.floatingTexture);
+        const ready = tex && !tex._failed && (tex.complete || tex._ready || tex.naturalWidth);
+        if (ready) {
+            StylizedPlatform.drawTexturedPlatform(ctx, x, y, width, height, tex);
+            return;
         }
-        
-        // Add wood grain
-        ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
-        for (let i = 0; i < width; i += plankWidth) {
-            for (let j = 0; j < 3; j++) {
-                const grainY = y + (j + 1) * height / 4;
-                ctx.beginPath();
-                ctx.moveTo(x + i + 2, grainY);
-                ctx.lineTo(x + i + plankWidth - 2, grainY);
-                ctx.stroke();
-            }
-        }
-        
-        // Border
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
+        // If texture is still loading or failed, skip drawing rather than showing the wrong art
     }
 }
