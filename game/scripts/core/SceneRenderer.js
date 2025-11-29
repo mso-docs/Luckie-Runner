@@ -11,8 +11,8 @@ class SceneRenderer {
         const g = this.game;
 
         // Background
-        // Lock background layers to horizontal parallax only (no vertical motion)
-        const bgCamera = { x: g.camera?.x || 0, y: 0 };
+        // Use camera X/Y for world-aligned layers; parallax managers ignore Y internally
+        const bgCamera = { x: g.camera?.x || 0, y: g.camera?.y || 0 };
 
         if (g.testMode) {
             g.renderTestBackground(ctx, canvas);

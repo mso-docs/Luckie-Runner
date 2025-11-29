@@ -321,7 +321,7 @@ class PalmTreeManager {
      */
     render(ctx, camera, gameTime) {
         if (!this.enabled) return;
-        // Follow camera vertically so bases stay aligned with the ground plane, but parallax only on X.
+        // Follow camera vertically so trees stay planted on ground; parallax only on X.
         const camY = camera?.y || 0;
         
         // Draw sky gradient and background elements (pass camera and gameTime for parallax and animation)
@@ -336,8 +336,8 @@ class PalmTreeManager {
                 
                 // Only render visible trees
                 if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
-                    // Move vertically with camera to stay glued to the ground plane; parallax on X only
-                    this.drawPalmTree(ctx, screenX, layer.groundY - camY, tree.height, tree.lean, layer, tree, camY);
+                    // Stay glued to ground: subtract camera Y but no Y parallax
+                    this.drawPalmTree(ctx, screenX, layer.groundY - camY, tree.height, tree.lean, layer, tree);
                 }
             });
         });
@@ -886,7 +886,7 @@ class PalmTreeManager {
         this.bushes.forEach(bush => {
             const screenX = bush.x - parallaxOffset;
             if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
-                this.drawBush(ctx, screenX, this.bushLayer.y - camY, bush, camY);
+                this.drawBush(ctx, screenX, this.bushLayer.y - camY, bush);
             }
         });
     }
@@ -894,14 +894,14 @@ class PalmTreeManager {
     /**
      * Draw a single bush sprite.
      */
-    drawBush(ctx, x, groundY, bush, camY = 0) {
+    drawBush(ctx, x, groundY, bush) {
         const sprite = bush.sprite || this.getRandomBushSprite();
         if (!sprite) return;
 
         const height = bush.height;
         const width = bush.width;
         const drawX = x - width / 2;
-        const drawY = (groundY) - height;
+        const drawY = groundY - height;
 
         ctx.save();
         ctx.globalAlpha = 1;
@@ -912,7 +912,7 @@ class PalmTreeManager {
     /**
      * Draw a single stylized palm tree
      */
-    drawPalmTree(ctx, x, groundY, height, lean, layer, tree, camY = 0) {
+    drawPalmTree(ctx, x, groundY, height, lean, layer, tree) {
         const sprite = this.getSpriteForTree(tree);
         if (!sprite) return;
 
@@ -925,7 +925,7 @@ class PalmTreeManager {
         // Offset lean subtly to keep bases on the ground
         const leanOffset = (lean || 0) * height * 0.3;
         const drawX = x + leanOffset - drawWidth / 2;
-        const drawY = (groundY) - drawHeight;
+        const drawY = groundY - drawHeight;
 
         ctx.save();
         ctx.globalAlpha *= layer.alpha ?? 1;
