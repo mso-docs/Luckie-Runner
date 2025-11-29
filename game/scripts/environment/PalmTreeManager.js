@@ -91,6 +91,55 @@ class PalmTreeManager {
         this.cloudSpritesReady = false;
         this.cloudSpriteLoadAttempted = false;
 
+        // Bush sprites (drawn in front of palms, behind platforms)
+        this.bushSpritePaths = [
+            { key: 'bush1', src: 'art/bg/bushes/bush1.png' },
+            { key: 'bush2', src: 'art/bg/bushes/bush2.png' },
+            { key: 'bush3', src: 'art/bg/bushes/bush3.png' },
+            { key: 'bush4', src: 'art/bg/bushes/bush4.png' },
+            { key: 'bush5', src: 'art/bg/bushes/bush5.png' },
+            { key: 'bush6', src: 'art/bg/bushes/bush6.png' },
+            { key: 'bush7', src: 'art/bg/bushes/bush7.png' },
+            { key: 'bush8', src: 'art/bg/bushes/bush8.png' },
+            { key: 'bush9', src: 'art/bg/bushes/bush9.png' },
+            { key: 'bush10', src: 'art/bg/bushes/bush10.png' },
+            { key: 'bush11', src: 'art/bg/bushes/bush11.png' },
+            { key: 'bush12', src: 'art/bg/bushes/bush12.png' },
+            { key: 'bush13', src: 'art/bg/bushes/bush13.png' },
+            { key: 'bush14', src: 'art/bg/bushes/bush14.png' },
+            { key: 'bush15', src: 'art/bg/bushes/bush15.png' },
+            { key: 'bush16', src: 'art/bg/bushes/bush16.png' },
+            { key: 'bush17', src: 'art/bg/bushes/bush17.png' },
+            { key: 'bush18', src: 'art/bg/bushes/bush18.png' },
+            { key: 'bush19', src: 'art/bg/bushes/bush19.png' },
+            { key: 'bush20', src: 'art/bg/bushes/bush20.png' },
+            { key: 'bush21', src: 'art/bg/bushes/bush21.png' },
+            { key: 'bush22', src: 'art/bg/bushes/bush22.png' },
+            { key: 'bush23', src: 'art/bg/bushes/bush23.png' },
+            { key: 'bush24', src: 'art/bg/bushes/bush24.png' },
+            { key: 'bush25', src: 'art/bg/bushes/bush25.png' },
+            { key: 'bush26', src: 'art/bg/bushes/bush26.png' },
+            { key: 'bush27', src: 'art/bg/bushes/bush27.png' },
+            { key: 'bush28', src: 'art/bg/bushes/bush28.png' },
+            { key: 'bush29', src: 'art/bg/bushes/bush29.png' },
+            { key: 'bush30', src: 'art/bg/bushes/bush30.png' },
+            { key: 'bush31', src: 'art/bg/bushes/bush31.png' },
+            { key: 'bush32', src: 'art/bg/bushes/bush32.png' },
+            { key: 'bush33', src: 'art/bg/bushes/bush33.png' },
+            { key: 'bush34', src: 'art/bg/bushes/bush34.png' },
+            { key: 'bush35', src: 'art/bg/bushes/bush35.png' },
+            { key: 'bush36', src: 'art/bg/bushes/bush36.png' }
+        ];
+        this.bushSprites = [];
+        this.bushSpritesReady = false;
+        this.bushSpriteLoadAttempted = false;
+        this.bushes = [];
+        this.bushLayer = {
+            scrollSpeed: 0.78, // slightly closer than palms
+            spacing: 280,
+            y: null
+        };
+
         // Mountain texture
         this.mountainTexture = null;
         this.mountainTextureReady = false;
@@ -199,9 +248,13 @@ class PalmTreeManager {
         // Build new cloud field
         this.generateCloudField(this.game.canvas.width, this.game.canvas.height);
 
+        // Build bush field in front of palms (behind platforms)
+        this.generateBushField(this.game.canvas.width, this.game.canvas.height);
+
         // Begin loading sprite assets
         this.loadPalmSprites();
         this.loadCloudSprites();
+        this.loadBushSprites();
         this.loadMountainTexture();
         this.loadSkyBodyTextures();
     }
@@ -225,6 +278,16 @@ class PalmTreeManager {
                 this.generateLayerTrees(layer, lastTreeX, viewportRight + this.offscreenBuffer);
             }
         });
+
+        // Update bush generation
+        const bushParallaxX = cameraX * this.bushLayer.scrollSpeed;
+        const bushViewportRight = bushParallaxX + canvasWidth + this.offscreenBuffer;
+        const lastBushX = this.bushes.length > 0
+            ? Math.max(...this.bushes.map(b => b.x))
+            : -this.offscreenBuffer;
+        if (bushViewportRight > lastBushX) {
+            this.generateBushes(lastBushX, bushViewportRight + this.offscreenBuffer);
+        }
     }
     
     /**
@@ -271,6 +334,9 @@ class PalmTreeManager {
                 }
             });
         });
+
+        // Bush layer (closer than palms, behind platforms)
+        this.renderBushes(ctx, camera);
     }
     
     /**
@@ -372,14 +438,41 @@ class PalmTreeManager {
 
         const finalize = () => {
             if (loaded < this.cloudSpritePaths.length) return;
-            this.cloudSprites = pending.filter(entry => entry.img && entry.img.complete && entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0);
-            if (this.cloudSprites.length === 0) {
-                this.cloudSprites = pending;
+        this.cloudSprites = pending.filter(entry => entry.img && entry.img.complete && entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0);
+        if (this.cloudSprites.length === 0) {
+            this.cloudSprites = pending;
+        }
+        this.cloudSpritesReady = this.cloudSprites.length > 0;
+    };
+
+    this.cloudSpritePaths.forEach(entry => {
+        const img = new Image();
+        img.onload = () => { loaded += 1; finalize(); };
+        img.onerror = () => { loaded += 1; finalize(); };
+        img.src = entry.src;
+        pending.push({ key: entry.key, img });
+    });
+}
+
+    /**
+     * Load bush sprite variants once so we can place them along the sand.
+     */
+    loadBushSprites() {
+        if (this.bushSpriteLoadAttempted) return;
+        this.bushSpriteLoadAttempted = true;
+        const pending = [];
+        let loaded = 0;
+
+        const finalize = () => {
+            if (loaded < this.bushSpritePaths.length) return;
+            this.bushSprites = pending.filter(entry => entry.img && entry.img.complete && entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0);
+            if (this.bushSprites.length === 0) {
+                this.bushSprites = pending;
             }
-            this.cloudSpritesReady = this.cloudSprites.length > 0;
+            this.bushSpritesReady = this.bushSprites.length > 0;
         };
 
-        this.cloudSpritePaths.forEach(entry => {
+        this.bushSpritePaths.forEach(entry => {
             const img = new Image();
             img.onload = () => { loaded += 1; finalize(); };
             img.onerror = () => { loaded += 1; finalize(); };
@@ -614,6 +707,49 @@ class PalmTreeManager {
 
         this.clouds = generated;
     }
+
+    /**
+     * Generate a lush bush field that sits in front of palms but behind platforms.
+     */
+    generateBushField(canvasWidth = 1600, canvasHeight = 900) {
+        this.bushes = [];
+        // Position bushes along the sand, slightly above ground line
+        // Overlap the ground platform a bit so bushes feel embedded
+        this.bushLayer.y = canvasHeight - 45;
+        const spacing = this.bushLayer.spacing;
+        const startX = -600;
+        const endX = canvasWidth + 1200;
+        this.generateBushes(startX, endX);
+    }
+
+    /**
+     * Generate additional bushes in a range.
+     */
+    generateBushes(startX, endX) {
+        let currentX = startX + this.bushLayer.spacing;
+        const minSpacing = 100;
+
+        while (currentX < endX) {
+            const sprite = this.getRandomBushSprite();
+            const naturalWidth = sprite?.naturalWidth || sprite?.width || 160;
+            const naturalHeight = sprite?.naturalHeight || sprite?.height || 90;
+            const targetHeight = 60 + Math.random() * 40; // 60-100px tall
+            const scale = targetHeight / naturalHeight;
+            const height = naturalHeight * scale;
+            const width = naturalWidth * scale;
+
+            this.bushes.push({
+                x: currentX + (Math.random() * 60 - 30),
+                width,
+                height,
+                sprite,
+                scale
+            });
+
+            const gap = spacing => spacing + Math.random() * 110 - 40;
+            currentX += Math.max(minSpacing, gap(this.bushLayer.spacing));
+        }
+    }
     
     /**
      * Draw clouds with parallax scrolling
@@ -676,6 +812,49 @@ class PalmTreeManager {
         
         ctx.restore();
     }
+
+    /**
+     * Get a random bush sprite.
+     */
+    getRandomBushSprite() {
+        this.loadBushSprites();
+        if (!this.bushSpritesReady || this.bushSprites.length === 0) return null;
+        const idx = Math.floor(Math.random() * this.bushSprites.length);
+        return this.bushSprites[idx]?.img || null;
+    }
+
+    /**
+     * Render bushes with parallax in front of palms.
+     */
+    renderBushes(ctx, camera) {
+        if (!this.bushes.length) return;
+        const parallaxOffset = camera.x * this.bushLayer.scrollSpeed;
+
+        this.bushes.forEach(bush => {
+            const screenX = bush.x - parallaxOffset;
+            if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
+                this.drawBush(ctx, screenX, this.bushLayer.y, bush);
+            }
+        });
+    }
+
+    /**
+     * Draw a single bush sprite.
+     */
+    drawBush(ctx, x, groundY, bush) {
+        const sprite = bush.sprite || this.getRandomBushSprite();
+        if (!sprite) return;
+
+        const height = bush.height;
+        const width = bush.width;
+        const drawX = x - width / 2;
+        const drawY = groundY - height;
+
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.drawImage(sprite, drawX, drawY, width, height);
+        ctx.restore();
+    }
     
     /**
      * Draw a single stylized palm tree
@@ -709,6 +888,7 @@ class PalmTreeManager {
         this.layers.forEach(layer => {
             layer.trees = [];
         });
+        this.bushes = [];
         this.initialize();
     }
     
