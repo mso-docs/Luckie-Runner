@@ -1,15 +1,15 @@
 class PauseScene {
-    attach(game) {
-        this.game = game;
+    attach(ctx) {
+        this.ctx = ctx;
     }
 
     enter() {
-        this.game.running = false;
-        this.game.stopLoop?.();
-        this.game.stateManager.showMenu?.('pauseMenu');
-        const audio = this.game?.services?.audio || this.game?.audioManager;
+        this.ctx.setRunning?.(false);
+        this.ctx.stopLoop?.();
+        this.ctx.stateManager.showMenu?.('pauseMenu');
+        const audio = this.ctx?.audio || this.ctx?.services?.audio;
         if (audio) {
-            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            const current = audio.getMusicVolume ? audio.getMusicVolume() : 1;
             if (audio.setMusic) {
                 audio.setMusic(current * 0.3);
             } else if (audio.setMusicVolume) {
@@ -19,10 +19,10 @@ class PauseScene {
     }
 
     exit() {
-        this.game.stateManager.hideAllMenus?.();
-        const audio = this.game?.services?.audio || this.game?.audioManager;
+        this.ctx.stateManager.hideAllMenus?.();
+        const audio = this.ctx?.audio || this.ctx?.services?.audio;
         if (audio) {
-            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            const current = audio.getMusicVolume ? audio.getMusicVolume() : 1;
             const restored = current / 0.3;
             if (audio.setMusic) {
                 audio.setMusic(restored);

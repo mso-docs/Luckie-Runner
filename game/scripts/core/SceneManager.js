@@ -2,8 +2,9 @@
  * SceneManager - lightweight scene/flow controller with enter/update/render/exit hooks.
  */
 class SceneManager {
-    constructor(game) {
+    constructor(game, context = null) {
         this.game = game;
+        this.context = context || { game };
         this.current = null;
         this.previous = null;
         this.scenes = {};
@@ -12,7 +13,7 @@ class SceneManager {
     register(name, scene) {
         this.scenes[name] = scene;
         if (scene && typeof scene.attach === 'function') {
-            scene.attach(this.game);
+            scene.attach(this.context);
         }
     }
 

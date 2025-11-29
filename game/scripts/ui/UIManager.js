@@ -1167,39 +1167,10 @@ class UIManager {
      * Lightweight styling parser for speech text.
      */
     formatSpeechText(text) {
-        if (typeof text !== 'string') return '';
-
-        const escape = (str) => str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        let safe = escape(text);
-        const apply = (pattern, cls) => {
-            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
-        };
-
-        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
-        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
-        apply(/&lt;(.+?)&gt;/g, 'speech-big');
-        apply(/_(.+?)_/g, 'speech-tiny');
-
-        apply(/\*(.+?)\*/g, 'speech-bold');
-        apply(/%(.+?)%/g, 'speech-shake');
-        apply(/~(.+?)~/g, 'speech-rainbow');
-        apply(/\^(.+?)\^/g, 'speech-glow');
-        apply(/!(.+?)!/g, 'speech-bounce');
-        apply(/`(.+?)`/g, 'speech-mono');
-        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
-
-        return safe;
+        return this.game.dialogueManager?.formatSpeechText(text) ?? (typeof text === 'string' ? text : '');
     }
 
     wrapWaveText(inner) {
-        const letters = Array.from(inner);
-        return letters.map((ch, i) => {
-            const delay = (i * 0.06).toFixed(2);
-            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
-        }).join('');
+        return this.game.dialogueManager?.wrapWaveText(inner) ?? inner;
     }
 }

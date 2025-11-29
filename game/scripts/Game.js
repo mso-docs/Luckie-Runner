@@ -20,7 +20,6 @@ class Game {
         this.input = new InputManager();
         this.audioManager = new AudioManager(this.config);
         this.stateManager = new GameStateManager(this);
-        this.sceneManager = new SceneManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
         this.smallPalms = [];
@@ -133,7 +132,7 @@ class Game {
         this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this, this.services);
-        this.entityFactory = new EntityFactory(this, this.services);
+        this.entityFactory = new EntityFactory(this, this.config);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
         this.systems = new GameSystems(this);
         this.statsManager = new StatsManager(this);
@@ -142,6 +141,24 @@ class Game {
             throw new Error('Renderer is not loaded.');
         }
         this.renderer = new Renderer(this, this.services);
+        this.sceneContext = {
+            stateManager: this.stateManager,
+            audio: this.services.audio,
+            services: this.services,
+            systems: this.systems,
+            renderer: this.renderer,
+            progress: this.progress,
+            resetAll: (opts) => this.resetAll(opts),
+            initializeGameSystems: () => this.initializeGameSystems(),
+            startLoop: () => this.startLoop(),
+            stopLoop: () => this.stopLoop(),
+            onTick: (dt, info) => this.onTick(dt, info),
+            render: () => this.render(),
+            setRunning: (val) => { this.running = val; },
+            getGameTime: () => this.gameTime,
+            ensureTitleMusicPlaying: () => this.ensureTitleMusicPlaying()
+        };
+        this.sceneManager = new SceneManager(this, this.sceneContext);
         
         // Game statistics
         this.stats = {
@@ -690,7 +707,7 @@ class Game {
      *  `mono`
      */
     formatSpeechText(text) {
-        return this.uiManager?.formatSpeechText(text) ?? '';
+        return this.dialogueManager?.formatSpeechText(text) ?? '';
     }
 
     /**

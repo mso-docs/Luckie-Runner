@@ -1,30 +1,30 @@
 class PlayScene {
-    attach(game) {
-        this.game = game;
+    attach(ctx) {
+        this.ctx = ctx;
     }
 
     enter() {
-        const audio = this.game?.services?.audio || this.game?.audioManager;
-        this.game.resetAll?.({ resetAudio: true, resetUI: true, resetWorld: true });
-        this.game.initializeGameSystems?.();
-        this.game.running = true;
-        this.game.stateManager?.setState?.('playing');
-        this.game.startLoop?.();
+        const audio = this.ctx?.audio || this.ctx?.services?.audio;
+        this.ctx.resetAll?.({ resetAudio: true, resetUI: true, resetWorld: true });
+        this.ctx.initializeGameSystems?.();
+        this.ctx.setRunning?.(true);
+        this.ctx.stateManager?.setState?.('playing');
+        this.ctx.startLoop?.();
         if (audio) {
             audio.playMusic?.('level1', 0.8);
         }
     }
 
     exit() {
-        this.game.running = false;
-        this.game.stopLoop?.();
+        this.ctx.setRunning?.(false);
+        this.ctx.stopLoop?.();
     }
 
     update(dt) {
-        this.game.onTick?.(dt, { gameTime: (this.game.gameTime || 0) + dt });
+        this.ctx.onTick?.(dt, { gameTime: (this.ctx.getGameTime?.() || 0) + dt });
     }
 
     render() {
-        this.game.render?.();
+        this.ctx.render?.();
     }
 }

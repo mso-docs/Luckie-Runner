@@ -103,7 +103,8 @@ class WorldBuilder {
     /**
      * Build background layers using a theme id.
      */
-    buildBackground(themeId = 'beach') {
+    buildBackground(themeId = null) {
+        const selected = themeId || this.config?.themes?.defaultTheme || 'beach';
         if (!this.themeRegistry) {
             if (typeof this.game.createFallbackBackground === 'function') {
                 this.game.createFallbackBackground();
@@ -111,7 +112,7 @@ class WorldBuilder {
             return;
         }
 
-        const layers = this.themeRegistry.buildLayers(themeId, this.game);
+        const layers = this.themeRegistry.buildLayers(selected, this.game);
         this.game.backgroundLayers = layers;
         this.game.palmTreeManager?.initialize?.();
         if (!layers.length && typeof this.game.createFallbackBackground === 'function') {

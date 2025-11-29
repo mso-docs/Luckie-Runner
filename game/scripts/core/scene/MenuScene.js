@@ -1,18 +1,18 @@
 class MenuScene {
-    attach(game) {
-        this.game = game;
+    attach(ctx) {
+        this.ctx = ctx;
     }
 
     enter() {
         // ensure menu visible
-        this.game.stateManager.showMenu('startMenu');
-        this.game.running = false;
-        this.game.stopLoop?.();
-        this.game.ensureTitleMusicPlaying?.();
+        this.ctx.stateManager.showMenu('startMenu');
+        this.ctx.setRunning?.(false);
+        this.ctx.stopLoop?.();
+        this.ctx.ensureTitleMusicPlaying?.();
     }
 
     exit() {
-        this.game.stateManager.hideAllMenus();
+        this.ctx.stateManager.hideAllMenus();
     }
 
     update() {
