@@ -42,6 +42,7 @@ class TownManager {
         this.updateBuildingDoors(deltaTime);
         this.updateSetpieceAnimation(deltaTime);
         this.updateTownNpcs(deltaTime);
+        this.ensureTownNpcsPresent();
     }
 
     /**
@@ -50,14 +51,6 @@ class TownManager {
     loadTownContent(town) {
         this.resetTownContent();
         if (!town) return;
-        const cached = this.townCache[town.id];
-        if (cached) {
-            this.activeContent = cached.activeContent;
-            this.game.townDecor = cached.decor;
-            this.townNpcs = cached.npcs || [];
-            this.restoreTownNpcs();
-            return;
-        }
         const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
         const npcs = Array.isArray(town.npcs) ? town.npcs.map(def => this.createNpc(def)) : [];
@@ -94,7 +87,6 @@ class TownManager {
 
         this.game.townDecor = decor;
         this.spawnTownNpcs();
-        this.townCache[town.id] = { activeContent: this.activeContent, decor, npcs };
     }
 
     resetTownContent() {
@@ -426,6 +418,26 @@ class TownManager {
     updateTownNpcs(deltaTime = 0) {
         if (!Array.isArray(this.townNpcs)) return;
         this.townNpcs.forEach(npc => npc?.update?.(deltaTime));
+    }
+
+    ensureTownNpcsPresent() {
+        const g = this.game;
+        if (!Array.isArray(this.townNpcs) || !Array.isArray(g.npcs)) return;
+        this.townNpcs.forEach(npc => {
+            if (!npc) return;
+            // Re-align to ground each ensure step to keep with player layer
+            const groundY = this.getGroundY();
+            if (groundY !== null && groundY !== undefined) {
+                npc.y = groundY - npc.height;
+                if (Array.isArray(npc.patrol)) {
+                    npc.patrol = npc.patrol.map(p => ({ x: p.x, y: groundY - npc.height }));
+                }
+            }
+            npc.game = g;
+            if (!g.npcs.includes(npc)) {
+                g.npcs.push(npc);
+            }
+        });
     }
 
     buildDecorRenderable(def = {}) {

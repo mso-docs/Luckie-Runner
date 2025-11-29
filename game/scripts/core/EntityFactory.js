@@ -81,7 +81,9 @@ class EntityFactory {
     }
 
     townNpc(def = {}) {
-        const NPCtor = (typeof TownPatrolNPC !== 'undefined') ? TownPatrolNPC : null;
+        const NPCtor = (typeof TownPatrolNPC !== 'undefined')
+            ? TownPatrolNPC
+            : (typeof window !== 'undefined' ? window.TownPatrolNPC : null);
         if (!NPCtor) return null;
         const npc = new NPCtor(this.game, def);
         return npc;

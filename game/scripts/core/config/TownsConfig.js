@@ -60,8 +60,8 @@ const TownsConfig = {
 
                 // Town overlay fronds (in front of palms/bushes)
                 ,{ id: 'shore_fronds_start', name: 'Fronds Start', x: 6500, y: 0, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/frond-start.png' }
-                ,{ id: 'shore_fronds_mid', name: 'Fronds Mid', x: 6602, y: 0, width: 3280, frameWidth: 1022, frameHeight: 988, tileX: true, tileWidth: 256, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/fronds.png' }
-                ,{ id: 'shore_fronds_end', name: 'Fronds End', x: 9882, y: 0, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/frond-end.png' }
+                ,{ id: 'shore_fronds_mid', name: 'Fronds Mid', x: 6602, y: 0, width: 35000, frameWidth: 1022, frameHeight: 988, tileX: true, tileWidth: 128, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/fronds.png' }
+                ,{ id: 'shore_fronds_end', name: 'Fronds End', x: 10102, y: 0, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/frond-end.png' }
             ],
             interiors: []
             ,
@@ -80,10 +80,10 @@ const TownsConfig = {
                     dialogueId: 'npc.mike',
                     speed: 40,
                     pauseMs: 30,
-                    x: 7800,
+                    x: 8200,
                     patrol: [
-                        { x: 7800 },
-                        { x: 8600 }
+                        { x: 8000 },
+                        { x: 8800 }
                     ]
                 }
             ]
