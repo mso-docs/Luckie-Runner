@@ -88,8 +88,10 @@ class Game {
             render: new RenderContext(this.canvas, this.ctx),
             persistence,
             reset: null,
-            save: null
+            save: null,
+            eventBus: new EventBus()
         };
+        this.serviceLocator = new ServiceLocator(this.services);
         this.services.reset = new ResetService(this);
         this.services.save = new SaveService(persistence);
         this.progress = new ProgressManager(this, this.services.save);
@@ -148,6 +150,7 @@ class Game {
             systems: this.systems,
             renderer: this.renderer,
             progress: this.progress,
+            events: this.serviceLocator.eventBus.bind(this.serviceLocator),
             resetAll: (opts) => this.resetAll(opts),
             initializeGameSystems: () => this.initializeGameSystems(),
             startLoop: () => this.startLoop(),

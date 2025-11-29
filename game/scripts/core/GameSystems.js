@@ -5,6 +5,7 @@
 class GameSystems {
     constructor(game) {
         this.game = game;
+        this.bus = game.serviceLocator?.eventBus?.() || game.services?.eventBus || null;
     }
 
     /**
@@ -127,7 +128,10 @@ class GameSystems {
     }
 
     handleEnemyRemoved(enemy) {
-        const g = this.game;
-        g.statsManager?.handleEnemyRemoved(enemy);
+        if (this.bus) {
+            this.bus.emit('enemy:defeated', enemy);
+        } else {
+            this.game.statsManager?.handleEnemyRemoved(enemy);
+        }
     }
 }

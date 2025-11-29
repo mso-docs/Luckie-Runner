@@ -4,6 +4,11 @@
 class StatsManager {
     constructor(game) {
         this.game = game;
+        const bus = game.serviceLocator?.eventBus?.() || game.services?.eventBus || null;
+        if (bus) {
+            bus.on('enemy:defeated', (enemy) => this.handleEnemyRemoved(enemy));
+            bus.on('item:collected', (item) => this.handleItemCollected(item));
+        }
     }
 
     handleEnemyRemoved(enemy) {

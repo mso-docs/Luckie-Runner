@@ -218,7 +218,12 @@ class CollisionSystem {
 
         const collected = item.collect?.(player) ?? false;
         if (collected) {
-            this.game.statsManager?.handleItemCollected?.(item);
+            const bus = this.game.serviceLocator?.eventBus?.() || this.game.services?.eventBus;
+            if (bus) {
+                bus.emit('item:collected', item);
+            } else {
+                this.game.statsManager?.handleItemCollected?.(item);
+            }
         }
         return collected;
     }
