@@ -4,11 +4,12 @@ class PlayScene {
     }
 
     enter() {
-        this.game.resetGame?.();
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        this.game.resetAll?.({ resetAudio: true, resetUI: true, resetWorld: true });
         this.game.initializeGameSystems?.();
         this.game.running = true;
+        this.game.stateManager?.setState?.('playing');
         this.game.startLoop?.();
-        const audio = this.game?.services?.audio || this.game?.audioManager;
         if (audio) {
             audio.playMusic?.('level1', 0.8);
         }

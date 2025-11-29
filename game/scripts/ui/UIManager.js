@@ -25,6 +25,7 @@ class UIManager {
             items: []
         };
         this.game.shopUI = this.shopUI;
+        this.shopGhostBubble = null;
 
         this.config = game.config || GameConfig || {};
         this.services = services || {};
@@ -916,5 +917,263 @@ class UIManager {
 
         buttons[nextIndex].focus();
         e.preventDefault();
+    }
+
+    /**
+     * Aggregate gameplay input handling (dialogue, chests, shops).
+     */
+    handleFrameInput() {
+        this.handleSpeechBubbleInput();
+        this.handleChestInput();
+        this.handleInteractionInput();
+    }
+
+    /**
+     * True when UI overlays should pause world updates.
+     */
+    isOverlayBlocking() {
+        return Boolean(this.inventoryUI?.isOpen || this.shopUI?.isOpen);
+    }
+
+    /**
+     * Advance or dismiss dialogue when Enter is pressed.
+     */
+    handleSpeechBubbleInput() {
+        if (!this.game.dialogueManager?.isActive()) return;
+        const input = this.services?.input || this.game.input;
+        const consumeEnter = () => {
+            if (!input) return false;
+            if (typeof input.consume === 'function') return input.consume('enter') || input.consume('numpadenter');
+            return input.consumeKeyPress?.('enter') || input.consumeKeyPress?.('numpadenter');
+        };
+        if (consumeEnter()) {
+            this.game.dialogueManager.advance();
+        }
+    }
+
+    /**
+     * Handle player interaction input (E/Enter) for chests and signs.
+     */
+    handleChestInput() {
+        const input = this.services?.input || this.game.input;
+        if (!this.game.player || !input) return;
+
+        const consumeInteract = () => {
+            if (typeof input.consumeInteract === 'function') return input.consumeInteract();
+            return input.consumeInteractPress?.();
+        };
+
+        if (consumeInteract()) {
+            if (this.chestUI.isOpen) {
+                this.hideChestOverlay();
+                return;
+            }
+
+            const talker = this.getNearbyTalkableNpc();
+            if (talker) {
+                this.startNpcDialogue(talker);
+                return;
+            }
+
+            const nearbySign = this.game.signUI.findNearbySign();
+            if (nearbySign) {
+                this.game.signUI.signDialogue.target = nearbySign;
+                if (this.game.signUI.signDialogue.active) {
+                    this.game.signUI.advanceSignDialogue();
+                } else {
+                    this.game.signUI.showSignDialogue(nearbySign);
+                }
+                return;
+            }
+
+            const chest = this.getNearbyChest();
+            if (chest) {
+                chest.open();
+                this.showChestOverlay(chest);
+            }
+        }
+    }
+
+    /**
+     * Handle player interaction input (Z key / action).
+     */
+    handleInteractionInput() {
+        const input = this.services?.input || this.game.input;
+        if (!this.game.player || !input) return;
+
+        const consumeAction = () => {
+            if (typeof input.consumeAction === 'function') return input.consumeAction();
+            return input.consumeActionPress?.();
+        };
+
+        if (consumeAction()) {
+            if (this.shopUI.isOpen) {
+                this.hideShopOverlay();
+                if (this.game.shopGhost) this.game.shopGhost.toggleFrame();
+                return;
+            }
+
+            const ghost = this.getNearbyShopGhost();
+            if (ghost) {
+                ghost.toggleFrame();
+                this.showShopOverlay();
+                return;
+            }
+
+            if (typeof this.game.player.handleInteraction === 'function') {
+                this.game.player.handleInteraction();
+            }
+        }
+    }
+
+    getNearbyShopGhost() {
+        if (this.game.shopGhost && this.game.player && this.game.shopGhost.isPlayerNearby(this.game.player)) {
+            return this.game.shopGhost;
+        }
+        return null;
+    }
+
+    getNearbyTalkableNpc() {
+        if (!this.game.player || !Array.isArray(this.game.npcs)) return null;
+        return this.game.npcs.find(npc =>
+            npc &&
+            npc.canTalk &&
+            typeof npc.isPlayerNearby === 'function' &&
+            npc.isPlayerNearby(this.game.player, npc.interactRadius || 120)
+        ) || null;
+    }
+
+    getNearbyChest() {
+        if (!this.game.player || !this.game.chests) return null;
+        return this.game.chests.find(chest => chest.isPlayerNearby(this.game.player)) || null;
+    }
+
+    /**
+     * Update UI elements that depend on world state each frame.
+     */
+    updateFrame(deltaTime) {
+        this.updateChests(deltaTime);
+        this.game.signUI.updateSignCallout();
+        this.game.signUI.updateSignDialoguePosition();
+    }
+
+    /**
+     * Keep dialogue bubble anchored to the speaking entity.
+     */
+    updateDialoguePosition() {
+        if (this.game.dialogueManager?.isActive()) {
+            this.game.dialogueManager.updatePosition();
+        }
+    }
+
+    /**
+     * NPC callouts (shop ghost bubble, etc).
+     */
+    updateNpcCallouts() {
+        this.updateShopGhostBubble();
+    }
+
+    updateShopGhostBubble() {
+        if (!this.shopGhostBubble) {
+            this.shopGhostBubble = document.getElementById('shopGhostBubble');
+            if (!this.shopGhostBubble) {
+                const bubble = document.createElement('div');
+                bubble.className = 'npc-bubble hidden';
+                bubble.textContent = 'Press Z to trade';
+                bubble.setAttribute('aria-hidden', 'true');
+                const gameContainer = document.getElementById('gameContainer');
+                if (gameContainer) {
+                    gameContainer.appendChild(bubble);
+                    this.shopGhostBubble = bubble;
+                }
+            }
+        }
+
+        const bubble = this.shopGhostBubble;
+        const ghost = this.game.shopGhost;
+        if (!bubble || !ghost || !this.game.player) {
+            if (bubble) bubble.classList.add('hidden');
+            return;
+        }
+
+        if (this.shopUI.isOpen || !ghost.isPlayerNearby(this.game.player)) {
+            bubble.classList.add('hidden');
+            bubble.setAttribute('aria-hidden', 'true');
+            return;
+        }
+
+        const screenX = ghost.x - this.game.camera.x + ghost.width / 2;
+        const screenY = ghost.y - this.game.camera.y + ghost.bobOffset;
+        bubble.style.left = `${screenX}px`;
+        const render = this.game.getRenderService();
+        const bottomFromCanvas = render.height() - screenY + ghost.height + 6;
+        bubble.style.bottom = `${bottomFromCanvas}px`;
+        bubble.classList.remove('hidden');
+        bubble.setAttribute('aria-hidden', 'false');
+    }
+
+    /**
+     * Update chests (UI + animation hooks).
+     */
+    updateChests(deltaTime) {
+        if (!Array.isArray(this.game.chests)) return;
+        this.game.chests.forEach(chest => {
+            if (chest?.update) chest.update(deltaTime);
+        });
+    }
+
+    /**
+     * Start a dialogue with an NPC using the shared speech bubble.
+     */
+    startNpcDialogue(npc) {
+        if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
+        if (typeof npc.setTalking === 'function') {
+            npc.setTalking(true);
+        }
+        this.game.dialogueManager.startDialog(npc.dialogueLines, npc, () => {
+            if (typeof npc.onDialogueClosed === 'function') {
+                npc.onDialogueClosed();
+            }
+        });
+    }
+
+    /**
+     * Lightweight styling parser for speech text.
+     */
+    formatSpeechText(text) {
+        if (typeof text !== 'string') return '';
+
+        const escape = (str) => str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        let safe = escape(text);
+        const apply = (pattern, cls) => {
+            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
+        };
+
+        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
+        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
+        apply(/&lt;(.+?)&gt;/g, 'speech-big');
+        apply(/_(.+?)_/g, 'speech-tiny');
+
+        apply(/\*(.+?)\*/g, 'speech-bold');
+        apply(/%(.+?)%/g, 'speech-shake');
+        apply(/~(.+?)~/g, 'speech-rainbow');
+        apply(/\^(.+?)\^/g, 'speech-glow');
+        apply(/!(.+?)!/g, 'speech-bounce');
+        apply(/`(.+?)`/g, 'speech-mono');
+        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
+
+        return safe;
+    }
+
+    wrapWaveText(inner) {
+        const letters = Array.from(inner);
+        return letters.map((ch, i) => {
+            const delay = (i * 0.06).toFixed(2);
+            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
+        }).join('');
     }
 }

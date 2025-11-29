@@ -134,6 +134,8 @@ class Game {
         this.uiManager = new UIManager(this, this.services);
         this.entityFactory = new EntityFactory(this, this.services);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
+        const RendererCtor = (typeof Renderer !== 'undefined') ? Renderer : null;
+        this.renderer = RendererCtor ? new RendererCtor(this, this.services) : null;
         
         // Game statistics
         this.stats = {
@@ -541,49 +543,14 @@ class Game {
      * Advance or dismiss dialogue when Enter is pressed
      */
     handleSpeechBubbleInput() {
-        if (!this.dialogueManager?.isActive()) return;
-
-        if (this.input.consumeKeyPress('enter') || this.input.consumeKeyPress('numpadenter')) {
-            this.dialogueManager.advance();
-        }
+        return this.uiManager?.handleSpeechBubbleInput();
     }
 
     /**
      * Handle player interaction input (E/Enter) for chests
      */
     handleChestInput() {
-        if (!this.player || !this.input) return;
-
-        if (this.input.consumeInteractPress()) {
-            if (this.chestUI.isOpen) {
-                this.hideChestOverlay();
-                return;
-            }
-
-            const talker = this.getNearbyTalkableNpc();
-            if (talker) {
-                this.startNpcDialogue(talker);
-                return;
-            }
-
-            // Sign interaction takes priority over chests
-            const nearbySign = this.signUI.findNearbySign();
-            if (nearbySign) {
-                this.signUI.signDialogue.target = nearbySign;
-                if (this.signUI.signDialogue.active) {
-                    this.signUI.advanceSignDialogue();
-                } else {
-                    this.signUI.showSignDialogue(nearbySign);
-                }
-                return;
-            }
-
-            const chest = this.getNearbyChest();
-            if (chest) {
-                chest.open();
-                this.showChestOverlay(chest);
-            }
-        }
+        return this.uiManager?.handleChestInput();
     }
 
     /**
@@ -591,29 +558,7 @@ class Game {
      * Delegates to player if an interaction handler exists
      */
     handleInteractionInput() {
-        if (!this.player || !this.input) return;
-
-        if (this.input.consumeActionPress()) {
-            // Close shop if open
-            if (this.shopUI.isOpen) {
-                this.hideShopOverlay();
-                if (this.shopGhost) this.shopGhost.toggleFrame();
-                return;
-            }
-
-            // Open shop if near the ghost
-            const ghost = this.getNearbyShopGhost();
-            if (ghost) {
-                ghost.toggleFrame();
-                this.showShopOverlay();
-                return;
-            }
-
-            // Fallback to player interaction
-            if (typeof this.player.handleInteraction === 'function') {
-                this.player.handleInteraction();
-            }
-        }
+        return this.uiManager?.handleInteractionInput();
     }
 
     /**
@@ -621,10 +566,7 @@ class Game {
      * @returns {ShopGhost|null}
      */
     getNearbyShopGhost() {
-        if (this.shopGhost && this.player && this.shopGhost.isPlayerNearby(this.player)) {
-            return this.shopGhost;
-        }
-        return null;
+        return this.uiManager?.getNearbyShopGhost();
     }
 
     /**
@@ -632,13 +574,7 @@ class Game {
      * @returns {Entity|null}
      */
     getNearbyTalkableNpc() {
-        if (!this.player || !Array.isArray(this.npcs)) return null;
-        return this.npcs.find(npc =>
-            npc &&
-            npc.canTalk &&
-            typeof npc.isPlayerNearby === 'function' &&
-            npc.isPlayerNearby(this.player, npc.interactRadius || 120)
-        ) || null;
+        return this.uiManager?.getNearbyTalkableNpc();
     }
 
     /**
@@ -646,8 +582,7 @@ class Game {
      * @returns {Chest|null}
      */
     getNearbyChest() {
-        if (!this.player || !this.chests) return null;
-        return this.chests.find(chest => chest.isPlayerNearby(this.player)) || null;
+        return this.uiManager?.getNearbyChest();
     }
 
     /**
@@ -692,15 +627,7 @@ class Game {
      * @param {Entity} npc
      */
     startNpcDialogue(npc) {
-        if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
-        if (typeof npc.setTalking === 'function') {
-            npc.setTalking(true);
-        }
-        this.dialogueManager.startDialog(npc.dialogueLines, npc, () => {
-            if (typeof npc.onDialogueClosed === 'function') {
-                npc.onDialogueClosed();
-            }
-        });
+        return this.uiManager?.startNpcDialogue(npc);
     }
 
     /**
@@ -730,35 +657,14 @@ class Game {
      * Keep the bubble anchored to the active speaker (player or NPC)
      */
     updateSpeechBubblePosition() {
-        this.dialogueManager?.updatePosition();
+        return this.uiManager?.updateDialoguePosition();
     }
 
     /**
      * Update shop ghost hint bubble position and visibility
      */
     updateShopGhostBubble() {
-        const bubble = this.shopGhostBubble;
-        const ghost = this.shopGhost;
-
-        if (!bubble || !ghost || !this.player) {
-            if (bubble) bubble.classList.add('hidden');
-            return;
-        }
-
-        if (this.shopUI.isOpen || !ghost.isPlayerNearby(this.player)) {
-            bubble.classList.add('hidden');
-            bubble.setAttribute('aria-hidden', 'true');
-            return;
-        }
-
-        const screenX = ghost.x - this.camera.x + ghost.width / 2;
-        const screenY = ghost.y - this.camera.y + ghost.bobOffset;
-        bubble.style.left = `${screenX}px`;
-        const render = this.getRenderService();
-        const bottomFromCanvas = render.height() - screenY + ghost.height + 6;
-        bubble.style.bottom = `${bottomFromCanvas}px`;
-        bubble.classList.remove('hidden');
-        bubble.setAttribute('aria-hidden', 'false');
+        return this.uiManager?.updateShopGhostBubble();
     }
 
     /**
@@ -766,12 +672,7 @@ class Game {
      * @param {number} deltaTime
      */
     updateChests(deltaTime) {
-        if (!Array.isArray(this.chests)) return;
-        this.chests.forEach(chest => {
-            if (chest && chest.update) {
-                chest.update(deltaTime);
-            }
-        });
+        return this.uiManager?.updateChests(deltaTime);
     }
 
     /**
@@ -787,36 +688,7 @@ class Game {
      *  `mono`
      */
     formatSpeechText(text) {
-        if (typeof text !== 'string') return '';
-
-        // Escape HTML
-        const escape = (str) => str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        let safe = escape(text);
-
-        const apply = (pattern, cls) => {
-            safe = safe.replace(pattern, (_, inner) => `<span class="${cls}">${inner}</span>`);
-        };
-
-        // Size markers (escaped angle brackets)
-        apply(/&lt;&lt;&lt;(.+?)&gt;&gt;&gt;/g, 'speech-gigantic');
-        apply(/&lt;&lt;(.+?)&gt;&gt;/g, 'speech-bigger');
-        apply(/&lt;(.+?)&gt;/g, 'speech-big');
-        apply(/_(.+?)_/g, 'speech-tiny');
-
-        apply(/\*(.+?)\*/g, 'speech-bold');
-        apply(/%(.+?)%/g, 'speech-shake');
-        apply(/~(.+?)~/g, 'speech-rainbow');
-        apply(/\^(.+?)\^/g, 'speech-glow');
-        apply(/!(.+?)!/g, 'speech-bounce');
-        apply(/`(.+?)`/g, 'speech-mono');
-        // Wave needs per-letter animation; replace with staggered spans
-        safe = safe.replace(/#(.+?)#/g, (_, inner) => this.wrapWaveText(inner));
-
-        return safe;
+        return this.uiManager?.formatSpeechText(text) ?? '';
     }
 
     /**
@@ -825,11 +697,7 @@ class Game {
      * @returns {string}
      */
     wrapWaveText(inner) {
-        const letters = Array.from(inner);
-        return letters.map((ch, i) => {
-            const delay = (i * 0.06).toFixed(2);
-            return `<span class="speech-wave-letter" style="animation-delay:${delay}s">${ch}</span>`;
-        }).join('');
+        return this.uiManager?.wrapWaveText(inner) ?? inner;
     }
 
     /**
@@ -894,58 +762,7 @@ class Game {
      * Create background layers with parallax scrolling
      */
     createBackground() {
-        this.backgroundLayers = [];
-        
-        // Creating Pacific coast background layers
-        
-        // Create Pacific coast layered background from back to front
-        const render = this.getRenderService();
-        const canvasWidth = render.width();
-        const canvasHeight = render.height();
-        
-        try {
-            // 1. Sunset sky (furthest back, slowest parallax)
-            const sunsetSky = new ProceduralBackground(
-                canvasWidth, 
-                canvasHeight, 
-                0.1, 
-                0, 
-                BackgroundGenerators.createSunsetSky
-            );
-            this.backgroundLayers.push(sunsetSky);
-            // Sunset sky layer created
-            
-            // 2. Ocean layer (mid-background)
-            const ocean = new ProceduralBackground(
-                canvasWidth * 2, 
-                canvasHeight * 0.4, 
-                0.3, 
-                canvasHeight * 0.6, 
-                BackgroundGenerators.createOcean
-            );
-            this.backgroundLayers.push(ocean);
-            
-            // 3. Hills layer (mid-foreground)
-            const hills = new ProceduralBackground(
-                canvasWidth * 1.5, 
-                canvasHeight * 0.5, 
-                0.5, 
-                canvasHeight * 0.5, 
-                BackgroundGenerators.createHills
-            );
-            this.backgroundLayers.push(hills);
-            // Hills layer created
-            
-            // Initialize SVG-based procedural palm tree system (separate from background layers)
-            this.palmTreeManager.initialize();
-            
-            // All background layers created successfully
-        } catch (error) {
-            // Error creating background layers - using fallback
-            
-            // Fallback to simple gradient background
-            this.createFallbackBackground();
-        }
+        return this.worldBuilder?.buildBackground(this.currentTheme || this.config?.theme || 'beach');
     }
     
     /**
@@ -1266,13 +1083,10 @@ class Game {
         } else {
             this.input.update();
         }
-        this.handleSpeechBubbleInput();
-        this.handleChestInput();
-        this.handleInteractionInput();
+        this.uiManager?.handleFrameInput();
 
         // Pause world updates while overlays are open
-        const overlayBlocking = (this.inventoryUI?.isOpen) || (this.shopUI?.isOpen);
-        if (overlayBlocking) {
+        if (this.uiManager?.isOverlayBlocking()) {
             return;
         }
 
@@ -1296,9 +1110,7 @@ class Game {
         }
 
         // Update chests (callouts + glow)
-        this.updateChests(deltaTime);
-        this.signUI.updateSignCallout();
-        this.signUI.updateSignDialoguePosition();
+        this.uiManager?.updateFrame(deltaTime);
         
         // Update all background layers
         this.backgroundLayers.forEach(layer => {
@@ -1329,14 +1141,8 @@ class Game {
             if (item.active) {
                 item.update(deltaTime);
                 this.collisionSystem?.updateItemPhysics(item, deltaTime);
-                
-                // Check player collection
-                if (this.player && item.checkCollision(this.player)) {
-                    if (item.collect(this.player)) {
-                        this.stats.coinsCollected += item.type === 'coin' ? item.value : 0;
-                    }
-                }
-                return true;
+                this.collisionSystem?.handleItemCollection(item);
+                return item.active !== false;
             }
             return false;
         });
@@ -1355,20 +1161,16 @@ class Game {
         this.hazards = this.hazards.filter(hazard => {
             if (hazard.active) {
                 hazard.update(deltaTime);
-                this.collisionSystem?.updateHazardCollisions();
                 return true;
             }
             return false;
         });
+        this.collisionSystem?.updateHazardCollisions();
         
         // Update flag
         if (this.flag) {
             this.flag.update(deltaTime);
-
-            // Check flag collision with player (always enabled)
-            if (this.player && this.flag.checkCollision(this.player)) {
-                this.flag.collect(this.player);
-            }
+            this.collisionSystem?.checkFlagCollision(this.flag);
         }
         
         // Update statistics
@@ -1469,80 +1271,52 @@ class Game {
      * Render the game
      */
     render() {
+        if (this.renderer && typeof this.renderer.renderFrame === 'function') {
+            this.renderer.renderFrame();
+            return;
+        }
+
+        // Fallback: minimal render path when Renderer script isn't loaded
+        this.renderLegacy();
+    }
+
+    /**
+     * Legacy render path to keep visuals when Renderer isn't available.
+     */
+    renderLegacy() {
         const render = this.getRenderService();
         const ctx = render.ctx;
         const canvas = render.canvas;
         if (!ctx || !canvas) return;
 
-        // Clear canvas
-        if (render.clear) {
-            render.clear();
+        render.clear?.();
+
+        // Background
+        if (this.testMode) {
+            this.renderTestBackground(ctx, canvas);
         } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.backgroundLayers.forEach(layer => {
+                if (layer.render) layer.render(ctx, this.camera);
+            });
         }
-        
-        // Render background layers (parallax)
-        this.renderBackground(ctx, canvas);
-        
-        // Render canvas-based palm trees just behind platforms
+
         this.palmTreeManager.render(ctx, this.camera, this.gameTime);
-        
-        // Render platforms
-        this.renderPlatforms(ctx);
+        this.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, this.camera));
+        this.signBoards.forEach(sign => sign?.render?.(ctx, this.camera));
+        this.npcs.forEach(npc => npc?.render?.(ctx, this.camera));
+        this.chests.forEach(chest => chest?.render?.(ctx, this.camera));
+        this.smallPalms.forEach(palm => palm?.render?.(ctx, this.camera));
+        this.hazards.forEach(hazard => hazard?.render?.(ctx, this.camera));
+        this.items.forEach(item => item?.render?.(ctx, this.camera));
+        this.enemies.forEach(enemy => enemy?.render?.(ctx, this.camera));
+        this.projectiles.forEach(projectile => projectile?.render?.(ctx, this.camera));
+        this.player?.render?.(ctx, this.camera);
+        this.flag?.render?.(ctx, this.camera);
 
-        // Render signs
-        this.renderSigns(ctx);
-
-        // Render NPCs
-        this.renderNPCs(ctx);
-
-        // Render chests
-        this.renderChests(ctx);
-
-        // Render foreground small palms alongside other entities
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(palm => palm.render(ctx, this.camera));
-        }
-
-        // Render hazards
-        this.hazards.forEach(hazard => {
-            hazard.render(ctx, this.camera);
-        });
-
-        // Render items
-        this.items.forEach(item => {
-            item.render(ctx, this.camera);
-        });
-        
-        // Render enemies
-        this.enemies.forEach(enemy => {
-            enemy.render(ctx, this.camera);
-        });
-        
-        // Render projectiles
-        this.projectiles.forEach(projectile => {
-            projectile.render(ctx, this.camera);
-        });
-        
-        // Render player
-        if (this.player) {
-            this.player.render(ctx, this.camera);
-        }
-
-        // Render flag
-        if (this.flag) {
-            this.flag.render(ctx, this.camera);
-        }
-
-        // Keep speech bubble following player
         if (this.dialogueManager?.isActive()) {
             this.updateSpeechBubblePosition();
         }
-
-        // Update NPC hint bubble position
         this.updateShopGhostBubble();
-
-        // Debug overlay
         if (this.debug) {
             this.renderDebugOverlay();
         }
@@ -1553,168 +1327,39 @@ class Game {
      */
     renderDebugOverlay() {
         const render = this.getRenderService();
-        const ctx = render.ctx;
-        if (!ctx) return;
-        const cam = this.camera || { x: 0, y: 0 };
-        const drawRect = (x, y, w, h, color = 'rgba(0,255,0,0.35)', stroke = '#00ff00') => {
-            ctx.save();
-            ctx.fillStyle = color;
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.6;
-            ctx.fillRect(x, y, w, h);
-            ctx.globalAlpha = 1;
-            ctx.strokeRect(x, y, w, h);
-            ctx.restore();
-        };
-
-        const rectForEntity = (e) => ({
-            x: (e.x + (e.collisionOffset?.x || 0)) - cam.x,
-            y: (e.y + (e.collisionOffset?.y || 0)) - cam.y,
-            w: e.collisionWidth || e.width || 0,
-            h: e.collisionHeight || e.height || 0
-        });
-
-        // Player
-        if (this.player) {
-            const r = rectForEntity(this.player);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,0,0.25)', '#00ff00');
-        }
-
-        // Enemies
-        this.enemies.forEach(enemy => {
-            if (!enemy) return;
-            const r = rectForEntity(enemy);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,0,0.25)', '#ff0000');
-        });
-
-        // Items
-        this.items.forEach(item => {
-            if (!item) return;
-            const r = rectForEntity(item);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,215,0,0.25)', '#ffd700');
-        });
-
-        // Projectiles
-        this.projectiles.forEach(p => {
-            if (!p) return;
-            const r = rectForEntity(p);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,255,0.25)', '#00ffff');
-        });
-
-        // Hazards
-        this.hazards.forEach(h => {
-            if (!h) return;
-            const r = rectForEntity(h);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,255,0.25)', '#ff00ff');
-        });
-
-        // Chests
-        this.chests.forEach(ch => {
-            if (!ch) return;
-            const r = rectForEntity(ch);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
-        });
-
-        // Small palms
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(palm => {
-                if (!palm) return;
-                const r = rectForEntity(palm);
-                drawRect(r.x, r.y, r.w, r.h, 'rgba(0,128,0,0.25)', '#008000');
-            });
-        }
-
-        // Platforms (not entities)
-        this.platforms.forEach(p => {
-            if (!p) return;
-            const x = p.x - cam.x;
-            const y = p.y - cam.y;
-            drawRect(x, y, p.width, p.height, 'rgba(128,128,128,0.2)', '#808080');
-        });
-
-        // Signs
-        if (Array.isArray(this.signBoards)) {
-            this.signBoards.forEach(sign => {
-                if (!sign) return;
-                const r = rectForEntity(sign);
-                drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
-            });
-        }
+        return this.renderer?.renderDebugOverlay(render.ctx);
     }
 
     /**
      * Render layered parallax background
      */
     renderBackground(ctx = null, canvas = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        const targetCanvas = canvas || render.canvas;
-        if (!context || !targetCanvas) return;
-
-        if (this.testMode) {
-            // Render test room background
-            this.renderTestBackground(context, targetCanvas);
-        } else {
-            // Render all background layers from back to front
-            this.backgroundLayers.forEach(layer => {
-                if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                    layer.render(context, this.camera);
-                }
-            });
-        }
+        return this.renderer?.renderBackground(ctx, canvas);
     }
     
     /**
      * Render platforms with stylized graphics
      */
     renderPlatforms(ctx = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        if (!context) return;
-        this.platforms.forEach(platform => {
-            StylizedPlatform.renderPlatform(context, platform, this.camera);
-        });
+        return this.renderer?.renderPlatforms(ctx);
     }
 
     /**
      * Render NPCs (currently only the shop ghost)
      */
     renderNPCs(ctx = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        if (!context) return;
-        this.npcs.forEach(npc => {
-            if (npc.render) {
-                npc.render(context, this.camera);
-            }
-        });
+        return this.renderer?.renderNPCs(ctx);
     }
 
     /**
      * Render all placed chests
      */
     renderChests(ctx = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        if (!context) return;
-        this.chests.forEach(chest => {
-            if (chest && chest.render) {
-                chest.render(context, this.camera);
-            }
-        });
+        return this.renderer?.renderChests(ctx);
     }
 
     renderSigns(ctx = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        if (!context) return;
-        if (!Array.isArray(this.signBoards)) return;
-        this.signBoards.forEach(sign => {
-            if (sign && typeof sign.render === 'function') {
-                sign.render(context, this.camera);
-            }
-        });
+        return this.renderer?.renderSigns(ctx);
     }
     
     /**
@@ -1956,42 +1601,6 @@ class Game {
      * Render test room background with grid
      */
     renderTestBackground(ctx = null, canvas = null) {
-        const render = this.getRenderService();
-        const context = ctx || render.ctx;
-        const targetCanvas = canvas || render.canvas;
-        if (!context || !targetCanvas) return;
-
-        // Use palm tree manager's beach scene (includes sky with clouds, ocean, sand)
-        this.palmTreeManager.render(context, this.camera, this.gameTime);
-        
-        // Optional: Draw subtle reference grid
-        context.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        context.lineWidth = 1;
-        
-        // Vertical lines every 100px (less intrusive)
-        for (let x = 0; x <= targetCanvas.width; x += 100) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x, targetCanvas.height);
-            context.stroke();
-        }
-        
-        // Horizontal lines every 100px
-        for (let y = 0; y <= targetCanvas.height; y += 100) {
-            context.beginPath();
-            context.moveTo(0, y);
-            context.lineTo(targetCanvas.width, y);
-            context.stroke();
-        }
-        
-        // Test room info with better visibility
-        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        context.fillRect(5, 15, 360, 70);
-        
-        context.fillStyle = 'white';
-        context.font = '16px \"Hey Gorgeous\", \"Trebuchet MS\", \"Fredoka One\", \"Segoe UI\", sans-serif';
-        context.fillText('TEST ROOM - Debug Environment', 10, 35);
-        context.fillText('Press F2 to toggle back to main game', 10, 55);
-        context.fillText('Grid: 100px squares', 10, 75);
+        return this.renderer?.renderTestBackground(ctx, canvas);
     }
 }

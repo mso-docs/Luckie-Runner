@@ -1,6 +1,8 @@
 // Test room level definition (data-only)
 window.LevelDefinitions = window.LevelDefinitions || {};
 window.LevelDefinitions.testRoom = {
+    testRoom: true,
+    allowMissingSpawn: true,
     parkour: [
         { x: 220, width: 120, y: null, yOffset: 0 },   // base
         { x: 420, width: 90, y: null, yOffset: 50 },

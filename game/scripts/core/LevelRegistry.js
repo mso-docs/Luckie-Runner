@@ -23,7 +23,8 @@ class LevelRegistry {
             errors.push('Level definition is missing.');
             return { valid: false, errors };
         }
-        if (!def.spawn && !def.spawnOverride) {
+        const allowMissingSpawn = Boolean(def.testRoom || def.allowMissingSpawn);
+        if (!def.spawn && !def.spawnOverride && !allowMissingSpawn) {
             // optional, but useful to warn
             errors.push('Missing spawn info (spawn or spawnOverride).');
         }
@@ -39,6 +40,44 @@ class LevelRegistry {
         if (def.npcs && !Array.isArray(def.npcs)) {
             errors.push('npcs must be an array.');
         }
+        if (def.theme && typeof def.theme !== 'string') {
+            errors.push('theme must be a string id when provided.');
+        }
+
+        const validateEntities = (list, name, fields = []) => {
+            if (!Array.isArray(list)) return;
+            list.forEach((entry, idx) => {
+                if (typeof entry !== 'object') {
+                    errors.push(`${name}[${idx}] must be an object.`);
+                    return;
+                }
+                fields.forEach(field => {
+                    if (typeof entry[field] !== 'number') {
+                        errors.push(`${name}[${idx}].${field} must be a number.`);
+                    }
+                });
+            });
+        };
+
+        validateEntities(def.platforms, 'platforms', ['x', 'y', 'width', 'height']);
+        validateEntities(def.enemies, 'enemies', ['x', 'y']);
+        validateEntities(def.items, 'items', ['x', 'y']);
+        validateEntities(def.npcs, 'npcs', ['x', 'y']);
         return { valid: errors.length === 0, errors };
+    }
+
+    list() {
+        return Object.keys(this.levels);
+    }
+
+    /**
+     * Validate all registered levels; returns {id, valid, errors[]}[]
+     */
+    validateAll() {
+        return this.list().map(id => {
+            const def = this.get(id);
+            const result = this.validate(def);
+            return { id, ...result };
+        });
     }
 }

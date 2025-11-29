@@ -206,6 +206,23 @@ class CollisionSystem {
         item.velocity.x *= 0.95;
     }
 
+    /**
+     * Handle player picking up items.
+     * Returns true when the item was collected.
+     */
+    handleItemCollection(item) {
+        const player = this.game.player;
+        if (!player || !item || !item.active) return false;
+        if (typeof item.checkCollision !== 'function') return false;
+        if (!item.checkCollision(player)) return false;
+
+        const collected = item.collect?.(player) ?? false;
+        if (collected && item.type === 'coin' && this.game.stats) {
+            this.game.stats.coinsCollected += item.value || 0;
+        }
+        return collected;
+    }
+
     updateProjectilePhysics(projectile) {
         const g = this.game;
         g.platforms.forEach(platform => {
@@ -223,6 +240,17 @@ class CollisionSystem {
                 hazard.checkProjectileCollision(projectile);
             }
         });
+    }
+
+    /**
+     * Check flag/player overlap to trigger level completion.
+     */
+    checkFlagCollision(flag = null) {
+        const g = this.game;
+        if (!flag || !g.player || !flag.checkCollision) return;
+        if (flag.checkCollision(g.player)) {
+            flag.collect(g.player);
+        }
     }
 
     updateHazardCollisions() {

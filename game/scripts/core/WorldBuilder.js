@@ -3,11 +3,13 @@
  * Keeps construction concerns out of Game.
  */
 class WorldBuilder {
-    constructor(game, factory, services = null) {
+    constructor(game, factory, services = null, themeRegistry = null) {
         this.game = game;
         this.factory = factory || new EntityFactory(game);
         this.config = game.config || GameConfig || {};
         this.services = services;
+        const ThemeCtor = (typeof ThemeRegistry !== 'undefined') ? ThemeRegistry : null;
+        this.themeRegistry = themeRegistry || (ThemeCtor ? new ThemeCtor() : null);
     }
 
     createLevel(levelId = 'testRoom') {
@@ -19,6 +21,7 @@ class WorldBuilder {
         if (!validated.valid) {
             console.warn('Level validation failed:', validated.errors);
         }
+        g.currentTheme = levelDef?.theme || this.config?.theme || 'beach';
 
         g.platforms = [];
         g.enemies = [];
@@ -94,7 +97,26 @@ class WorldBuilder {
             this.captureInitialTestRoomState();
         }
 
-        g.createBackground();
+        this.buildBackground(levelDef?.theme || this.config?.theme || 'beach');
+    }
+
+    /**
+     * Build background layers using a theme id.
+     */
+    buildBackground(themeId = 'beach') {
+        if (!this.themeRegistry) {
+            if (typeof this.game.createFallbackBackground === 'function') {
+                this.game.createFallbackBackground();
+            }
+            return;
+        }
+
+        const layers = this.themeRegistry.buildLayers(themeId, this.game);
+        this.game.backgroundLayers = layers;
+        this.game.palmTreeManager?.initialize?.();
+        if (!layers.length && typeof this.game.createFallbackBackground === 'function') {
+            this.game.createFallbackBackground();
+        }
     }
 
     captureInitialTestRoomState() {

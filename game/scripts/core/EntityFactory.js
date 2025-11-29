@@ -4,6 +4,8 @@
 class EntityFactory {
     constructor(game) {
         this.game = game;
+        this.registry = {};
+        this.bootstrapDefaults();
     }
 
     platform(x, y, width, height, type) {
@@ -77,35 +79,39 @@ class EntityFactory {
     }
 
     /**
+     * Register a new entity type builder.
+     */
+    registerType(type, builder) {
+        if (type && typeof builder === 'function') {
+            this.registry[type] = builder;
+        }
+    }
+
+    /**
+     * Seed built-in entity builders.
+     */
+    bootstrapDefaults() {
+        this.registerType('platform', (def) => this.platform(def.x, def.y, def.width, def.height, def.subtype || def.kind));
+        this.registerType('slime', (def) => this.slime(def.x, def.y));
+        this.registerType('health_potion', (def) => this.healthPotion(def.x, def.y, def.healAmount));
+        this.registerType('coffee', (def) => this.coffee(def.x, def.y));
+        this.registerType('chest', (def) => this.chest(def.x, def.y, def.displayName, def.contents));
+        this.registerType('small_palm', (def) => this.smallPalm(def.x, def.y));
+        this.registerType('shopGhost', (def) => this.shopGhost(def.x, def.y));
+        this.registerType('princess', (def) => this.princess(def.x, def.y, def.dialogueLines || null));
+        this.registerType('balloonFan', (def) => this.balloonFan(def.x, def.y, def.dialogueLines || null));
+        this.registerType('sign', (def) => this.sign(def.x, def.y, def.spriteSrc, def.dialogueLines || null));
+        this.registerType('flag', (def) => this.flag(def.x, def.y));
+    }
+
+    /**
      * Generic creation by type key
      */
     create(def) {
         if (!def || !def.type) return null;
-        switch (def.type) {
-            case 'platform':
-                return this.platform(def.x, def.y, def.width, def.height, def.subtype || def.kind);
-            case 'slime':
-                return this.slime(def.x, def.y);
-            case 'health_potion':
-                return this.healthPotion(def.x, def.y, def.healAmount);
-            case 'coffee':
-                return this.coffee(def.x, def.y);
-            case 'chest':
-                return this.chest(def.x, def.y, def.displayName, def.contents);
-            case 'small_palm':
-                return this.smallPalm(def.x, def.y);
-            case 'shopGhost':
-                return this.shopGhost(def.x, def.y);
-            case 'princess':
-                return this.princess(def.x, def.y, def.dialogueLines || null);
-            case 'balloonFan':
-                return this.balloonFan(def.x, def.y, def.dialogueLines || null);
-            case 'sign':
-                return this.sign(def.x, def.y, def.spriteSrc, def.dialogueLines || null);
-            case 'flag':
-                return this.flag(def.x, def.y);
-            default:
-                return null;
+        if (this.registry[def.type]) {
+            return this.registry[def.type](def, this.game);
         }
+        return null;
     }
 }
