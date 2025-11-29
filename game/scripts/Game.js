@@ -134,8 +134,11 @@ class Game {
         this.uiManager = new UIManager(this, this.services);
         this.entityFactory = new EntityFactory(this, this.services);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
-        const RendererCtor = (typeof Renderer !== 'undefined') ? Renderer : null;
-        this.renderer = RendererCtor ? new RendererCtor(this, this.services) : null;
+        if (typeof Renderer === 'undefined') {
+            console.error('Renderer is not loaded. Ensure game/scripts/core/Renderer.js is included before Game.js.');
+            throw new Error('Renderer is not loaded.');
+        }
+        this.renderer = new Renderer(this, this.services);
         
         // Game statistics
         this.stats = {
@@ -1271,55 +1274,11 @@ class Game {
      * Render the game
      */
     render() {
-        if (this.renderer && typeof this.renderer.renderFrame === 'function') {
-            this.renderer.renderFrame();
-            return;
+        if (!this.renderer || typeof this.renderer.renderFrame !== 'function') {
+            console.error('Renderer instance is missing or invalid.');
+            throw new Error('Renderer instance is missing or invalid.');
         }
-
-        // Fallback: minimal render path when Renderer script isn't loaded
-        this.renderLegacy();
-    }
-
-    /**
-     * Legacy render path to keep visuals when Renderer isn't available.
-     */
-    renderLegacy() {
-        const render = this.getRenderService();
-        const ctx = render.ctx;
-        const canvas = render.canvas;
-        if (!ctx || !canvas) return;
-
-        render.clear?.();
-
-        // Background
-        if (this.testMode) {
-            this.renderTestBackground(ctx, canvas);
-        } else {
-            this.backgroundLayers.forEach(layer => {
-                if (layer.render) layer.render(ctx, this.camera);
-            });
-        }
-
-        this.palmTreeManager.render(ctx, this.camera, this.gameTime);
-        this.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, this.camera));
-        this.signBoards.forEach(sign => sign?.render?.(ctx, this.camera));
-        this.npcs.forEach(npc => npc?.render?.(ctx, this.camera));
-        this.chests.forEach(chest => chest?.render?.(ctx, this.camera));
-        this.smallPalms.forEach(palm => palm?.render?.(ctx, this.camera));
-        this.hazards.forEach(hazard => hazard?.render?.(ctx, this.camera));
-        this.items.forEach(item => item?.render?.(ctx, this.camera));
-        this.enemies.forEach(enemy => enemy?.render?.(ctx, this.camera));
-        this.projectiles.forEach(projectile => projectile?.render?.(ctx, this.camera));
-        this.player?.render?.(ctx, this.camera);
-        this.flag?.render?.(ctx, this.camera);
-
-        if (this.dialogueManager?.isActive()) {
-            this.updateSpeechBubblePosition();
-        }
-        this.updateShopGhostBubble();
-        if (this.debug) {
-            this.renderDebugOverlay();
-        }
+        this.renderer.renderFrame();
     }
 
     /**

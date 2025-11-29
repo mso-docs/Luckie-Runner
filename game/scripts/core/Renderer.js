@@ -13,30 +13,30 @@ class Renderer {
      */
     getContext() {
         const render = this.services?.render || this.game?.services?.render || null;
-        if (render) {
+        if (render && render.ctx && render.canvas) {
             return {
-                ctx: render.ctx || this.game?.ctx || null,
-                canvas: render.canvas || this.game?.canvas || null,
-                clear: render.clear ? render.clear.bind(render) : () => {
-                    const ctx = render.ctx || this.game?.ctx;
-                    const canvas = render.canvas || this.game?.canvas;
-                    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
-                },
-                width: render.width ? render.width.bind(render) : () => render.canvas?.width ?? this.game?.canvas?.width ?? 0,
-                height: render.height ? render.height.bind(render) : () => render.canvas?.height ?? this.game?.canvas?.height ?? 0
+                ctx: render.ctx,
+                canvas: render.canvas,
+                clear: render.clear ? render.clear.bind(render) : () => render.ctx.clearRect(0, 0, render.canvas.width, render.canvas.height),
+                width: render.width ? render.width.bind(render) : () => render.canvas.width,
+                height: render.height ? render.height.bind(render) : () => render.canvas.height
             };
         }
 
         const ctx = this.game?.ctx || null;
         const canvas = this.game?.canvas || null;
+        if (!ctx || !canvas) {
+            console.error('Renderer: missing canvas or context.');
+            throw new Error('Renderer: missing canvas or context.');
+        }
         return {
             ctx,
             canvas,
             clear: () => {
-                if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             },
-            width: () => canvas?.width ?? 0,
-            height: () => canvas?.height ?? 0
+            width: () => canvas.width,
+            height: () => canvas.height
         };
     }
 
@@ -45,7 +45,10 @@ class Renderer {
      */
     renderFrame() {
         const { ctx, canvas, clear } = this.getContext();
-        if (!ctx || !canvas) return;
+        if (!ctx || !canvas) {
+            console.error('Renderer: unable to render frame due to missing context.');
+            throw new Error('Renderer: missing render context.');
+        }
 
         clear();
 
