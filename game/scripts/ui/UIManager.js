@@ -1027,6 +1027,7 @@ class UIManager {
         this.townUI.banner = document.getElementById('townBanner');
         this.townUI.text = document.getElementById('townBannerText');
         if (this.townUI.banner) {
+            // ensure default background for banner
             this.townUI.banner.style.setProperty('--town-banner-bg', "url('art/ui/scroll.png')");
         }
     }
@@ -1050,12 +1051,14 @@ class UIManager {
         text.textContent = town.name || 'Town';
 
         banner.classList.remove('hidden');
+        banner.classList.add('show');
         banner.setAttribute('aria-hidden', 'false');
 
         this.townUI.timeout = setTimeout(() => {
-            banner.classList.add('hidden');
+            banner.classList.remove('show');
             banner.setAttribute('aria-hidden', 'true');
-        }, 3000);
+            setTimeout(() => banner.classList.add('hidden'), 400);
+        }, 5000);
     }
 
     setupDebugUI() {
@@ -1075,6 +1078,17 @@ class UIManager {
             this.game.debug = false;
             this.updateDebugOverlay(true);
         });
+        // Prevent Enter/keyboard form submit behavior
+        if (this.debugUI.toggle) {
+            this.debugUI.toggle.setAttribute('type', 'button');
+            this.debugUI.toggle.tabIndex = -1;
+            this.debugUI.toggle.addEventListener('keydown', (e) => e.preventDefault());
+        }
+        if (this.debugUI.close) {
+            this.debugUI.close.setAttribute('type', 'button');
+            this.debugUI.close.tabIndex = -1;
+            this.debugUI.close.addEventListener('keydown', (e) => e.preventDefault());
+        }
     }
 
     updateDebugOverlay(force = false) {

@@ -93,7 +93,8 @@ class UIInputController {
         const controls = this.controls;
         const sm = this.game.stateManager;
 
-        if (matches(controls.toggleDebug, ['F1'])) {
+        const debugKeys = (controls.toggleDebug && controls.toggleDebug.length) ? controls.toggleDebug : ['/'];
+        if (matches(debugKeys, ['/'])) {
             this.game.debug = !this.game.debug;
             return;
         }

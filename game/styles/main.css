@@ -325,32 +325,41 @@ body, button, input, select, textarea,
 /* Town banner */
 .town-banner {
     position: absolute;
-    bottom: 52px;
+    bottom: 12px;
     right: 12px;
     transform: translateX(0);
-    width: 320px;
-    height: 120px;
+    width: 400px;
+    height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    z-index: 18;
+    z-index: 30; /* above ground/scene */
+    opacity: 0;
+    transition: opacity 0.6s ease;
 }
 
 .town-banner__bg {
     position: absolute;
     inset: 0;
-    background: var(--town-banner-bg, url('../art/ui/scroll.png')) center/contain no-repeat;
+    background-image: url('../art/ui/scroll.png');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
 }
 
 .town-banner__text {
     position: relative;
     font-family: 'Cooper Black', var(--font-title);
-    font-size: 26px;
+    font-size: 32px;
     color: #5c3a1a;
     text-shadow: -1px -1px 0 #f4e0c0, 1px -1px 0 #f4e0c0, -1px 1px 0 #f4e0c0, 1px 1px 0 #f4e0c0;
     padding: 0 12px;
+}
+
+.town-banner.show {
+    opacity: 1;
 }
 
   .coffee-icon {
