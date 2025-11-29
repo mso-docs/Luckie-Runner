@@ -8,6 +8,7 @@ class ThemeRegistry {
 
         // Default built-in themes
         this.register('beach', {
+            skyBody: 'sun',
             layers: [
                 { type: 'procedural', speed: 0.1, y: 0, generator: BackgroundGenerators.createSunsetSky, heightScale: 1, widthScale: 1 },
                 { type: 'procedural', speed: 0.3, y: 0.6, generator: BackgroundGenerators.createOcean, heightScale: 0.4, widthScale: 2 },
@@ -16,6 +17,13 @@ class ThemeRegistry {
         });
 
         this.register('flat', {
+            skyBody: 'sun',
+            layers: []
+        });
+
+        // Optional night variant using the moon; shares layers with beach by default.
+        this.register('night', {
+            skyBody: 'moon',
             layers: []
         });
     }

@@ -95,6 +95,12 @@ class PalmTreeManager {
         this.mountainTexture = null;
         this.mountainTextureReady = false;
         this.mountainTextureLoading = false;
+
+        // Sky body textures (sun/moon)
+        this.skyBodyTextures = {
+            sun: { src: 'art/bg/sky/sun-moon/sun.png', img: null, ready: false, loading: false },
+            moon: { src: 'art/bg/sky/sun-moon/moon.png', img: null, ready: false, loading: false }
+        };
     }
     
     /**
@@ -128,6 +134,28 @@ class PalmTreeManager {
             img.src = entry.src;
             pending.push({ key: entry.key, img });
         });
+    }
+
+    /**
+     * Resolve which sky body to draw based on the current theme.
+     */
+    getSkyBodyFromTheme() {
+        const themeId = this.game?.currentTheme;
+        const registry = this.game?.worldBuilder?.themeRegistry;
+        const theme = (registry && typeof registry.get === 'function') ? registry.get(themeId) : null;
+        return (theme && theme.skyBody) ? theme.skyBody : 'sun';
+    }
+
+    /**
+     * Get a loaded sky texture, triggering load if needed.
+     */
+    getSkyBodyTexture(body = 'sun') {
+        this.loadSkyBodyTextures();
+        const entry = this.skyBodyTextures[body];
+        if (entry && entry.ready && entry.img && entry.img.complete && entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0) {
+            return entry.img;
+        }
+        return null;
     }
 
     /**
@@ -175,6 +203,7 @@ class PalmTreeManager {
         this.loadPalmSprites();
         this.loadCloudSprites();
         this.loadMountainTexture();
+        this.loadSkyBodyTextures();
     }
     
     /**
@@ -260,8 +289,8 @@ class PalmTreeManager {
         ctx.fillStyle = skyGradient;
         ctx.fillRect(0, 0, w, h * 0.55);
         
-        // Draw sun in upper right area
-        this.drawSun(ctx, w * 0.85, h * 0.12, 50);
+        // Draw sky body (sun/moon) in upper right area
+        this.drawSkyBody(ctx, w * 0.85, h * 0.12, 50);
         
         // Draw floating clouds with parallax
         this.drawClouds(ctx, camera, w, h, gameTime);
@@ -314,6 +343,22 @@ class PalmTreeManager {
         };
         img.src = 'art/bg/mountains/coastal-mountains.png';
         this.mountainTexture = img;
+    }
+
+    /**
+     * Load sun/moon textures once.
+     */
+    loadSkyBodyTextures() {
+        Object.keys(this.skyBodyTextures).forEach(key => {
+            const entry = this.skyBodyTextures[key];
+            if (!entry || entry.loading || entry.ready) return;
+            entry.loading = true;
+            const img = new Image();
+            img.onload = () => { entry.ready = true; entry.loading = false; };
+            img.onerror = () => { entry.ready = false; entry.loading = false; };
+            img.src = entry.src;
+            entry.img = img;
+        });
     }
 
     /**
@@ -460,28 +505,53 @@ class PalmTreeManager {
     }
     
     /**
-     * Draw sun in the sky
+     * Draw the configured sky body (sun by default, moon when theme asks)
      */
-    drawSun(ctx, x, y, radius) {
+    drawSkyBody(ctx, x, y, radius) {
         ctx.save();
-        
-        // Draw sun glow
-        const glowGradient = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 2);
-        glowGradient.addColorStop(0, 'rgba(255, 255, 150, 0.4)');
-        glowGradient.addColorStop(1, 'rgba(255, 255, 150, 0)');
-        
+
+        const skyBody = this.getSkyBodyFromTheme();
+        const texture = this.getSkyBodyTexture(skyBody);
+        const size = radius * 2.2; // Slightly larger than the old drawn sun
+        const isMoon = skyBody === 'moon';
+
+        // Glow/halo behind the sprite
+        const glowRadius = radius * (isMoon ? 2.4 : 2.8);
+        const glowGradient = ctx.createRadialGradient(x, y, glowRadius * 0.35, x, y, glowRadius);
+        if (isMoon) {
+            glowGradient.addColorStop(0, 'rgba(210, 225, 255, 0.35)');
+            glowGradient.addColorStop(0.6, 'rgba(190, 210, 245, 0.2)');
+            glowGradient.addColorStop(1, 'rgba(180, 200, 235, 0)');
+        } else {
+            glowGradient.addColorStop(0, 'rgba(255, 245, 180, 0.45)');
+            glowGradient.addColorStop(0.6, 'rgba(255, 225, 140, 0.25)');
+            glowGradient.addColorStop(1, 'rgba(255, 210, 120, 0)');
+        }
         ctx.fillStyle = glowGradient;
         ctx.beginPath();
-        ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+        ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
         ctx.fill();
+
+        if (texture) {
+            // Center the sprite on x/y
+            ctx.drawImage(texture, x - size / 2, y - size / 2, size, size);
+            ctx.restore();
+            return;
+        }
         
-        // Draw sun core
-        const sunGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        sunGradient.addColorStop(0, '#ffff66');    // Bright yellow center
-        sunGradient.addColorStop(0.7, '#ffdd44');  // Golden yellow
-        sunGradient.addColorStop(1, '#ffbb33');    // Orange-yellow edge
+        // Fallback: draw stylized sun/moon core
+        const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        if (isMoon) {
+            coreGradient.addColorStop(0, '#f5f7ff');   // Pale moon center
+            coreGradient.addColorStop(0.7, '#d9e2ff'); // Cool edge
+            coreGradient.addColorStop(1, '#b3c2ff');   // Dim outer edge
+        } else {
+            coreGradient.addColorStop(0, '#ffff66');    // Bright yellow center
+            coreGradient.addColorStop(0.7, '#ffdd44');  // Golden yellow
+            coreGradient.addColorStop(1, '#ffbb33');    // Orange-yellow edge
+        }
         
-        ctx.fillStyle = sunGradient;
+        ctx.fillStyle = coreGradient;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -498,7 +568,9 @@ class PalmTreeManager {
         const span = canvasWidth + 800;
         const baseYMin = canvasHeight * 0.10;
         const baseYMax = canvasHeight * 0.30;
+        const minSpacing = 140; // soften clumping by keeping clouds apart
 
+        const generated = [];
         for (let i = 0; i < count; i++) {
             const width = 110 + Math.random() * 70;
             const height = width * 0.3;
@@ -517,7 +589,7 @@ class PalmTreeManager {
                 blobs.push({ x: offsetX, y: offsetY, r: radius });
             }
 
-            this.clouds.push({
+            generated.push({
                 baseX,
                 y,
                 width,
@@ -528,6 +600,19 @@ class PalmTreeManager {
                 sprite: this.getRandomCloudSprite()
             });
         }
+
+        // Sort and enforce spacing to avoid obvious clumping while keeping count.
+        generated.sort((a, b) => a.baseX - b.baseX);
+        for (let i = 1; i < generated.length; i++) {
+            const prev = generated[i - 1];
+            const cur = generated[i];
+            const requiredGap = Math.max(minSpacing, (prev.width + cur.width) * 0.6);
+            if (cur.baseX - prev.baseX < requiredGap) {
+                cur.baseX = prev.baseX + requiredGap;
+            }
+        }
+
+        this.clouds = generated;
     }
     
     /**
