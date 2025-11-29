@@ -643,38 +643,33 @@ class Game {
     }
 
     /**
+     * Resolve audio service with legacy fallback.
+     */
+    getAudio() {
+        return this.services?.audio || this.audioManager || null;
+    }
+
+    /**
      * Audio helpers for menus and UI
      */
     playMenuEnterSound() {
-        if (this.services?.audio) {
-            this.services.audio.playSound('menu_enter', 1);
-        } else if (this.audioManager) {
-            this.audioManager.playSound('menu_enter', 1);
-        }
+        const audio = this.getAudio();
+        if (audio) audio.playSound?.('menu_enter', 1);
     }
 
     playMenuExitSound() {
-        if (this.services?.audio) {
-            this.services.audio.playSound('menu_exit', 1);
-        } else if (this.audioManager) {
-            this.audioManager.playSound('menu_exit', 1);
-        }
+        const audio = this.getAudio();
+        if (audio) audio.playSound?.('menu_exit', 1);
     }
 
     playButtonSound() {
-        if (this.services?.audio) {
-            this.services.audio.playSound('button', 1);
-        } else if (this.audioManager) {
-            this.audioManager.playSound('button', 1);
-        }
+        const audio = this.getAudio();
+        if (audio) audio.playSound?.('button', 1);
     }
 
     playPurchaseSound() {
-        if (this.services?.audio) {
-            this.services.audio.playSound('purchase', 1);
-        } else if (this.audioManager) {
-            this.audioManager.playSound('purchase', 1);
-        }
+        const audio = this.getAudio();
+        if (audio) audio.playSound?.('purchase', 1);
     }
 
     /**
