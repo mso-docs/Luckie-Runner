@@ -13,6 +13,7 @@ class TownManager {
         this.fadeDuration = 1200;
         this.baseMusicVolume = game.currentLevelMusicVolume ?? 0.8;
         this.activeContent = { buildings: [], setpieces: [] };
+        this.doorAutoCloseMs = 2200;
 
         this.preloadTownMusic();
     }
@@ -34,6 +35,7 @@ class TownManager {
         }
 
         this.updateMusicTransition(deltaTime);
+        this.updateBuildingDoors(deltaTime);
     }
 
     /**
@@ -56,6 +58,13 @@ class TownManager {
             id: def.id || null,
             name: def.name || 'Building',
             exterior: def.exterior || {},
+            frames: def.exterior?.frames ?? 2,
+            frameHeight: def.exterior?.frameHeight ?? (() => {
+                const frames = def.exterior?.frames ?? 2;
+                const h = def.exterior?.height || 0;
+                return Math.max(1, Math.floor(h / Math.max(1, frames)));
+            })(),
+            frameIndex: 0, // 0 = door closed, 1 = door open
             door: {
                 x: def.door?.x ?? def.exterior?.x ?? 0,
                 y: def.door?.y ?? def.exterior?.y ?? 0,
@@ -64,7 +73,9 @@ class TownManager {
                 interactRadius: def.door?.interactRadius ?? 32
             },
             interiorId: def.interiorId || null,
-            npcs: Array.isArray(def.npcs) ? [...def.npcs] : []
+            npcs: Array.isArray(def.npcs) ? [...def.npcs] : [],
+            doorTimer: 0,
+            doorOpen: false
         };
     }
 
@@ -76,7 +87,8 @@ class TownManager {
             y: def.y ?? 0,
             width: def.width ?? 64,
             height: def.height ?? 64,
-            layer: def.layer || 'foreground'
+            layer: def.layer || 'foreground',
+            sprite: def.sprite || null
         };
     }
 
@@ -215,8 +227,34 @@ class TownManager {
     enterBuilding(building) {
         const label = building?.name || 'Building';
         const interiorId = building?.interiorId || 'interior';
+        this.openBuildingDoor(building);
         // Placeholder hook for loading interiors; replace with real scene/level switch.
         this.game?.uiManager?.showSpeechBubble?.(`Entering ${label} (${interiorId})`);
+    }
+
+    openBuildingDoor(building) {
+        if (!building) return;
+        building.doorOpen = true;
+        building.frameIndex = 1; // second frame = door open
+        building.doorTimer = this.doorAutoCloseMs;
+    }
+
+    closeBuildingDoor(building) {
+        if (!building) return;
+        building.doorOpen = false;
+        building.frameIndex = 0;
+        building.doorTimer = 0;
+    }
+
+    updateBuildingDoors(deltaTime = 0) {
+        if (!Array.isArray(this.activeContent?.buildings)) return;
+        this.activeContent.buildings.forEach(b => {
+            if (!b.doorOpen) return;
+            b.doorTimer = Math.max(0, (b.doorTimer || 0) - deltaTime);
+            if (b.doorTimer <= 0) {
+                this.closeBuildingDoor(b);
+            }
+        });
     }
 
     updateMusicTransition(deltaTime = 0) {
