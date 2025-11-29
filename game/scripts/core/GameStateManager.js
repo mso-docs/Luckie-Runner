@@ -109,6 +109,8 @@ class GameStateManager {
         }
         const audio = this.getAudio();
         if (audio) {
+            this.game.currentLevelMusicId = 'level1';
+            this.game.currentLevelMusicVolume = 0.8;
             audio.playMusic?.('level1', 0.8);
         }
         // Auto-save on start (so we always have at least one slot)

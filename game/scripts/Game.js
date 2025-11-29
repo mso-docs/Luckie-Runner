@@ -19,6 +19,8 @@ class Game {
         this.config = GameConfig;
         this.input = new InputManager();
         this.audioManager = new AudioManager(this.config);
+        this.currentLevelMusicId = 'level1';
+        this.currentLevelMusicVolume = 0.8;
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
