@@ -134,6 +134,7 @@ class Game {
         this.uiManager = new UIManager(this, this.services);
         this.entityFactory = new EntityFactory(this, this.services);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
+        this.systems = new GameSystems(this);
         if (typeof Renderer === 'undefined') {
             console.error('Renderer is not loaded. Ensure game/scripts/core/Renderer.js is included before Game.js.');
             throw new Error('Renderer is not loaded.');
@@ -1080,120 +1081,14 @@ class Game {
      * @param {number} deltaTime - Time since last frame
      */
     update(deltaTime) {
-        // Update input
-        if (this.services?.input?.update) {
-            this.services.input.update();
-        } else {
-            this.input.update();
-        }
-        this.uiManager?.handleFrameInput();
-
-        // Pause world updates while overlays are open
-        if (this.uiManager?.isOverlayBlocking()) {
-            return;
-        }
-
-        // Update NPCs
-        this.npcs.forEach(npc => {
-            if (npc.update) {
-                npc.update(deltaTime);
-            }
-        });
-        
-        // Update player
-        if (this.player) {
-            this.player.update(deltaTime);
-            this.updateCamera();
-            this.collisionSystem?.checkPlayerCollisions();
-        }
-
-        // Update small palms (foreground interactive)
-        if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(palm => palm.update(deltaTime));
-        }
-
-        // Update chests (callouts + glow)
-        this.uiManager?.updateFrame(deltaTime);
-        
-        // Update all background layers
-        this.backgroundLayers.forEach(layer => {
-            if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                layer.update(this.camera.x, deltaTime);
-            }
-        });
-        
-        // Update procedural palm trees
-        const render = this.getRenderService();
-        this.palmTreeManager.update(this.camera.x, render.width());
-        
-        // Update enemies
-        this.enemies = this.enemies.filter(enemy => {
-            if (enemy.active) {
-                enemy.update(deltaTime);
-                this.collisionSystem?.updateEnemyPhysics(enemy);
-                return true;
-            } else {
-                // Enemy defeated
-                this.handleEnemyRemoved(enemy);
-                return false;
-            }
-        });
-        
-        // Update items
-        this.items = this.items.filter(item => {
-            if (item.active) {
-                item.update(deltaTime);
-                this.collisionSystem?.updateItemPhysics(item, deltaTime);
-                this.collisionSystem?.handleItemCollection(item);
-                return item.active !== false;
-            }
-            return false;
-        });
-        
-        // Update projectiles
-        this.projectiles = this.projectiles.filter(projectile => {
-            if (projectile.active) {
-                projectile.update(deltaTime);
-                this.collisionSystem?.updateProjectilePhysics(projectile);
-                return true;
-            }
-            return false;
-        });
-        
-        // Update hazards
-        this.hazards = this.hazards.filter(hazard => {
-            if (hazard.active) {
-                hazard.update(deltaTime);
-                return true;
-            }
-            return false;
-        });
-        this.collisionSystem?.updateHazardCollisions();
-        
-        // Update flag
-        if (this.flag) {
-            this.flag.update(deltaTime);
-            this.collisionSystem?.checkFlagCollision(this.flag);
-        }
-        
-        // Update statistics
-        this.updateGameStats(deltaTime);
-        this.updateInventoryOverlay();
-        
-        // Check game over conditions
-        this.checkGameOver();
+        this.systems?.update(deltaTime);
     }
 
     /**
      * Update camera to follow player
      */
     updateCamera() {
-        if (!this.player || !this.camera) return;
-        const render = this.getRenderService();
-        
-        this.camera.setViewport(render.width(), render.height());
-        this.camera.setBounds(this.level?.width, this.level?.height);
-        this.camera.followPlayer(this.player, { testMode: this.testMode });
+        return this.systems?.updateCamera();
     }
 
     /**
@@ -1208,10 +1103,7 @@ class Game {
      * @param {Enemy} enemy
      */
     handleEnemyRemoved(enemy) {
-        this.stats.enemiesDefeated++;
-        if (this.badgeUI) {
-            this.badgeUI.handleEnemyDefeated(enemy);
-        }
+        return this.systems?.handleEnemyRemoved(enemy);
     }
 
     /**
@@ -1219,21 +1111,14 @@ class Game {
      * @param {number} deltaTime - Time since last frame
      */
     updateGameStats(deltaTime) {
-        this.stats.timeElapsed += deltaTime;
-        
-        if (this.player) {
-            const distanceThisFrame = Math.abs(this.player.velocity.x) * (deltaTime / 1000);
-            this.stats.distanceTraveled += distanceThisFrame;
-        }
+        return this.systems?.updateGameStats(deltaTime);
     }
 
     /**
      * Check for game over conditions
      */
     checkGameOver() {
-        if (this.player && this.player.health <= 0) {
-            this.stateManager.gameOver();
-        }
+        return this.systems?.checkGameOver();
     }
 
     /**
