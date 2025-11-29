@@ -217,8 +217,8 @@ class CollisionSystem {
         if (!item.checkCollision(player)) return false;
 
         const collected = item.collect?.(player) ?? false;
-        if (collected && item.type === 'coin' && this.game.stats) {
-            this.game.stats.coinsCollected += item.value || 0;
+        if (collected) {
+            this.game.statsManager?.handleItemCollected?.(item);
         }
         return collected;
     }

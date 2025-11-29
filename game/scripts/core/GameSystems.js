@@ -116,11 +116,7 @@ class GameSystems {
 
     updateGameStats(deltaTime) {
         const g = this.game;
-        g.stats.timeElapsed += deltaTime;
-        if (g.player) {
-            const distanceThisFrame = Math.abs(g.player.velocity.x) * (deltaTime / 1000);
-            g.stats.distanceTraveled += distanceThisFrame;
-        }
+        g.statsManager?.tick(deltaTime);
     }
 
     checkGameOver() {
@@ -132,7 +128,6 @@ class GameSystems {
 
     handleEnemyRemoved(enemy) {
         const g = this.game;
-        g.stats.enemiesDefeated++;
-        g.badgeUI?.handleEnemyDefeated?.(enemy);
+        g.statsManager?.handleEnemyRemoved(enemy);
     }
 }

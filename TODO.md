@@ -5,4 +5,4 @@
 - [x] Shift audio UI/volume controls into `AudioController` bridging `AudioService` and DOM controls.
 - [x] Push dialogue/interaction handling fully into `UIManager/DialogueManager` (start/advance/hide bubble, NPC talk), with `Game` only routing signals.
 - [x] Extract test-room/reset snapshot utilities into `TestRoomManager` (or extend `ResetService`) for debug mode toggles and state restore.
-- [ ] Create `StatsManager` to handle enemy/item events, badges/HUD updates, and stats accumulation.
+- [x] Create `StatsManager` to handle enemy/item events, badges/HUD updates, and stats accumulation.

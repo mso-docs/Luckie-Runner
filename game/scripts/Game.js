@@ -136,6 +136,7 @@ class Game {
         this.entityFactory = new EntityFactory(this, this.services);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
         this.systems = new GameSystems(this);
+        this.statsManager = new StatsManager(this);
         if (typeof Renderer === 'undefined') {
             console.error('Renderer is not loaded. Ensure game/scripts/core/Renderer.js is included before Game.js.');
             throw new Error('Renderer is not loaded.');
