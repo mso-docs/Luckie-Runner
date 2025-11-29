@@ -81,6 +81,14 @@ class Game {
         this.speechBubbleUI.init();
         this.speechBubble = this.speechBubbleUI.refs;
 
+        // Services (DI)
+        this.services = {
+            input: new InputService(this.input),
+            audio: new AudioService(this.audioManager),
+            render: new RenderContext(this.canvas, this.ctx),
+            persistence: new PersistenceService()
+        };
+
         // Inventory overlay UI state
         this.inventoryUI = {
             overlay: null,
@@ -116,9 +124,9 @@ class Game {
         // UI managers
         this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
-        this.uiManager = new UIManager(this);
-        this.entityFactory = new EntityFactory(this);
-        this.worldBuilder = new WorldBuilder(this, this.entityFactory);
+        this.uiManager = new UIManager(this, this.services);
+        this.entityFactory = new EntityFactory(this, this.services);
+        this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
         
         // Game statistics
         this.stats = {

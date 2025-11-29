@@ -3,7 +3,7 @@
  * Keeps Game focused on orchestration while UI concerns stay here.
  */
 class UIManager {
-    constructor(game) {
+    constructor(game, services = null) {
         this.game = game;
         this.inventoryUI = game.inventoryUI || {
             overlay: null,
@@ -27,6 +27,7 @@ class UIManager {
         this.game.shopUI = this.shopUI;
 
         this.config = game.config || GameConfig || {};
+        this.services = services || {};
     }
 
     /**

@@ -3,10 +3,11 @@
  * Keeps construction concerns out of Game.
  */
 class WorldBuilder {
-    constructor(game, factory) {
+    constructor(game, factory, services = null) {
         this.game = game;
         this.factory = factory || new EntityFactory(game);
         this.config = game.config || GameConfig || {};
+        this.services = services;
     }
 
     createLevel(levelId = 'testRoom') {
