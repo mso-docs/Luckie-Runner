@@ -1556,11 +1556,24 @@ class Game {
      * Toggle mute state
      */
     toggleMute() {
+        const audio = this.services?.audio || null;
+        if (audio && audio.toggleMute) {
+            const wasMuted = audio.isMuted();
+            audio.toggleMute();
+            if (wasMuted && !audio.isMuted()) {
+                if (this.stateManager.isPlaying()) {
+                    audio.playMusic('level1', 0.8);
+                } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
+                    audio.playMusic('title', 0.8);
+                }
+            }
+            this.updateAudioUI();
+            return;
+        }
+
         if (this.audioManager) {
             const wasMuted = this.audioManager.isMuted();
             this.audioManager.toggleMute();
-            
-            // Restart appropriate music when unmuting
             if (wasMuted && !this.audioManager.isMuted()) {
                 if (this.stateManager.isPlaying()) {
                     this.audioManager.playMusic('level1', 0.8);
@@ -1568,7 +1581,6 @@ class Game {
                     this.audioManager.playMusic('title', 0.8);
                 }
             }
-            
             this.updateAudioUI();
         }
     }
@@ -1578,6 +1590,12 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setMasterVolume(volume) {
+        const audio = this.services?.audio || null;
+        if (audio && audio.setMaster) {
+            audio.setMaster(volume / 100);
+            this.updateAudioUI();
+            return;
+        }
         if (this.audioManager) {
             this.audioManager.setMasterVolume(volume / 100);
             this.updateAudioUI();
@@ -1589,6 +1607,12 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setMusicVolume(volume) {
+        const audio = this.services?.audio || null;
+        if (audio && audio.setMusic) {
+            audio.setMusic(volume / 100);
+            this.updateAudioUI();
+            return;
+        }
         if (this.audioManager) {
             this.audioManager.setMusicVolume(volume / 100);
             this.updateAudioUI();
@@ -1600,6 +1624,12 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setSfxVolume(volume) {
+        const audio = this.services?.audio || null;
+        if (audio && audio.setSfx) {
+            audio.setSfx(volume / 100);
+            this.updateAudioUI();
+            return;
+        }
         if (this.audioManager) {
             this.audioManager.setSfxVolume(volume / 100);
             this.updateAudioUI();
@@ -1616,7 +1646,8 @@ class Game {
      * Update audio control UI elements
      */
     updateAudioUI() {
-        if (!this.audioManager) return;
+        const audio = this.services?.audio || this.audioManager;
+        if (!audio) return;
 
         const muteButton = document.getElementById('muteButton');
         const masterVolumeSlider = document.getElementById('masterVolume');
@@ -1626,28 +1657,28 @@ class Game {
         const musicVolumeValue = document.getElementById('musicVolumeValue');
         const sfxVolumeValue = document.getElementById('sfxVolumeValue');
 
-        if (muteButton) {
-            muteButton.textContent = this.audioManager.isMuted() ? '🔇 Unmute' : '🔊 Mute';
+        if (muteButton && audio.isMuted) {
+            muteButton.textContent = audio.isMuted() ? '🔇 Unmute' : '🔊 Mute';
         }
 
-        if (masterVolumeSlider) {
-            masterVolumeSlider.value = Math.round(this.audioManager.getMasterVolume() * 100);
+        if (masterVolumeSlider && audio.getMasterVolume) {
+            masterVolumeSlider.value = Math.round(audio.getMasterVolume() * 100);
         }
-        if (musicVolumeSlider) {
-            musicVolumeSlider.value = Math.round(this.audioManager.getMusicVolume() * 100);
+        if (musicVolumeSlider && audio.getMusicVolume) {
+            musicVolumeSlider.value = Math.round(audio.getMusicVolume() * 100);
         }
-        if (sfxVolumeSlider) {
-            sfxVolumeSlider.value = Math.round(this.audioManager.getSfxVolume() * 100);
+        if (sfxVolumeSlider && audio.getSfxVolume) {
+            sfxVolumeSlider.value = Math.round(audio.getSfxVolume() * 100);
         }
 
-        if (masterVolumeValue) {
-            masterVolumeValue.textContent = Math.round(this.audioManager.getMasterVolume() * 100) + '%';
+        if (masterVolumeValue && audio.getMasterVolume) {
+            masterVolumeValue.textContent = Math.round(audio.getMasterVolume() * 100) + '%';
         }
-        if (musicVolumeValue) {
-            musicVolumeValue.textContent = Math.round(this.audioManager.getMusicVolume() * 100) + '%';
+        if (musicVolumeValue && audio.getMusicVolume) {
+            musicVolumeValue.textContent = Math.round(audio.getMusicVolume() * 100) + '%';
         }
-        if (sfxVolumeValue) {
-            sfxVolumeValue.textContent = Math.round(this.audioManager.getSfxVolume() * 100) + '%';
+        if (sfxVolumeValue && audio.getSfxVolume) {
+            sfxVolumeValue.textContent = Math.round(audio.getSfxVolume() * 100) + '%';
         }
     }
     

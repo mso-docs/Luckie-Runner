@@ -146,7 +146,7 @@ class Player extends Entity {
      */
     onUpdate(deltaTime) {
         const dt = deltaTime / 1000; // Convert to seconds
-        const input = this.game.input;
+        const input = this.game.services?.input || this.game.input;
 
         // Update timed buffs
         this.updateCoffeeBuff(deltaTime);
