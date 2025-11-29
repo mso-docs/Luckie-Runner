@@ -1011,15 +1011,20 @@ class UIManager {
      * Start a dialogue with an NPC using the shared speech bubble.
      */
     startNpcDialogue(npc) {
-        if (!npc || !npc.canTalk || !Array.isArray(npc.dialogueLines) || npc.dialogueLines.length === 0) return;
-        if (typeof npc.setTalking === 'function') {
+        if (!npc || !npc.canTalk) return;
+        const id = npc.dialogueId || null;
+        const start = id
+            ? this.game.dialogueManager.startById(id, npc, () => {
+                npc.onDialogueClosed?.();
+                npc.setTalking?.(false);
+            })
+            : this.game.dialogueManager.startDialog(npc.dialogueLines || [], npc, () => {
+                npc.onDialogueClosed?.();
+                npc.setTalking?.(false);
+            });
+        if (start && typeof npc.setTalking === 'function') {
             npc.setTalking(true);
         }
-        this.game.dialogueManager.startDialog(npc.dialogueLines, npc, () => {
-            if (typeof npc.onDialogueClosed === 'function') {
-                npc.onDialogueClosed();
-            }
-        });
     }
 
     /**

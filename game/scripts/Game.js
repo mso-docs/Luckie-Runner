@@ -131,7 +131,8 @@ class Game {
         this.signUI = new SignUI(this);
 
         // UI managers
-        this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
+        const dialogues = (typeof window !== 'undefined') ? { ...(window.Dialogues || {}), ...(window.NPCDialogues || {}) } : {};
+        this.dialogueManager = new DialogueManager(this, dialogues, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this, this.services);
         this.entityFactory = new EntityFactory(this, this.config);

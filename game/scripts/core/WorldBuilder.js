@@ -138,14 +138,14 @@ class WorldBuilder {
 
         const npcBlueprints = [];
         if (g.shopGhost) {
-            npcBlueprints.push({ type: 'shopGhost', x: g.shopGhost.x, y: g.shopGhost.y });
+            npcBlueprints.push({ type: 'shopGhost', x: g.shopGhost.x, y: g.shopGhost.y, dialogueId: g.shopGhost.dialogueId || 'shop.ghost' });
         }
         if (g.princess) {
             npcBlueprints.push({
                 type: 'princess',
                 x: g.princess.x,
                 y: g.princess.y,
-                dialogueLines: g.princess.dialogueLines ? [...g.princess.dialogueLines] : null
+                dialogueId: g.princess.dialogueId || 'princess.default'
             });
         }
         if (g.balloonFan) {
@@ -153,7 +153,7 @@ class WorldBuilder {
                 type: 'balloonFan',
                 x: g.balloonFan.x,
                 y: g.balloonFan.y,
-                dialogueLines: g.balloonFan.dialogueLines ? [...g.balloonFan.dialogueLines] : null
+                dialogueId: g.balloonFan.dialogueId || 'balloon.default'
             });
         }
 
@@ -200,12 +200,14 @@ class WorldBuilder {
             signBoard: g.signBoard ? {
                 x: g.signBoard.x,
                 y: g.signBoard.y,
-                spriteSrc: g.signBoard.sprite?.src
+                spriteSrc: g.signBoard.sprite?.src,
+                dialogueId: g.signBoard.dialogueId || 'default_sign'
             } : null,
             signBoards: (g.signBoards || []).map(sign => ({
                 x: sign.x,
                 y: sign.y,
                 spriteSrc: sign.sprite?.src,
+                dialogueId: sign.dialogueId || null,
                 dialogueLines: sign.dialogueLines ? [...sign.dialogueLines] : null
             })),
             flag: g.flag ? { x: g.flag.x, y: g.flag.y } : null
@@ -271,15 +273,15 @@ class WorldBuilder {
         g.balloonFan = null;
         (blueprint.npcs || []).forEach(def => {
             if (def.type === 'shopGhost') {
-                const ghost = this.factory.shopGhost(def.x, def.y);
+                const ghost = this.factory.shopGhost(def.x, def.y, def.dialogueId || 'shop.ghost');
                 g.shopGhost = ghost;
                 g.npcs.push(ghost);
             } else if (def.type === 'princess') {
-                const princess = this.factory.princess(def.x, def.y, def.dialogueLines || []);
+                const princess = this.factory.princess(def.x, def.y, def.dialogueId || 'princess.default');
                 g.princess = princess;
                 g.npcs.push(princess);
             } else if (def.type === 'balloonFan') {
-                const balloonFan = this.factory.balloonFan(def.x, def.y, def.dialogueLines || []);
+                const balloonFan = this.factory.balloonFan(def.x, def.y, def.dialogueId || 'balloon.default');
                 g.balloonFan = balloonFan;
                 g.npcs.push(balloonFan);
             }
@@ -290,6 +292,7 @@ class WorldBuilder {
             : null;
         g.signBoards = (blueprint.signBoards || []).map(def => {
             const sign = this.factory.sign(def.x, def.y, def.spriteSrc, def.dialogueLines);
+            if (def.dialogueId) sign.dialogueId = def.dialogueId;
             return sign;
         });
         if (g.signBoard) {
@@ -511,23 +514,19 @@ class WorldBuilder {
 
         const ghostX = 680;
         const ghostY = groundY - 64;
-        g.shopGhost = this.factory.shopGhost(ghostX, ghostY);
+        g.shopGhost = this.factory.shopGhost(ghostX, ghostY, 'shop.ghost');
         g.npcs.push(g.shopGhost);
 
         const mountainTop = mountainSteps[6];
         const princessX = mountainTop.x + (mountainTop.width / 2) - 24.5;
         const princessY = mountainTop.y - 64;
-        g.princess = this.factory.princess(princessX, princessY, [
-            'You actually made it up here? I promise I will have a real quest soon.',
-            'For now, enjoy this breeze and pretend the mountain is much taller.',
-            'Press Enter again if you want to hear me repeat myself. I am patient!'
-        ]);
+        g.princess = this.factory.princess(princessX, princessY, 'princess.default');
         g.npcs.push(g.princess);
 
         const balloonPerch = balloonParkour[balloonParkour.length - 1];
         const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
         const balloonFanY = balloonPerch.y - 63;
-        g.balloonFan = this.factory.balloonFan(balloonFanX, balloonFanY);
+        g.balloonFan = this.factory.balloonFan(balloonFanX, balloonFanY, 'balloon.default');
         g.npcs.push(g.balloonFan);
 
         g.signBoard = this.factory.sign(
@@ -542,10 +541,8 @@ class WorldBuilder {
         const postSignPlatform = balloonParkour[balloonParkour.length - 1];
         const postSignX = postSignPlatform.x + postSignPlatform.width - 48;
         const postSignY = groundY - 52;
-        const postSign = this.factory.sign(postSignX, postSignY, 'art/items/sign.png', [
-            'Coming soon: a real message for champions.',
-            'Thanks for checking out the balloon parkour!'
-        ]);
+        const postSign = this.factory.sign(postSignX, postSignY, 'art/items/sign.png', null);
+        postSign.dialogueId = 'sign.postParkour';
         g.signBoards.push(postSign);
 
         const coinChestX = spawnAnchorX + 210;

@@ -2,12 +2,13 @@
  * PrincessNPC - Climbable-peak NPC with simple two-frame animation
  */
 class PrincessNPC extends Entity {
-    constructor(x, y) {
+    constructor(x, y, dialogueId = 'princess.default') {
         super(x, y, 49, 64);
 
         this.loadTileSheet('art/sprites/princess-sprite.png', 49, 64, [0], 999999);
         this.interactRadius = 110;
         this.canTalk = true;
+        this.dialogueId = dialogueId;
     }
 
     /**

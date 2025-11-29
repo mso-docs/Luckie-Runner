@@ -2,13 +2,14 @@
  * ShopGhost - simple NPC with two-frame sprite and proximity-based interactions
  */
 class ShopGhost extends Entity {
-    constructor(x, y) {
+    constructor(x, y, dialogueId = 'shop.ghost') {
         super(x, y, 47, 64);
 
         this.loadTileSheet('art/sprites/shop-ghost.png', 47, 64, [0], 999999); // disable auto-anim
         this.interactRadius = 120;
         this.bobOffset = 0;
         this.bobTime = 0;
+        this.dialogueId = dialogueId;
     }
 
     onUpdate(deltaTime) {

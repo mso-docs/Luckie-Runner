@@ -46,24 +46,25 @@ class EntityFactory {
         return palm;
     }
 
-    shopGhost(x, y) {
+    shopGhost(x, y, dialogueId = null) {
         const ghost = new ShopGhost(x, y);
         ghost.game = this.game;
+        if (dialogueId) ghost.dialogueId = dialogueId;
         return ghost;
     }
 
-    princess(x, y, dialogueLines = null) {
+    princess(x, y, dialogueId = null) {
         const princess = new PrincessNPC(x, y);
         princess.game = this.game;
-        if (dialogueLines) princess.dialogueLines = dialogueLines.slice();
+        if (dialogueId) princess.dialogueId = dialogueId;
         return princess;
     }
 
-    balloonFan(x, y, dialogueLines = null) {
+    balloonFan(x, y, dialogueId = null) {
         const fan = new BalloonNPC(x, y);
         fan.game = this.game;
         fan.baseY = y;
-        if (dialogueLines) fan.dialogueLines = dialogueLines.slice();
+        if (dialogueId) fan.dialogueId = dialogueId;
         return fan;
     }
 
