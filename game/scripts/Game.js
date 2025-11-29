@@ -95,6 +95,7 @@ class Game {
         this.services.save = new SaveService(persistence);
         this.progress = new ProgressManager(this, this.services.save);
         this.audioController = new AudioController(this, this.services.audio, this.config);
+        this.testRoomManager = new TestRoomManager(this);
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -1152,7 +1153,7 @@ class Game {
         this.palmTreeManager.reset();
         
         // Rebuild level content (platforms, enemies, items, flag, background)
-        const targetLevel = this.pendingLevelId || this.currentLevelId || 'testRoom';
+        const targetLevel = this.progress?.consumePendingLevelId?.(this.currentLevelId || 'testRoom') || this.currentLevelId || 'testRoom';
         const shouldUseTestSnapshot = targetLevel === 'testRoom' && this.initialTestRoomState;
         if (shouldUseTestSnapshot) {
             this.restoreInitialTestRoomState();
@@ -1216,13 +1217,7 @@ class Game {
      * Toggle between test mode and normal game mode
      */
     toggleTestMode() {
-        this.testMode = !this.testMode;
-        // Test mode toggled
-        
-        // Restart the level with new mode
-        if (this.state === 'playing') {
-            this.stateManager.startGame();
-        }
+        this.testRoomManager?.toggleTestMode();
     }
     
     /**
