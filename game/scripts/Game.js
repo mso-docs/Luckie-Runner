@@ -1607,6 +1607,9 @@ class Game {
         this.testGroundY = null;
         this.signBoard = null;
         this.signBoards = [];
+        if (this.badgeUI?.reset) {
+            this.badgeUI.reset(true);
+        }
         
         this.npcs = [];
         this.shopGhost = null;

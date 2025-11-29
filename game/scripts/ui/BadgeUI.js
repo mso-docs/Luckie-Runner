@@ -264,4 +264,26 @@ class BadgeUI {
             list.appendChild(row);
         });
     }
+
+    /**
+     * Reset badge state and UI (clears earned badges and progress).
+     * @param {boolean} clearProgress - reset defeat counts as well
+     */
+    reset(clearProgress = true) {
+        this.earnedBadges.clear();
+        if (clearProgress) {
+            this.progress.defeats = {};
+        }
+        this.calloutQueue = [];
+        this.calloutActive = false;
+        if (this.calloutEl) {
+            this.calloutEl.classList.add('hidden');
+            this.calloutEl.classList.remove('is-visible');
+        }
+        // Reset player modifiers to baseline
+        if (this.game?.player) {
+            this.reapplyAllModifiers(this.game.player);
+        }
+        this.renderInventory();
+    }
 }

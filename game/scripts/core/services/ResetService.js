@@ -82,6 +82,7 @@ class ResetService {
         g.hideShopOverlay?.(true);
         g.signUI?.reset?.();
         g.dialogueManager?.reset?.();
+        g.badgeUI?.reset?.(true);
 
         const buffPanel = document.getElementById('buffPanel');
         const coffeeTimer = document.getElementById('coffeeTimer');
