@@ -55,4 +55,8 @@ class SaveService {
         const slots = this.listSlots().filter(s => s.id !== id);
         this.persistence.save(this.keys.saves, slots);
     }
+
+    clearAllSlots() {
+        this.persistence.save(this.keys.saves, []);
+    }
 }

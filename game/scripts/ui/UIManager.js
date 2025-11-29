@@ -185,10 +185,17 @@ class UIManager {
                     <div class="save-slot__subtitle">${levelLabel} • Updated ${updated}</div>
                     <div class="save-slot__stats">Playtime: ${playTime} • ${collectibleText}</div>
                 </div>
-                <button type="button" data-slot="${slot.id}">Load</button>
+                <div class="save-slot__actions">
+                    <button type="button" class="load-slot" data-slot="${slot.id}">Load</button>
+                    <button type="button" class="delete-slot" data-slot="${slot.id}">Delete</button>
+                </div>
             `;
-            btn.querySelector('button')?.addEventListener('click', () => {
+            btn.querySelector('.load-slot')?.addEventListener('click', () => {
                 this.game?.loadProgress?.(slot.id);
+            });
+            btn.querySelector('.delete-slot')?.addEventListener('click', () => {
+                this.game?.services?.save?.deleteSlot?.(slot.id);
+                this.renderSaveSlots();
             });
             list.appendChild(btn);
         });

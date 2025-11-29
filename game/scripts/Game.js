@@ -1036,6 +1036,23 @@ class Game {
         const badgeCount = Array.isArray(this.badgeUI?.getEarnedBadges?.())
             ? this.badgeUI.getEarnedBadges().length
             : 0;
+
+        const levelState = {
+            enemies: (this.enemies || []).map(e => ({
+                type: e.type || 'enemy',
+                x: e.x,
+                y: e.y,
+                health: e.health,
+                active: e.active !== false
+            })),
+            items: (this.items || []).map(it => ({
+                type: it.type || 'item',
+                x: it.x,
+                y: it.y,
+                active: it.active !== false
+            }))
+        };
+
         return {
             id: Date.now().toString(),
             name,
@@ -1053,7 +1070,8 @@ class Game {
             collectibles: {
                 coins: this.stats?.coinsCollected || 0,
                 badges: badgeCount
-            }
+            },
+            levelState
         };
     }
 
@@ -1091,6 +1109,29 @@ class Game {
         if (this.badgeUI?.reset) {
             // When loading, we still respect saved badge counts by not adding any yet (they're not persisted here)
             this.badgeUI.reset(false);
+        }
+
+        // Apply level state (enemies/items) best-effort by index
+        if (snap.levelState) {
+            if (Array.isArray(snap.levelState.enemies) && Array.isArray(this.enemies)) {
+                snap.levelState.enemies.forEach((saved, idx) => {
+                    const enemy = this.enemies[idx];
+                    if (!enemy || (saved.type && enemy.type !== saved.type)) return;
+                    if (typeof saved.x === 'number') enemy.x = saved.x;
+                    if (typeof saved.y === 'number') enemy.y = saved.y;
+                    if (typeof saved.health === 'number') enemy.health = saved.health;
+                    enemy.active = saved.active !== false;
+                });
+            }
+            if (Array.isArray(snap.levelState.items) && Array.isArray(this.items)) {
+                snap.levelState.items.forEach((saved, idx) => {
+                    const item = this.items[idx];
+                    if (!item || (saved.type && item.type !== saved.type)) return;
+                    if (typeof saved.x === 'number') item.x = saved.x;
+                    if (typeof saved.y === 'number') item.y = saved.y;
+                    item.active = saved.active !== false;
+                });
+            }
         }
     }
     
@@ -1727,10 +1768,12 @@ class Game {
         this.palmTreeManager.reset();
         
         // Rebuild level content (platforms, enemies, items, flag, background)
-        if (this.initialTestRoomState) {
+        const targetLevel = this.pendingLevelId || this.currentLevelId || 'testRoom';
+        const shouldUseTestSnapshot = targetLevel === 'testRoom' && this.initialTestRoomState;
+        if (shouldUseTestSnapshot) {
             this.restoreInitialTestRoomState();
         } else {
-            this.createLevel();
+            this.createLevel(targetLevel);
         }
     }
 
