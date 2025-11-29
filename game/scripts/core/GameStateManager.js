@@ -43,6 +43,7 @@ class GameStateManager {
         
         this.previousState = this.currentState;
         this.currentState = newState;
+        this.game.currentStateLabel = newState;
         
         // State changed
         return true;
@@ -110,6 +111,8 @@ class GameStateManager {
         if (audio) {
             audio.playMusic?.('level1', 0.8);
         }
+        // Auto-save on start (so we always have at least one slot)
+        this.game.saveProgress?.('slot1', 'Auto Save');
     }
     
     /**
@@ -272,6 +275,7 @@ class GameStateManager {
         if (typeof this.game.stopLoop === 'function') {
             this.game.stopLoop();
         }
+        this.game.saveProgress?.('slot1', 'Auto Save');
         const audio = this.getAudio();
         if (audio) {
             audio.stopAllMusic?.();

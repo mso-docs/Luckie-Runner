@@ -295,6 +295,7 @@
             <h1>Luckie Runner!</h1>
             <p>Help Luckie Puppy get to Beachside Boba Cafe on time!</p>
             <button id="startButton">Start Game</button>
+            <button id="loadButton">Load Game</button>
             <button id="instructionsButton">Instructions</button>
         </div>
 
@@ -325,6 +326,7 @@
         <div id="pauseMenu" class="menu hidden">
             <h2>Paused!</h2>
             <button id="resumeButton">Resume?</button>
+            <button id="pauseSaveButton">Save Game</button>
             
             <!-- Audio Controls -->
             <div class="audio-controls">
@@ -351,6 +353,15 @@
             </div>
             
             <button id="pauseMainMenuButton">Main Menu</button>
+        </div>
+
+        <!-- Load Menu -->
+        <div id="loadMenu" class="menu hidden">
+            <h2>Load Game</h2>
+            <div id="saveSlotsList" class="save-slot-list">
+                <!-- Populated via UIManager -->
+            </div>
+            <button id="loadBackButton">Back</button>
         </div>
     </div>
 

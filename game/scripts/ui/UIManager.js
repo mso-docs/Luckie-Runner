@@ -44,6 +44,12 @@ class UIManager {
             sm.startGame();
         });
 
+        document.getElementById('loadButton')?.addEventListener('click', () => {
+            g.ensureTitleMusicPlaying();
+            this.renderSaveSlots();
+            sm.showMenu('loadMenu');
+        });
+
         document.getElementById('instructionsButton')?.addEventListener('click', () => {
             g.ensureTitleMusicPlaying();
             sm.showMenu('instructionsMenu');
@@ -51,6 +57,11 @@ class UIManager {
 
         // Instructions back button
         document.getElementById('backButton')?.addEventListener('click', () => {
+            g.ensureTitleMusicPlaying();
+            sm.showMenu('startMenu');
+        });
+
+        document.getElementById('loadBackButton')?.addEventListener('click', () => {
             g.ensureTitleMusicPlaying();
             sm.showMenu('startMenu');
         });
@@ -67,6 +78,13 @@ class UIManager {
         // Pause menu buttons
         document.getElementById('resumeButton')?.addEventListener('click', () => {
             sm.resumeGame();
+        });
+
+        document.getElementById('pauseSaveButton')?.addEventListener('click', () => {
+            g.saveProgress?.('slot1', 'Pause Save');
+            this.renderSaveSlots();
+            // optional feedback: show load menu to confirm
+            sm.showMenu('loadMenu');
         });
 
         document.getElementById('pauseMainMenuButton')?.addEventListener('click', () => {
@@ -137,6 +155,52 @@ class UIManager {
             // Fall back to original state manager shortcuts (Escape/P) and others
             sm.handleKeyboardShortcuts(e.key);
         });
+    }
+
+    renderSaveSlots() {
+        const list = document.getElementById('saveSlotsList');
+        if (!list) return;
+        const save = this.game?.services?.save;
+        const slots = save?.listSlots?.() || [];
+        list.innerHTML = '';
+        if (!slots.length) {
+            const empty = document.createElement('div');
+            empty.className = 'save-slot';
+            empty.innerHTML = `<div class="save-slot__meta"><div class="save-slot__title">No saves yet</div><div class="save-slot__subtitle">Start a run to create one.</div></div>`;
+            list.appendChild(empty);
+            return;
+        }
+
+        slots.forEach(slot => {
+            const btn = document.createElement('div');
+            btn.className = 'save-slot';
+            const levelLabel = slot.levelId ? `Level: ${slot.levelId}` : 'Level: Unknown';
+            const playTime = this.formatPlaytime(slot.timeElapsed || 0);
+            const collectibles = slot.collectibles || {};
+            const collectibleText = `Coins: ${collectibles.coins ?? 0} • Badges: ${collectibles.badges ?? 0}`;
+            const updated = slot.updatedAt ? new Date(slot.updatedAt).toLocaleString() : 'Unknown';
+            btn.innerHTML = `
+                <div class="save-slot__meta">
+                    <div class="save-slot__title">${slot.name || 'Save Slot'}</div>
+                    <div class="save-slot__subtitle">${levelLabel} • Updated ${updated}</div>
+                    <div class="save-slot__stats">Playtime: ${playTime} • ${collectibleText}</div>
+                </div>
+                <button type="button" data-slot="${slot.id}">Load</button>
+            `;
+            btn.querySelector('button')?.addEventListener('click', () => {
+                this.game?.loadProgress?.(slot.id);
+            });
+            list.appendChild(btn);
+        });
+    }
+
+    formatPlaytime(ms = 0) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     }
 
     /**

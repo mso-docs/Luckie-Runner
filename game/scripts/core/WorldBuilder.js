@@ -11,6 +11,7 @@ class WorldBuilder {
     }
 
     createLevel(levelId = 'testRoom') {
+        this.game.currentLevelId = levelId;
         const g = this.game;
         const registry = (typeof window !== 'undefined' && window.levelRegistry) ? window.levelRegistry : null;
         const levelDef = registry ? registry.get(levelId) : null;

@@ -125,6 +125,8 @@ class Game {
         this.signSprite = new Image();
         this.signSprite.src = 'art/items/sign.png';
         this.signUI = new SignUI(this);
+        this.pendingLoadSnapshot = null;
+        this.pendingLevelId = null;
 
         // UI managers
         this.dialogueManager = new DialogueManager(this, (typeof window !== 'undefined' && window.Dialogues) ? window.Dialogues : {}, this.speechBubbleUI);
@@ -232,7 +234,8 @@ class Game {
                 window.levelRegistry.register(id, def);
             });
         }
-        this.createLevel('testRoom');
+        const targetLevel = this.pendingLevelId || 'testRoom';
+        this.createLevel(targetLevel);
 
         // Register scenes
         if (this.sceneManager) {
@@ -832,8 +835,10 @@ class Game {
     /**
      * Create the game level with platforms, enemies, and items
      */
-    createLevel() {
-        return this.worldBuilder?.createLevel();
+    createLevel(levelId = null) {
+        const target = levelId || this.pendingLevelId || this.currentLevelId || 'testRoom';
+        this.pendingLevelId = null;
+        return this.worldBuilder?.createLevel(target);
     }
 
     /**
@@ -998,6 +1003,96 @@ class Game {
     startGame() {
         this.stateManager.startGame();
     }
+
+    /**
+     * Save current run to a slot.
+     * @param {string} slotId
+     * @param {string} name
+     */
+    saveProgress(slotId = 'slot1', name = 'Auto Save') {
+        const save = this.buildSaveSnapshot(name);
+        return this.services?.save?.saveSlot(slotId, save);
+    }
+
+    /**
+     * Load a saved slot and begin the game from that snapshot.
+     * @param {string} slotId
+     */
+    loadProgress(slotId) {
+        const snap = this.services?.save?.getSlot?.(slotId);
+        if (!snap) return false;
+        this.pendingLoadSnapshot = snap;
+        this.pendingLevelId = snap.levelId || 'testRoom';
+        this.stateManager.startGame();
+        return true;
+    }
+
+    /**
+     * Build a snapshot of the current run suitable for saving.
+     * @param {string} name
+     */
+    buildSaveSnapshot(name = 'Auto Save') {
+        const player = this.player || {};
+        const badgeCount = Array.isArray(this.badgeUI?.getEarnedBadges?.())
+            ? this.badgeUI.getEarnedBadges().length
+            : 0;
+        return {
+            id: Date.now().toString(),
+            name,
+            levelId: this.currentLevelId || 'testRoom',
+            updatedAt: Date.now(),
+            timeElapsed: this.stats?.timeElapsed || 0,
+            player: {
+                x: player.x || 0,
+                y: player.y || 0,
+                health: player.health || player.maxHealth || 100,
+                coins: player.coins || 0,
+                score: player.score || 0
+            },
+            stats: { ...(this.stats || {}) },
+            collectibles: {
+                coins: this.stats?.coinsCollected || 0,
+                badges: badgeCount
+            }
+        };
+    }
+
+    /**
+     * Apply a saved snapshot to the current world/player.
+     * Requires that the level/player are already built.
+     * @param {Object} snap
+     */
+    applySaveSnapshot(snap) {
+        if (!snap) return;
+        if (snap.levelId && snap.levelId !== this.currentLevelId) {
+            this.currentLevelId = snap.levelId;
+        }
+        if (snap.stats) {
+            this.stats = { ...snap.stats };
+        }
+        if (typeof snap.timeElapsed === 'number') {
+            this.stats.timeElapsed = snap.timeElapsed;
+        }
+        if (snap.player && this.player) {
+            this.player.x = snap.player.x ?? this.player.x;
+            this.player.y = snap.player.y ?? this.player.y;
+            if (typeof snap.player.health === 'number') {
+                this.player.health = snap.player.health;
+            }
+            if (typeof snap.player.coins === 'number') {
+                this.player.coins = snap.player.coins;
+            }
+            if (typeof snap.player.score === 'number') {
+                this.player.score = snap.player.score;
+            }
+            this.player.updateHealthUI?.();
+            this.player.updateUI?.();
+        }
+        if (this.badgeUI?.reset) {
+            // When loading, we still respect saved badge counts by not adding any yet (they're not persisted here)
+            this.badgeUI.reset(false);
+        }
+    }
     
     /**
      * Initialize game systems (called by state manager)
@@ -1027,6 +1122,12 @@ class Game {
         }
         if (this.badgeUI) {
             this.badgeUI.reapplyAllModifiers(this.player);
+        }
+
+        // Apply pending save snapshot after player/world exists
+        if (this.pendingLoadSnapshot) {
+            this.applySaveSnapshot(this.pendingLoadSnapshot);
+            this.pendingLoadSnapshot = null;
         }
 
         this.updateInventoryOverlay();
