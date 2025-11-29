@@ -42,13 +42,13 @@ class GameSystems {
         // Background layers
         g.backgroundLayers.forEach(layer => {
             if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                layer.update(g.testMode ? 0 : g.camera.x, deltaTime);
+                layer.update(g.camera.x, deltaTime);
             }
         });
 
         // Procedural palm trees
         const render = g.getRenderService();
-        g.palmTreeManager.update(g.testMode ? 0 : g.camera.x, render.width());
+        g.palmTreeManager.update(g.camera.x, render.width());
 
         // Enemies
         g.enemies = g.enemies.filter(enemy => {

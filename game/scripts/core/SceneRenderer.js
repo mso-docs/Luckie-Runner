@@ -11,7 +11,7 @@ class SceneRenderer {
         const g = this.game;
 
         // Background
-        const bgCamera = g.testMode ? { x: 0, y: 0 } : g.camera;
+        const bgCamera = g.testMode ? { x: g.camera?.x || 0, y: 0 } : g.camera;
 
         if (g.testMode) {
             g.renderTestBackground(ctx, canvas);
