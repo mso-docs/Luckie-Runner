@@ -727,7 +727,7 @@ class PalmTreeManager {
      */
     generateBushes(startX, endX) {
         let currentX = startX + this.bushLayer.spacing;
-        const minSpacing = 100;
+        const minSpacing = 25; // never closer than 25px
 
         while (currentX < endX) {
             const sprite = this.getRandomBushSprite();
