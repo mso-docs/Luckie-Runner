@@ -321,20 +321,23 @@ class PalmTreeManager {
      */
     render(ctx, camera, gameTime) {
         if (!this.enabled) return;
+        // Follow camera vertically so bases stay aligned with the ground plane, but parallax only on X.
+        const camY = camera?.y || 0;
         
         // Draw sky gradient and background elements (pass camera and gameTime for parallax and animation)
         this.drawSkyGradient(ctx, camera, gameTime);
         
         // Draw each layer from back to front
         this.layers.forEach(layer => {
-            const parallaxOffset = camera.x * layer.scrollSpeed;
+            const parallaxOffset = (camera?.x || 0) * layer.scrollSpeed;
             
             layer.trees.forEach(tree => {
                 const screenX = tree.x - parallaxOffset;
                 
                 // Only render visible trees
                 if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
-                    this.drawPalmTree(ctx, screenX, layer.groundY, tree.height, tree.lean, layer, tree);
+                    // Move vertically with camera to stay glued to the ground plane; parallax on X only
+                    this.drawPalmTree(ctx, screenX, layer.groundY - camY, tree.height, tree.lean, layer, tree, camY);
                 }
             });
         });
@@ -815,7 +818,7 @@ class PalmTreeManager {
 
         this.clouds.forEach(cloud => {
             const drift = (gameTime / 1000) * cloud.driftSpeed; // always move right
-            const parallaxOffset = camera.x * cloud.parallax;
+            const parallaxOffset = (camera?.x || 0) * cloud.parallax;
 
             let screenX = cloud.baseX + drift - parallaxOffset;
             screenX = ((screenX + wrapSpan) % wrapSpan) - 400;
@@ -877,12 +880,13 @@ class PalmTreeManager {
      */
     renderBushes(ctx, camera) {
         if (!this.bushes.length) return;
-        const parallaxOffset = camera.x * this.bushLayer.scrollSpeed;
+        const parallaxOffset = (camera?.x || 0) * this.bushLayer.scrollSpeed;
+        const camY = camera?.y || 0;
 
         this.bushes.forEach(bush => {
             const screenX = bush.x - parallaxOffset;
             if (screenX > -this.offscreenBuffer && screenX < ctx.canvas.width + this.offscreenBuffer) {
-                this.drawBush(ctx, screenX, this.bushLayer.y, bush);
+                this.drawBush(ctx, screenX, this.bushLayer.y - camY, bush, camY);
             }
         });
     }
@@ -890,14 +894,14 @@ class PalmTreeManager {
     /**
      * Draw a single bush sprite.
      */
-    drawBush(ctx, x, groundY, bush) {
+    drawBush(ctx, x, groundY, bush, camY = 0) {
         const sprite = bush.sprite || this.getRandomBushSprite();
         if (!sprite) return;
 
         const height = bush.height;
         const width = bush.width;
         const drawX = x - width / 2;
-        const drawY = groundY - height;
+        const drawY = (groundY) - height;
 
         ctx.save();
         ctx.globalAlpha = 1;
@@ -908,7 +912,7 @@ class PalmTreeManager {
     /**
      * Draw a single stylized palm tree
      */
-    drawPalmTree(ctx, x, groundY, height, lean, layer, tree) {
+    drawPalmTree(ctx, x, groundY, height, lean, layer, tree, camY = 0) {
         const sprite = this.getSpriteForTree(tree);
         if (!sprite) return;
 
@@ -921,7 +925,7 @@ class PalmTreeManager {
         // Offset lean subtly to keep bases on the ground
         const leanOffset = (lean || 0) * height * 0.3;
         const drawX = x + leanOffset - drawWidth / 2;
-        const drawY = groundY - drawHeight;
+        const drawY = (groundY) - drawHeight;
 
         ctx.save();
         ctx.globalAlpha *= layer.alpha ?? 1;
