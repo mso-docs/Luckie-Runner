@@ -97,6 +97,7 @@ class Game {
         this.progress = new ProgressManager(this, this.services.save);
         this.audioController = new AudioController(this, this.services.audio, this.config);
         this.testRoomManager = new TestRoomManager(this);
+        this.townManager = new TownManager(this, this.config?.towns || {});
 
         // Inventory overlay UI state
         this.inventoryUI = {

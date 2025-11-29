@@ -32,6 +32,11 @@ class UIManager {
             close: null,
             content: null
         };
+        this.townUI = {
+            banner: null,
+            text: null,
+            timeout: null
+        };
 
         this.config = game.config || GameConfig || {};
         this.services = services || {};
@@ -47,6 +52,7 @@ class UIManager {
             this.inputController.bindDom();
         }
         this.setupDebugUI();
+        this.setupTownUI();
     }
 
     renderSaveSlots() {
@@ -948,6 +954,7 @@ class UIManager {
         this.game.signUI.updateSignCallout();
         this.game.signUI.updateSignDialoguePosition();
         this.updateDebugOverlay();
+        // town banner is event-driven; nothing per-frame here
     }
 
     /**
@@ -1013,6 +1020,42 @@ class UIManager {
         this.game.chests.forEach(chest => {
             if (chest?.update) chest.update(deltaTime);
         });
+    }
+
+    setupTownUI() {
+        if (this.townUI.banner) return;
+        this.townUI.banner = document.getElementById('townBanner');
+        this.townUI.text = document.getElementById('townBannerText');
+        if (this.townUI.banner) {
+            this.townUI.banner.style.setProperty('--town-banner-bg', "url('art/ui/scroll.png')");
+        }
+    }
+
+    showTownBanner(town) {
+        this.setupTownUI();
+        const { banner, text } = this.townUI;
+        if (!banner || !text || !town) return;
+
+        if (this.townUI.timeout) {
+            clearTimeout(this.townUI.timeout);
+            this.townUI.timeout = null;
+        }
+
+        const bg = town.banner?.background || null;
+        if (bg) {
+            banner.style.setProperty('--town-banner-bg', `url('${bg}')`);
+        }
+        const color = town.banner?.textColor || '#5c3a1a';
+        text.style.color = color;
+        text.textContent = town.name || 'Town';
+
+        banner.classList.remove('hidden');
+        banner.setAttribute('aria-hidden', 'false');
+
+        this.townUI.timeout = setTimeout(() => {
+            banner.classList.add('hidden');
+            banner.setAttribute('aria-hidden', 'true');
+        }, 3000);
     }
 
     setupDebugUI() {

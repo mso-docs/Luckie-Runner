@@ -32,6 +32,7 @@ const GameConfig = {
     themes: (typeof ThemesConfig !== 'undefined') ? ThemesConfig : {
         defaultTheme: 'beach'
     },
+    towns: (typeof TownsConfig !== 'undefined') ? TownsConfig : { towns: [] },
     testRoom: {
         groundHeight: 50,
         spawnAnchorX: 140,
