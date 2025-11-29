@@ -44,23 +44,16 @@ const TownsConfig = {
                 }
             ],
             setpieces: [
-                // Town center fountain with benches
+                // Fountain (animated, scales with player)
                 { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, scale: 0.4, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png' },
-                { id: 'bench_west', name: 'Bench', x: 8060, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
-                { id: 'bench_east', name: 'Bench', x: 8340, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
 
-                // Additional benches spread through town
-                { id: 'bench_entry', name: 'Bench', x: 6580, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
-                { id: 'bench_far', name: 'Bench', x: 9600, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
-                { id: 'bench_villa', name: 'Bench', x: 8950, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
+                // Fixed bench
+                { id: 'bench_center', name: 'Bench', x: 8100, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png' },
 
-                // Street lamps for ambience
-                { id: 'lamp_west', name: 'Street Lamp', x: 6500, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_mid_west', name: 'Street Lamp', x: 7000, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_mid_east', name: 'Street Lamp', x: 9000, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_east', name: 'Street Lamp', x: 9900, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_villa', name: 'Street Lamp', x: 8720, y: 380, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' }
+                // Three fixed street lamps
+                { id: 'lamp_west', name: 'Street Lamp', x: 7000, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
+                { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
+                { id: 'lamp_east', name: 'Street Lamp', x: 9400, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
             ],
             interiors: []
         }
