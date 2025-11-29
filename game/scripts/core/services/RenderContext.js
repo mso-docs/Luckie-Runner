@@ -20,4 +20,11 @@ class RenderContext {
     height() {
         return this.canvas?.height || 0;
     }
+
+    /**
+     * Expose a RenderTarget interface for consumers.
+     */
+    getTarget() {
+        return new RenderTarget(this.canvas, this.ctx);
+    }
 }

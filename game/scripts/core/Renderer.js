@@ -16,13 +16,14 @@ class Renderer {
      */
     getContext() {
         const render = this.services?.render || this.game?.services?.render || null;
-        if (render && render.ctx && render.canvas) {
+        const target = render?.getTarget ? render.getTarget() : render;
+        if (target && target.ctx && target.canvas) {
             return {
-                ctx: render.ctx,
-                canvas: render.canvas,
-                clear: render.clear ? render.clear.bind(render) : () => render.ctx.clearRect(0, 0, render.canvas.width, render.canvas.height),
-                width: render.width ? render.width.bind(render) : () => render.canvas.width,
-                height: render.height ? render.height.bind(render) : () => render.canvas.height
+                ctx: target.ctx,
+                canvas: target.canvas,
+                clear: target.clear ? target.clear.bind(target) : () => target.ctx.clearRect(0, 0, target.canvas.width, target.canvas.height),
+                width: target.width ? target.width.bind(target) : () => target.canvas.width,
+                height: target.height ? target.height.bind(target) : () => target.canvas.height
             };
         }
 
@@ -32,14 +33,13 @@ class Renderer {
             console.error('Renderer: missing canvas or context.');
             throw new Error('Renderer: missing canvas or context.');
         }
+        const fallback = new RenderTarget(canvas, ctx);
         return {
             ctx,
             canvas,
-            clear: () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            },
-            width: () => canvas.width,
-            height: () => canvas.height
+            clear: fallback.clear.bind(fallback),
+            width: fallback.width.bind(fallback),
+            height: fallback.height.bind(fallback)
         };
     }
 
