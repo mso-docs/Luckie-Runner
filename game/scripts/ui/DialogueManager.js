@@ -79,17 +79,19 @@ class DialogueManager {
     }
 
     updatePosition() {
+        const render = this.game?.services?.render;
+        const canvas = render?.canvas || this.game?.canvas;
         if (this.bubble) {
-            this.bubble.setPosition(this.state.anchor || this.game.player, this.game.camera, this.game.canvas);
+            this.bubble.setPosition(this.state.anchor || this.game.player, this.game.camera, canvas);
             return;
         }
 
         const bubble = this.game.speechBubble?.container;
-        if (!bubble) return;
+        if (!bubble || !canvas) return;
         const anchor = this.state.anchor || this.game.player;
         const camera = this.game.camera || { x: 0, y: 0 };
-        let targetX = this.game.canvas.width / 2;
-        let headY = this.game.canvas.height / 2;
+        let targetX = canvas.width / 2;
+        let headY = canvas.height / 2;
         let anchorWidth = 0;
         let facingDir = 1;
         if (anchor) {
@@ -101,7 +103,7 @@ class DialogueManager {
         }
         bubble.style.left = `${targetX}px`;
         const aboveHeadOffset = 20;
-        const bottomFromCanvas = this.game.canvas.height - headY + aboveHeadOffset;
+        const bottomFromCanvas = canvas.height - headY + aboveHeadOffset;
         bubble.style.bottom = `${bottomFromCanvas}px`;
         const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);

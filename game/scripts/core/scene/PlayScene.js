@@ -8,8 +8,9 @@ class PlayScene {
         this.game.initializeGameSystems?.();
         this.game.running = true;
         this.game.startLoop?.();
-        if (this.game.audioManager) {
-            this.game.audioManager.playMusic('level1', 0.8);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playMusic?.('level1', 0.8);
         }
     }
 

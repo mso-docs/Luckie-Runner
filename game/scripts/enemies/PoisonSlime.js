@@ -200,8 +200,9 @@ class PoisonSlime extends Enemy {
         }
         
         // Play puddle creation sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('poison_drop', 0.3);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('poison_drop', 0.3);
         }
     }
 
@@ -325,20 +326,20 @@ class PoisonSlime extends Enemy {
     onStateChange(newState, oldState) {
         super.onStateChange(newState, oldState);
         
-        if (this.game.audioManager) {
-            switch (newState) {
-                case 'chase':
-                    if (oldState === 'patrol') {
-                        this.game.audioManager.playSound('poison_slime_alert', 0.4);
-                    }
-                    break;
-                case 'attack':
-                    this.game.audioManager.playSound('poison_attack', 0.5);
-                    break;
-                case 'hurt':
-                    this.game.audioManager.playSound('poison_hurt', 0.6);
-                    break;
-            }
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (!audio) return;
+        switch (newState) {
+            case 'chase':
+                if (oldState === 'patrol') {
+                    audio.playSound?.('poison_slime_alert', 0.4);
+                }
+                break;
+            case 'attack':
+                audio.playSound?.('poison_attack', 0.5);
+                break;
+            case 'hurt':
+                audio.playSound?.('poison_hurt', 0.6);
+                break;
         }
     }
 

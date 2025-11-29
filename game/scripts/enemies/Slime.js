@@ -186,7 +186,8 @@ class Slime extends Enemy {
             this.patrolSoundCooldown -= deltaSeconds;
         }
 
-        if (!this.game || !this.game.audioManager) return;
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (!audio) return;
 
         if (this.patrolSoundCooldown <= 0) {
             const player = this.game.player;
@@ -202,7 +203,7 @@ class Slime extends Enemy {
             const proximity = 1 - (dist / maxHearDistance);
             const minAudible = 0.4; // keep faint sound when very close to the cutoff
             const volume = 0.9 * Math.max(minAudible, proximity);
-            this.game.audioManager.playSound('slime_patrol', volume);
+            audio.playSound?.('slime_patrol', volume);
             this.patrolSoundCooldown = this.patrolSoundInterval;
         }
     }

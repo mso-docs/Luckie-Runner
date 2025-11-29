@@ -744,7 +744,8 @@ class Game {
         const screenX = ghost.x - this.camera.x + ghost.width / 2;
         const screenY = ghost.y - this.camera.y + ghost.bobOffset;
         bubble.style.left = `${screenX}px`;
-        const bottomFromCanvas = this.canvas.height - screenY + ghost.height + 6;
+        const render = this.getRenderService();
+        const bottomFromCanvas = render.height() - screenY + ghost.height + 6;
         bubble.style.bottom = `${bottomFromCanvas}px`;
         bubble.classList.remove('hidden');
         bubble.setAttribute('aria-hidden', 'false');
@@ -886,8 +887,9 @@ class Game {
         // Creating Pacific coast background layers
         
         // Create Pacific coast layered background from back to front
-        const canvasWidth = this.canvas.width;
-        const canvasHeight = this.canvas.height;
+        const render = this.getRenderService();
+        const canvasWidth = render.width();
+        const canvasHeight = render.height();
         
         try {
             // 1. Sunset sky (furthest back, slowest parallax)
@@ -941,9 +943,10 @@ class Game {
         // Creating fallback gradient background
         
         // Create a simple sunset gradient as fallback
+        const render = this.getRenderService();
         const canvas = document.createElement('canvas');
-        canvas.width = this.canvas.width;
-        canvas.height = this.canvas.height;
+        canvas.width = render.width();
+        canvas.height = render.height();
         const ctx = canvas.getContext('2d');
         
         // Create gradient
@@ -1084,7 +1087,11 @@ class Game {
      */
     update(deltaTime) {
         // Update input
-        this.input.update();
+        if (this.services?.input?.update) {
+            this.services.input.update();
+        } else {
+            this.input.update();
+        }
         this.handleSpeechBubbleInput();
         this.handleChestInput();
         this.handleInteractionInput();
@@ -1127,7 +1134,8 @@ class Game {
         });
         
         // Update procedural palm trees
-        this.palmTreeManager.update(this.camera.x, this.canvas.width);
+        const render = this.getRenderService();
+        this.palmTreeManager.update(this.camera.x, render.width());
         
         // Update enemies
         this.enemies = this.enemies.filter(enemy => {
@@ -1202,8 +1210,9 @@ class Game {
      */
     updateCamera() {
         if (!this.player || !this.camera) return;
+        const render = this.getRenderService();
         
-        this.camera.setViewport(this.canvas.width, this.canvas.height);
+        this.camera.setViewport(render.width(), render.height());
         this.camera.setBounds(this.level?.width, this.level?.height);
         this.camera.followPlayer(this.player, { testMode: this.testMode });
     }
@@ -1249,63 +1258,106 @@ class Game {
     }
 
     /**
+     * Provide a normalized render service wrapper.
+     */
+    getRenderService() {
+        const render = this.services?.render;
+        if (render) {
+            return {
+                ...render,
+                ctx: render.ctx || this.ctx,
+                canvas: render.canvas || this.canvas,
+                clear: render.clear ? render.clear.bind(render) : () => {
+                    const ctx = render.ctx || this.ctx;
+                    const canvas = render.canvas || this.canvas;
+                    if (ctx && canvas) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                },
+                width: render.width ? render.width.bind(render) : () => (render.canvas?.width ?? this.canvas?.width ?? 0),
+                height: render.height ? render.height.bind(render) : () => (render.canvas?.height ?? this.canvas?.height ?? 0)
+            };
+        }
+        return {
+            ctx: this.ctx,
+            canvas: this.canvas,
+            clear: () => {
+                if (this.ctx && this.canvas) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
+            },
+            width: () => this.canvas?.width ?? 0,
+            height: () => this.canvas?.height ?? 0
+        };
+    }
+
+    /**
      * Render the game
      */
     render() {
+        const render = this.getRenderService();
+        const ctx = render.ctx;
+        const canvas = render.canvas;
+        if (!ctx || !canvas) return;
+
         // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (render.clear) {
+            render.clear();
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
         
         // Render background layers (parallax)
-        this.renderBackground();
+        this.renderBackground(ctx, canvas);
         
         // Render canvas-based palm trees just behind platforms
-        this.palmTreeManager.render(this.ctx, this.camera, this.gameTime);
+        this.palmTreeManager.render(ctx, this.camera, this.gameTime);
         
         // Render platforms
-        this.renderPlatforms();
+        this.renderPlatforms(ctx);
 
         // Render signs
-        this.renderSigns();
+        this.renderSigns(ctx);
 
         // Render NPCs
-        this.renderNPCs();
+        this.renderNPCs(ctx);
 
         // Render chests
-        this.renderChests();
+        this.renderChests(ctx);
 
         // Render foreground small palms alongside other entities
         if (Array.isArray(this.smallPalms)) {
-            this.smallPalms.forEach(palm => palm.render(this.ctx, this.camera));
+            this.smallPalms.forEach(palm => palm.render(ctx, this.camera));
         }
 
         // Render hazards
         this.hazards.forEach(hazard => {
-            hazard.render(this.ctx, this.camera);
+            hazard.render(ctx, this.camera);
         });
 
         // Render items
         this.items.forEach(item => {
-            item.render(this.ctx, this.camera);
+            item.render(ctx, this.camera);
         });
         
         // Render enemies
         this.enemies.forEach(enemy => {
-            enemy.render(this.ctx, this.camera);
+            enemy.render(ctx, this.camera);
         });
         
         // Render projectiles
         this.projectiles.forEach(projectile => {
-            projectile.render(this.ctx, this.camera);
+            projectile.render(ctx, this.camera);
         });
         
         // Render player
         if (this.player) {
-            this.player.render(this.ctx, this.camera);
+            this.player.render(ctx, this.camera);
         }
 
         // Render flag
         if (this.flag) {
-            this.flag.render(this.ctx, this.camera);
+            this.flag.render(ctx, this.camera);
         }
 
         // Keep speech bubble following player
@@ -1326,7 +1378,9 @@ class Game {
      * Render debug hitboxes for all entities
      */
     renderDebugOverlay() {
-        const ctx = this.ctx;
+        const render = this.getRenderService();
+        const ctx = render.ctx;
+        if (!ctx) return;
         const cam = this.camera || { x: 0, y: 0 };
         const drawRect = (x, y, w, h, color = 'rgba(0,255,0,0.35)', stroke = '#00ff00') => {
             ctx.save();
@@ -1418,15 +1472,20 @@ class Game {
     /**
      * Render layered parallax background
      */
-    renderBackground() {
+    renderBackground(ctx = null, canvas = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        const targetCanvas = canvas || render.canvas;
+        if (!context || !targetCanvas) return;
+
         if (this.testMode) {
             // Render test room background
-            this.renderTestBackground();
+            this.renderTestBackground(context, targetCanvas);
         } else {
             // Render all background layers from back to front
             this.backgroundLayers.forEach(layer => {
                 if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                    layer.render(this.ctx, this.camera);
+                    layer.render(context, this.camera);
                 }
             });
         }
@@ -1435,19 +1494,25 @@ class Game {
     /**
      * Render platforms with stylized graphics
      */
-    renderPlatforms() {
+    renderPlatforms(ctx = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        if (!context) return;
         this.platforms.forEach(platform => {
-            StylizedPlatform.renderPlatform(this.ctx, platform, this.camera);
+            StylizedPlatform.renderPlatform(context, platform, this.camera);
         });
     }
 
     /**
      * Render NPCs (currently only the shop ghost)
      */
-    renderNPCs() {
+    renderNPCs(ctx = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        if (!context) return;
         this.npcs.forEach(npc => {
             if (npc.render) {
-                npc.render(this.ctx, this.camera);
+                npc.render(context, this.camera);
             }
         });
     }
@@ -1455,19 +1520,25 @@ class Game {
     /**
      * Render all placed chests
      */
-    renderChests() {
+    renderChests(ctx = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        if (!context) return;
         this.chests.forEach(chest => {
             if (chest && chest.render) {
-                chest.render(this.ctx, this.camera);
+                chest.render(context, this.camera);
             }
         });
     }
 
-    renderSigns() {
+    renderSigns(ctx = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        if (!context) return;
         if (!Array.isArray(this.signBoards)) return;
         this.signBoards.forEach(sign => {
             if (sign && typeof sign.render === 'function') {
-                sign.render(this.ctx, this.camera);
+                sign.render(context, this.camera);
             }
         });
     }
@@ -1705,38 +1776,43 @@ class Game {
     /**
      * Render test room background with grid
      */
-    renderTestBackground() {
+    renderTestBackground(ctx = null, canvas = null) {
+        const render = this.getRenderService();
+        const context = ctx || render.ctx;
+        const targetCanvas = canvas || render.canvas;
+        if (!context || !targetCanvas) return;
+
         // Use palm tree manager's beach scene (includes sky with clouds, ocean, sand)
-        this.palmTreeManager.render(this.ctx, this.camera, this.gameTime);
+        this.palmTreeManager.render(context, this.camera, this.gameTime);
         
         // Optional: Draw subtle reference grid
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.lineWidth = 1;
+        context.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        context.lineWidth = 1;
         
         // Vertical lines every 100px (less intrusive)
-        for (let x = 0; x <= this.canvas.width; x += 100) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-            this.ctx.stroke();
+        for (let x = 0; x <= targetCanvas.width; x += 100) {
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, targetCanvas.height);
+            context.stroke();
         }
         
         // Horizontal lines every 100px
-        for (let y = 0; y <= this.canvas.height; y += 100) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
+        for (let y = 0; y <= targetCanvas.height; y += 100) {
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(targetCanvas.width, y);
+            context.stroke();
         }
         
         // Test room info with better visibility
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.fillRect(5, 15, 360, 70);
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.fillRect(5, 15, 360, 70);
         
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px "Hey Gorgeous", "Trebuchet MS", "Fredoka One", "Segoe UI", sans-serif';
-        this.ctx.fillText('TEST ROOM - Debug Environment', 10, 35);
-        this.ctx.fillText('Press F2 to toggle back to main game', 10, 55);
-        this.ctx.fillText('Grid: 100px squares', 10, 75);
+        context.fillStyle = 'white';
+        context.font = '16px \"Hey Gorgeous\", \"Trebuchet MS\", \"Fredoka One\", \"Segoe UI\", sans-serif';
+        context.fillText('TEST ROOM - Debug Environment', 10, 35);
+        context.fillText('Press F2 to toggle back to main game', 10, 55);
+        context.fillText('Grid: 100px squares', 10, 75);
     }
 }

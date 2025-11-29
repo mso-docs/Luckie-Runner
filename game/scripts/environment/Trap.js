@@ -30,9 +30,8 @@ class Trap {
             player.takeDamage(this.damage, this);
             
             // Play hurt sound when trap is triggered
-            if (player.game && player.game.audioManager) {
-                player.game.audioManager.playSound('hurt', 0.6);
-            }
+            const audio = player.game?.services?.audio || player.game?.audioManager;
+            if (audio) audio.playSound?.('hurt', 0.6);
         }
     }
     

@@ -114,8 +114,9 @@ class BadgeUI {
         this.queueCallout(badgeDef);
         this.renderInventory();
 
-        if (this.game?.audioManager) {
-            this.game.audioManager.playSound('badge', 0.9);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('badge', 0.9);
         }
     }
 

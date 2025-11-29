@@ -106,8 +106,9 @@ class GameStateManager {
         if (typeof this.game.startLoop === 'function') {
             this.game.startLoop();
         }
-        if (this.game.audioManager) {
-            this.game.audioManager.playMusic('level1', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.playMusic?.('level1', 0.8);
         }
     }
     
@@ -125,8 +126,14 @@ class GameStateManager {
 
         this.setState(this.states.PAUSED);
         this.showMenu('pauseMenu');
-        if (this.game.audioManager) {
-            this.game.audioManager.setMusicVolume(this.game.audioManager.getMusicVolume() * 0.3);
+        const audio = this.getAudio();
+        if (audio) {
+            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            if (audio.setMusic) {
+                audio.setMusic(current * 0.3);
+            } else if (audio.setMusicVolume) {
+                audio.setMusicVolume(current * 0.3);
+            }
         }
     }
     
@@ -144,8 +151,15 @@ class GameStateManager {
 
         this.setState(this.states.PLAYING);
         this.hideAllMenus();
-        if (this.game.audioManager) {
-            this.game.audioManager.setMusicVolume(this.game.audioManager.getMusicVolume() / 0.3);
+        const audio = this.getAudio();
+        if (audio) {
+            const current = (audio.getMusicVolume ? audio.getMusicVolume() : this.game?.audioManager?.musicVolume) ?? 1;
+            const restored = current / 0.3;
+            if (audio.setMusic) {
+                audio.setMusic(restored);
+            } else if (audio.setMusicVolume) {
+                audio.setMusicVolume(restored);
+            }
         }
     }
     
@@ -175,9 +189,10 @@ class GameStateManager {
         this.showMenu('gameOverMenu');
         
         // Play game over sound
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
-            this.game.audioManager.playSound('game_over', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
+            audio.playSound?.('game_over', 0.8);
         }
         
         // Game Over
@@ -214,9 +229,10 @@ class GameStateManager {
         this.showMenu('gameOverMenu');
         
         // Play victory sound
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
-            this.game.audioManager.playSound('level', 0.8);
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
+            audio.playSound?.('level', 0.8);
         }
         
         // Victory!
@@ -256,12 +272,13 @@ class GameStateManager {
         if (typeof this.game.stopLoop === 'function') {
             this.game.stopLoop();
         }
-        if (this.game.audioManager) {
-            this.game.audioManager.stopAllMusic();
+        const audio = this.getAudio();
+        if (audio) {
+            audio.stopAllMusic?.();
         }
         this.game.resetGame();
         this.showMenu('startMenu');
-        if (this.game.audioManager) {
+        if (audio) {
             this.game.playTitleMusic();
         }
     }
@@ -309,6 +326,10 @@ class GameStateManager {
         if (finalCoinsElement) {
             finalCoinsElement.textContent = this.lastRunStats.coins || 0;
         }
+    }
+
+    getAudio() {
+        return this.game?.services?.audio || this.game?.audioManager || null;
     }
     
     /**

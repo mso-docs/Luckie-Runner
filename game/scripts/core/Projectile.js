@@ -196,11 +196,11 @@ class Projectile extends Entity {
      */
     createHitEffect(target) {
         if (this.playedHitSound) return;
-        if (this.game && this.game.audioManager) {
-            const key = this.hitSound || 'rock';
-            this.game.audioManager.playSound(key, 0.6);
-            this.playedHitSound = true;
-        }
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (!audio) return;
+        const key = this.hitSound || 'rock';
+        audio.playSound?.(key, 0.6);
+        this.playedHitSound = true;
     }
 
     /**

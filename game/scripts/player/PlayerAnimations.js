@@ -53,8 +53,9 @@ class PlayerAnimations {
         // Landing effects
         if (player.onGround && player.velocity.y > 5 && !player.wasOnGround) {
             this.createLandingDust();
-            if (player.game.audioManager) {
-                player.game.audioManager.playSound('land', 0.4);
+            const audio = player.game?.services?.audio || player.game?.audioManager;
+            if (audio) {
+                audio.playSound?.('land', 0.4);
             }
         }
         

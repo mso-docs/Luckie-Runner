@@ -612,8 +612,9 @@ class Enemy extends Entity {
         }
         
         // Play attack sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('slimy', 0.6);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('slimy', 0.6);
         }
     }
 
@@ -668,8 +669,9 @@ class Enemy extends Entity {
         this.handleDrops();
         
         // Play death sound
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('slime_defeat', 0.7);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('slime_defeat', 0.7);
         }
         
         // Award score to player

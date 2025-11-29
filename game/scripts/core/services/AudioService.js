@@ -38,6 +38,18 @@ class AudioService {
         return this.manager?.toggleMute?.(forceState);
     }
 
+    getMasterVolume() {
+        return this.manager?.getMasterVolume?.() ?? this.manager?.masterVolume ?? 0;
+    }
+
+    getMusicVolume() {
+        return this.manager?.getMusicVolume?.() ?? this.manager?.musicVolume ?? 0;
+    }
+
+    getSfxVolume() {
+        return this.manager?.getSfxVolume?.() ?? this.manager?.sfxVolume ?? 0;
+    }
+
     get managerRef() {
         return this.manager;
     }

@@ -90,8 +90,9 @@ class Flag extends Entity {
         }
 
         // Play completion sound
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound('level', 0.8);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.('level', 0.8);
         }
 
         // Level completed! Flag collected

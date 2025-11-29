@@ -32,8 +32,9 @@ class HealthPotion extends Item {
 
         this.collected = true;
         this.active = false;
-        if (this.game && this.game.audioManager) {
-            this.game.audioManager.playSound(this.collectSound, 0.7);
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        if (audio) {
+            audio.playSound?.(this.collectSound, 0.7);
         }
         collector.updateUI?.();
         collector.updateHealthUI?.();
