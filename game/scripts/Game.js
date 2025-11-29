@@ -646,25 +646,33 @@ class Game {
      * Audio helpers for menus and UI
      */
     playMenuEnterSound() {
-        if (this.audioManager) {
+        if (this.services?.audio) {
+            this.services.audio.playSound('menu_enter', 1);
+        } else if (this.audioManager) {
             this.audioManager.playSound('menu_enter', 1);
         }
     }
 
     playMenuExitSound() {
-        if (this.audioManager) {
+        if (this.services?.audio) {
+            this.services.audio.playSound('menu_exit', 1);
+        } else if (this.audioManager) {
             this.audioManager.playSound('menu_exit', 1);
         }
     }
 
     playButtonSound() {
-        if (this.audioManager) {
+        if (this.services?.audio) {
+            this.services.audio.playSound('button', 1);
+        } else if (this.audioManager) {
             this.audioManager.playSound('button', 1);
         }
     }
 
     playPurchaseSound() {
-        if (this.audioManager) {
+        if (this.services?.audio) {
+            this.services.audio.playSound('purchase', 1);
+        } else if (this.audioManager) {
             this.audioManager.playSound('purchase', 1);
         }
     }

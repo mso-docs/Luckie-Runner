@@ -216,7 +216,7 @@ class UIManager {
             panel.classList.toggle('hidden', !isActive);
         });
 
-        if (!silent && this.game?.audioManager && this.game.playButtonSound) {
+        if (!silent && this.services?.audio?.managerRef && this.game.playButtonSound) {
             this.game.playButtonSound();
         }
     }
@@ -534,9 +534,9 @@ class UIManager {
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         this.inventoryUI.isOpen = true;
-        if (this.game.playMenuEnterSound) {
-            this.game.playMenuEnterSound();
-        }
+            if (this.game.playMenuEnterSound) {
+                this.game.playMenuEnterSound();
+            }
     }
 
     /**
@@ -799,8 +799,8 @@ class UIManager {
 
         const coins = player.coins ?? 0;
         if (coins < item.price) {
-            if (this.game.audioManager) {
-                this.game.audioManager.playSound('error', 0.8);
+            if (this.services?.audio) {
+                this.services.audio.playSound('error', 0.8);
             }
             return false;
         }
@@ -812,8 +812,8 @@ class UIManager {
         if (typeof item.grant === 'function') {
             item.grant(player);
         }
-        if (this.game.audioManager) {
-            this.game.audioManager.playSound('menu_enter', 0.8);
+        if (this.services?.audio) {
+            this.services.audio.playSound('menu_enter', 0.8);
         }
         this.updateShopDisplay();
         return true;
