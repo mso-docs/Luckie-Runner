@@ -1138,6 +1138,31 @@ class UIManager {
     }
 
     /**
+     * Start a one-off speech bubble with raw text.
+     */
+    showSpeechBubble(text) {
+        const anchor = this.game.dialogueManager.state.anchor || this.game.player;
+        this.game.dialogueManager.startDialog([text], anchor);
+    }
+
+    /**
+     * Advance or dismiss the active speech bubble.
+     */
+    advanceSpeechBubble() {
+        this.game.dialogueManager?.advance();
+    }
+
+    /**
+     * Hide the speech bubble.
+     */
+    hideSpeechBubble(immediate = false) {
+        this.game.dialogueManager?.close();
+        if (immediate && this.game.speechBubble?.container) {
+            this.game.speechBubble.container.style.display = 'none';
+        }
+    }
+
+    /**
      * Lightweight styling parser for speech text.
      */
     formatSpeechText(text) {

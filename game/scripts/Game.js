@@ -635,14 +635,14 @@ class Game {
      * @param {string} text - Dialogue text to display
      */
     showSpeechBubble(text) {
-        this.dialogueManager.startDialog([text], this.dialogueManager.state.anchor || this.player);
+        return this.uiManager?.showSpeechBubble(text);
     }
 
     /**
      * Move to the next line or hide the bubble
      */
     advanceSpeechBubble() {
-        this.dialogueManager?.advance();
+        return this.uiManager?.advanceSpeechBubble();
     }
 
     /**
@@ -650,7 +650,7 @@ class Game {
      * @param {boolean} immediate - Skip fade when true
      */
     hideSpeechBubble(immediate = false) {
-        this.dialogueManager?.close();
+        return this.uiManager?.hideSpeechBubble(immediate);
     }
 
     /**
