@@ -36,127 +36,10 @@ class UIManager {
      * Wire up menu/pause/audio controls and global shortcuts.
      */
     setupMenuAndControls() {
-        const g = this.game;
-        const sm = this.game.stateManager;
-        const controls = this.config.controls || {};
-
-        // Start menu buttons
-        document.getElementById('startButton')?.addEventListener('click', () => {
-            g.ensureTitleMusicPlaying();
-            sm.startGame();
-        });
-
-        document.getElementById('loadButton')?.addEventListener('click', () => {
-            g.ensureTitleMusicPlaying();
-            this.renderSaveSlots();
-            sm.showMenu('loadMenu');
-        });
-
-        document.getElementById('instructionsButton')?.addEventListener('click', () => {
-            g.ensureTitleMusicPlaying();
-            sm.showMenu('instructionsMenu');
-        });
-
-        // Instructions back button
-        document.getElementById('backButton')?.addEventListener('click', () => {
-            g.ensureTitleMusicPlaying();
-            sm.showMenu('startMenu');
-        });
-
-        document.getElementById('loadBackButton')?.addEventListener('click', () => {
-            g.ensureTitleMusicPlaying();
-            sm.showMenu('startMenu');
-        });
-
-        // Game over buttons
-        document.getElementById('restartButton')?.addEventListener('click', () => {
-            sm.restartGame();
-        });
-
-        document.getElementById('mainMenuButton')?.addEventListener('click', () => {
-            sm.returnToMenu();
-        });
-
-        // Pause menu buttons
-        document.getElementById('resumeButton')?.addEventListener('click', () => {
-            sm.resumeGame();
-        });
-
-        document.getElementById('pauseSaveButton')?.addEventListener('click', () => {
-            g.saveProgress?.('slot1', 'Pause Save');
-            this.renderSaveSlots();
-            // optional feedback: show load menu to confirm
-            sm.showMenu('loadMenu');
-        });
-
-        document.getElementById('pauseMainMenuButton')?.addEventListener('click', () => {
-            sm.returnToMenu();
-        });
-
-        // Audio controls
-        document.getElementById('muteButton')?.addEventListener('click', () => {
-            g.toggleMute();
-        });
-
-        document.getElementById('masterVolume')?.addEventListener('input', (e) => {
-            g.setMasterVolume(parseInt(e.target.value, 10));
-        });
-
-        document.getElementById('musicVolume')?.addEventListener('input', (e) => {
-            g.setMusicVolume(parseInt(e.target.value, 10));
-        });
-
-        document.getElementById('sfxVolume')?.addEventListener('input', (e) => {
-            g.setSfxVolume(parseInt(e.target.value, 10));
-        });
-
-        // Play button sound for any menu buttons
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            if (btn && g.playButtonSound) {
-                g.playButtonSound();
-            }
-        });
-
-        const matches = (key, actionKeys, fallbacks) => {
-            const list = actionKeys && actionKeys.length ? actionKeys : fallbacks;
-            return list ? list.includes(key) : false;
-        };
-
-        document.addEventListener('keydown', (e) => {
-            // First handle configurable shortcuts; if handled, skip state-manager defaults to avoid double toggles
-            if (matches(e.key, controls.toggleDebug, ['F1'])) {
-                g.debug = !g.debug;
-                e.preventDefault();
-                return;
-            }
-            if (matches(e.key, controls.toggleTest, ['F2'])) {
-                g.toggleTestMode();
-                e.preventDefault();
-                return;
-            }
-            if (matches(e.key, controls.toggleMute, ['m', 'M'])) {
-                g.toggleMute();
-                return;
-            }
-            if (matches(e.key, controls.toggleInventory, ['i', 'I'])) {
-                this.toggleInventoryOverlay();
-                e.preventDefault();
-                return;
-            }
-            if (matches(e.key, controls.pause, ['Escape', 'p', 'P'])) {
-                if (sm.isPlaying()) {
-                    sm.pauseGame();
-                } else if (sm.isPaused()) {
-                    sm.resumeGame();
-                }
-                e.preventDefault();
-                return;
-            }
-
-            // Fall back to original state manager shortcuts (Escape/P) and others
-            sm.handleKeyboardShortcuts(e.key);
-        });
+        if (!this.inputController) {
+            this.inputController = new UIInputController(this.game, this);
+            this.inputController.bindDom();
+        }
     }
 
     renderSaveSlots() {
@@ -924,6 +807,7 @@ class UIManager {
      * Aggregate gameplay input handling (dialogue, chests, shops).
      */
     handleFrameInput() {
+        this.inputController?.update?.();
         this.handleSpeechBubbleInput();
         this.handleChestInput();
         this.handleInteractionInput();

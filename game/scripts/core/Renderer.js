@@ -6,6 +6,9 @@ class Renderer {
     constructor(game, services = {}) {
         this.game = game;
         this.services = services;
+        this.sceneRenderer = new SceneRenderer(game);
+        this.uiRenderer = new UIRenderer(game);
+        this.debugRenderer = new DebugRenderer(game);
     }
 
     /**
@@ -52,26 +55,8 @@ class Renderer {
 
         clear();
 
-        this.renderBackground(ctx, canvas);
-
-        // Canvas-based palms go just behind platforms
-        this.game.palmTreeManager.render(ctx, this.game.camera, this.game.gameTime);
-
-        this.renderPlatforms(ctx);
-        this.renderSigns(ctx);
-        this.renderNPCs(ctx);
-        this.renderChests(ctx);
-
-        if (Array.isArray(this.game.smallPalms)) {
-            this.game.smallPalms.forEach(palm => palm.render(ctx, this.game.camera));
-        }
-
-        this.game.hazards.forEach(hazard => hazard.render(ctx, this.game.camera));
-        this.game.items.forEach(item => item.render(ctx, this.game.camera));
-        this.game.enemies.forEach(enemy => enemy.render(ctx, this.game.camera));
-        this.game.projectiles.forEach(projectile => projectile.render(ctx, this.game.camera));
-        if (this.game.player) this.game.player.render(ctx, this.game.camera);
-        if (this.game.flag) this.game.flag.render(ctx, this.game.camera);
+        this.sceneRenderer.render(ctx, canvas);
+        this.uiRenderer.render(ctx, canvas);
 
         // Keep UI elements anchored
         if (this.game.dialogueManager?.isActive()) {
@@ -80,127 +65,7 @@ class Renderer {
         this.game.uiManager?.updateNpcCallouts?.();
 
         if (this.game.debug) {
-            this.renderDebugOverlay(ctx);
-        }
-    }
-
-    /**
-     * Render layered parallax background or test grid.
-     */
-    renderBackground(ctx, canvas) {
-        if (!ctx || !canvas) return;
-        if (this.game.testMode) {
-            this.renderTestBackground(ctx, canvas);
-            return;
-        }
-
-        this.game.backgroundLayers.forEach(layer => {
-            if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                layer.render(ctx, this.game.camera);
-            }
-        });
-    }
-
-    renderPlatforms(ctx) {
-        if (!ctx) return;
-        this.game.platforms.forEach(platform => {
-            StylizedPlatform.renderPlatform(ctx, platform, this.game.camera);
-        });
-    }
-
-    renderNPCs(ctx) {
-        if (!ctx) return;
-        this.game.npcs.forEach(npc => {
-            if (npc.render) npc.render(ctx, this.game.camera);
-        });
-    }
-
-    renderChests(ctx) {
-        if (!ctx) return;
-        this.game.chests.forEach(chest => {
-            if (chest?.render) chest.render(ctx, this.game.camera);
-        });
-    }
-
-    renderSigns(ctx) {
-        if (!ctx || !Array.isArray(this.game.signBoards)) return;
-        this.game.signBoards.forEach(sign => {
-            if (sign?.render) sign.render(ctx, this.game.camera);
-        });
-    }
-
-    renderDebugOverlay(ctx) {
-        if (!ctx) return;
-        const cam = this.game.camera || { x: 0, y: 0 };
-        const drawRect = (x, y, w, h, color = 'rgba(0,255,0,0.35)', stroke = '#00ff00') => {
-            ctx.save();
-            ctx.fillStyle = color;
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = 2;
-            ctx.globalAlpha = 0.6;
-            ctx.fillRect(x, y, w, h);
-            ctx.globalAlpha = 1;
-            ctx.strokeRect(x, y, w, h);
-            ctx.restore();
-        };
-
-        const rectForEntity = (e) => ({
-            x: (e.x + (e.collisionOffset?.x || 0)) - cam.x,
-            y: (e.y + (e.collisionOffset?.y || 0)) - cam.y,
-            w: e.collisionWidth || e.width || 0,
-            h: e.collisionHeight || e.height || 0
-        });
-
-        if (this.game.player) {
-            const r = rectForEntity(this.game.player);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,0,0.25)', '#00ff00');
-        }
-
-        this.game.enemies.forEach(enemy => {
-            if (!enemy) return;
-            const r = rectForEntity(enemy);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,0,0.25)', '#ff0000');
-        });
-        this.game.items.forEach(item => {
-            if (!item) return;
-            const r = rectForEntity(item);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,215,0,0.25)', '#ffd700');
-        });
-        this.game.projectiles.forEach(p => {
-            if (!p) return;
-            const r = rectForEntity(p);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,255,255,0.25)', '#00ffff');
-        });
-        this.game.hazards.forEach(h => {
-            if (!h) return;
-            const r = rectForEntity(h);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(255,0,255,0.25)', '#ff00ff');
-        });
-        this.game.chests.forEach(ch => {
-            if (!ch) return;
-            const r = rectForEntity(ch);
-            drawRect(r.x, r.y, r.w, r.h, 'rgba(0,0,255,0.25)', '#0000ff');
-        });
-
-        if (Array.isArray(this.game.smallPalms)) {
-            this.game.smallPalms.forEach(palm => {
-                if (!palm) return;
-                const r = rectForEntity(palm);
-                drawRect(r.x, r.y, r.w, r.h, 'rgba(0,128,0,0.25)', '#008000');
-            });
-        }
-
-        this.game.platforms.forEach(p => {
-            if (!p) return;
-            drawRect(p.x - cam.x, p.y - cam.y, p.width, p.height, 'rgba(128,128,128,0.2)', '#808080');
-        });
-
-        if (Array.isArray(this.game.signBoards)) {
-            this.game.signBoards.forEach(sign => {
-                if (!sign) return;
-                const r = rectForEntity(sign);
-                drawRect(r.x, r.y, r.w, r.h, 'rgba(255,165,0,0.25)', '#ffa500');
-            });
+            this.debugRenderer.render(ctx);
         }
     }
 
