@@ -12,6 +12,7 @@ class TownManager {
         this.musicTransition = null;
         this.fadeDuration = 1200;
         this.baseMusicVolume = game.currentLevelMusicVolume ?? 0.8;
+        this.activeContent = { buildings: [], setpieces: [] };
 
         this.preloadTownMusic();
     }
@@ -36,11 +37,47 @@ class TownManager {
     }
 
     /**
-     * Placeholder for future building/foreground/interior instantiation.
+     * Instantiate building/foreground/interior metadata.
      */
     loadTownContent(town) {
-        // Future: instantiate buildings/foreground/interiors from town config.
-        // e.g., this.game.worldBuilder.buildTown(town);
+        this.resetTownContent();
+        if (!town) return;
+        const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
+        const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
+        this.activeContent = { buildings, setpieces };
+    }
+
+    resetTownContent() {
+        this.activeContent = { buildings: [], setpieces: [] };
+    }
+
+    createBuilding(def = {}) {
+        return {
+            id: def.id || null,
+            name: def.name || 'Building',
+            exterior: def.exterior || {},
+            door: {
+                x: def.door?.x ?? def.exterior?.x ?? 0,
+                y: def.door?.y ?? def.exterior?.y ?? 0,
+                width: def.door?.width ?? def.exterior?.doorWidth ?? 36,
+                height: def.door?.height ?? def.exterior?.doorHeight ?? 48,
+                interactRadius: def.door?.interactRadius ?? 32
+            },
+            interiorId: def.interiorId || null,
+            npcs: Array.isArray(def.npcs) ? [...def.npcs] : []
+        };
+    }
+
+    createSetpiece(def = {}) {
+        return {
+            id: def.id || null,
+            name: def.name || 'Setpiece',
+            x: def.x ?? 0,
+            y: def.y ?? 0,
+            width: def.width ?? 64,
+            height: def.height ?? 64,
+            layer: def.layer || 'foreground'
+        };
     }
 
     getTownForPosition(levelId, x) {
@@ -60,6 +97,7 @@ class TownManager {
     handleTownExit() {
         if (!this.currentTownId) return;
         this.handleTownMusic(null);
+        this.resetTownContent();
         this.currentTownId = null;
     }
 
@@ -136,6 +174,49 @@ class TownManager {
             elapsed: 0,
             duration: this.fadeDuration
         };
+    }
+
+    /**
+     * Handle interact input for town building doors. Returns true if consumed.
+     */
+    handleDoorInteract() {
+        const g = this.game;
+        const p = g.player;
+        const input = g.services?.input || g.input;
+        if (!p || !input) return false;
+        const consumeInteract = () => {
+            if (typeof input.consumeInteract === 'function') return input.consumeInteract();
+            return input.consumeInteractPress?.();
+        };
+        if (!consumeInteract()) return false;
+
+        const building = this.getNearbyBuildingDoor(p);
+        if (!building) return false;
+        this.enterBuilding(building);
+        return true;
+    }
+
+    getNearbyBuildingDoor(player) {
+        if (!player || !Array.isArray(this.activeContent?.buildings)) return null;
+        const px = player.x + (player.width ? player.width / 2 : 0);
+        const py = player.y + (player.height ? player.height : 0);
+        return this.activeContent.buildings.find(b => {
+            const door = b.door || {};
+            const centerX = (door.x ?? 0) + (door.width || 0) / 2;
+            const centerY = (door.y ?? 0) + (door.height || 0) / 2;
+            const dx = (px || 0) - centerX;
+            const dy = (py || 0) - centerY;
+            const distSq = dx * dx + dy * dy;
+            const radius = door.interactRadius ?? 32;
+            return distSq <= radius * radius;
+        }) || null;
+    }
+
+    enterBuilding(building) {
+        const label = building?.name || 'Building';
+        const interiorId = building?.interiorId || 'interior';
+        // Placeholder hook for loading interiors; replace with real scene/level switch.
+        this.game?.uiManager?.showSpeechBubble?.(`Entering ${label} (${interiorId})`);
     }
 
     updateMusicTransition(deltaTime = 0) {

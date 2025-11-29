@@ -867,6 +867,11 @@ class UIManager {
                 return;
             }
 
+            // Town building doors
+            if (this.game.townManager?.handleDoorInteract?.()) {
+                return;
+            }
+
             const talker = this.getNearbyTalkableNpc();
             if (talker) {
                 this.startNpcDialogue(talker);
