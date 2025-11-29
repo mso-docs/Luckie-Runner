@@ -83,7 +83,7 @@ class WorldBuilder {
         const spawn = (levelId === 'testRoom' || g.testMode) ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
         const contentMaxX = (levelId === 'testRoom' || g.testMode)
             ? Math.max(
-                6000,
+                20000,
                 (g.testRoomMaxX || 0) + (g.canvas?.width || 800) // give the camera room to scroll past the edge content
             )
             : (levelDef?.width || this.config.level?.width || g.canvas.width);
