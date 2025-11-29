@@ -94,6 +94,7 @@ class Game {
         this.services.reset = new ResetService(this);
         this.services.save = new SaveService(persistence);
         this.progress = new ProgressManager(this, this.services.save);
+        this.audioController = new AudioController(this, this.services.audio, this.config);
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -228,9 +229,9 @@ class Game {
         this.badgeUI = new BadgeUI(this);
         this.setupChestUI();
         this.setupShopUI();
-        this.primeAudioUIFromConfig();
+        this.audioController.applyConfigDefaults();
         // Sync audio UI with config defaults on load
-        this.updateAudioUI();
+        this.audioController.updateUI();
         
         // Create initial level
         // Register bundled levels
@@ -606,23 +607,19 @@ class Game {
      * Audio helpers for menus and UI
      */
     playMenuEnterSound() {
-        const audio = this.getAudio();
-        if (audio) audio.playSound?.('menu_enter', 1);
+        this.audioController?.playMenuEnter();
     }
 
     playMenuExitSound() {
-        const audio = this.getAudio();
-        if (audio) audio.playSound?.('menu_exit', 1);
+        this.audioController?.playMenuExit();
     }
 
     playButtonSound() {
-        const audio = this.getAudio();
-        if (audio) audio.playSound?.('button', 1);
+        this.audioController?.playButton();
     }
 
     playPurchaseSound() {
-        const audio = this.getAudio();
-        if (audio) audio.playSound?.('purchase', 1);
+        this.audioController?.playPurchase();
     }
 
     /**
@@ -1168,33 +1165,7 @@ class Game {
      * Toggle mute state
      */
     toggleMute() {
-        const audio = this.services?.audio || null;
-        if (audio && audio.toggleMute) {
-            const wasMuted = audio.isMuted();
-            audio.toggleMute();
-            if (wasMuted && !audio.isMuted()) {
-                if (this.stateManager.isPlaying()) {
-                    audio.playMusic('level1', 0.8);
-                } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
-                    audio.playMusic('title', 0.8);
-                }
-            }
-            this.updateAudioUI();
-            return;
-        }
-
-        if (this.audioManager) {
-            const wasMuted = this.audioManager.isMuted();
-            this.audioManager.toggleMute();
-            if (wasMuted && !this.audioManager.isMuted()) {
-                if (this.stateManager.isPlaying()) {
-                    this.audioManager.playMusic('level1', 0.8);
-                } else if (this.stateManager.isInMenu() || this.stateManager.isState('gameOver')) {
-                    this.audioManager.playMusic('title', 0.8);
-                }
-            }
-            this.updateAudioUI();
-        }
+        this.audioController?.toggleMute();
     }
 
     /**
@@ -1202,16 +1173,7 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setMasterVolume(volume) {
-        const audio = this.services?.audio || null;
-        if (audio && audio.setMaster) {
-            audio.setMaster(volume / 100);
-            this.updateAudioUI();
-            return;
-        }
-        if (this.audioManager) {
-            this.audioManager.setMasterVolume(volume / 100);
-            this.updateAudioUI();
-        }
+        this.audioController?.setMasterVolume(volume);
     }
 
     /**
@@ -1219,16 +1181,7 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setMusicVolume(volume) {
-        const audio = this.services?.audio || null;
-        if (audio && audio.setMusic) {
-            audio.setMusic(volume / 100);
-            this.updateAudioUI();
-            return;
-        }
-        if (this.audioManager) {
-            this.audioManager.setMusicVolume(volume / 100);
-            this.updateAudioUI();
-        }
+        this.audioController?.setMusicVolume(volume);
     }
 
     /**
@@ -1236,16 +1189,7 @@ class Game {
      * @param {number} volume - Volume level (0-100)
      */
     setSfxVolume(volume) {
-        const audio = this.services?.audio || null;
-        if (audio && audio.setSfx) {
-            audio.setSfx(volume / 100);
-            this.updateAudioUI();
-            return;
-        }
-        if (this.audioManager) {
-            this.audioManager.setSfxVolume(volume / 100);
-            this.updateAudioUI();
-        }
+        this.audioController?.setSfxVolume(volume);
     }
 
     /**
@@ -1258,40 +1202,7 @@ class Game {
      * Update audio control UI elements
      */
     updateAudioUI() {
-        const audio = this.services?.audio || this.audioManager;
-        if (!audio) return;
-
-        const muteButton = document.getElementById('muteButton');
-        const masterVolumeSlider = document.getElementById('masterVolume');
-        const musicVolumeSlider = document.getElementById('musicVolume');
-        const sfxVolumeSlider = document.getElementById('sfxVolume');
-        const masterVolumeValue = document.getElementById('masterVolumeValue');
-        const musicVolumeValue = document.getElementById('musicVolumeValue');
-        const sfxVolumeValue = document.getElementById('sfxVolumeValue');
-
-        if (muteButton && audio.isMuted) {
-            muteButton.textContent = audio.isMuted() ? '🔇 Unmute' : '🔊 Mute';
-        }
-
-        if (masterVolumeSlider && audio.getMasterVolume) {
-            masterVolumeSlider.value = Math.round(audio.getMasterVolume() * 100);
-        }
-        if (musicVolumeSlider && audio.getMusicVolume) {
-            musicVolumeSlider.value = Math.round(audio.getMusicVolume() * 100);
-        }
-        if (sfxVolumeSlider && audio.getSfxVolume) {
-            sfxVolumeSlider.value = Math.round(audio.getSfxVolume() * 100);
-        }
-
-        if (masterVolumeValue && audio.getMasterVolume) {
-            masterVolumeValue.textContent = Math.round(audio.getMasterVolume() * 100) + '%';
-        }
-        if (musicVolumeValue && audio.getMusicVolume) {
-            musicVolumeValue.textContent = Math.round(audio.getMusicVolume() * 100) + '%';
-        }
-        if (sfxVolumeValue && audio.getSfxVolume) {
-            sfxVolumeValue.textContent = Math.round(audio.getSfxVolume() * 100) + '%';
-        }
+        this.audioController?.updateUI();
     }
     
     /**
