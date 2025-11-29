@@ -26,6 +26,17 @@ class UIManager {
         };
         this.game.shopUI = this.shopUI;
         this.shopGhostBubble = null;
+        this.debugUI = {
+            panel: null,
+            toggle: null,
+            close: null,
+            content: null
+        };
+        this.townUI = {
+            banner: null,
+            text: null,
+            timeout: null
+        };
 
         this.config = game.config || GameConfig || {};
         this.services = services || {};
@@ -40,6 +51,8 @@ class UIManager {
             this.inputController = new UIInputController(this.game, this);
             this.inputController.bindDom();
         }
+        this.setupDebugUI();
+        this.setupTownUI();
     }
 
     renderSaveSlots() {
@@ -854,6 +867,11 @@ class UIManager {
                 return;
             }
 
+            // Town building doors
+            if (this.game.townManager?.handleDoorInteract?.()) {
+                return;
+            }
+
             const talker = this.getNearbyTalkableNpc();
             if (talker) {
                 this.startNpcDialogue(talker);
@@ -940,6 +958,8 @@ class UIManager {
         this.updateChests(deltaTime);
         this.game.signUI.updateSignCallout();
         this.game.signUI.updateSignDialoguePosition();
+        this.updateDebugOverlay();
+        // town banner is event-driven; nothing per-frame here
     }
 
     /**
@@ -1005,6 +1025,102 @@ class UIManager {
         this.game.chests.forEach(chest => {
             if (chest?.update) chest.update(deltaTime);
         });
+    }
+
+    setupTownUI() {
+        if (this.townUI.banner) return;
+        this.townUI.banner = document.getElementById('townBanner');
+        this.townUI.text = document.getElementById('townBannerText');
+        if (this.townUI.banner) {
+            // ensure default background for banner
+            this.townUI.banner.style.setProperty('--town-banner-bg', "url('art/ui/scroll.png')");
+        }
+    }
+
+    showTownBanner(town) {
+        this.setupTownUI();
+        const { banner, text } = this.townUI;
+        if (!banner || !text || !town) return;
+
+        if (this.townUI.timeout) {
+            clearTimeout(this.townUI.timeout);
+            this.townUI.timeout = null;
+        }
+
+        const bg = town.banner?.background || null;
+        if (bg) {
+            banner.style.setProperty('--town-banner-bg', `url('${bg}')`);
+        }
+        const color = town.banner?.textColor || '#5c3a1a';
+        text.style.color = color;
+        text.textContent = town.name || 'Town';
+
+        banner.classList.remove('hidden');
+        banner.classList.add('show');
+        banner.setAttribute('aria-hidden', 'false');
+
+        this.townUI.timeout = setTimeout(() => {
+            banner.classList.remove('show');
+            banner.setAttribute('aria-hidden', 'true');
+            setTimeout(() => banner.classList.add('hidden'), 400);
+        }, 5000);
+    }
+
+    setupDebugUI() {
+        if (this.debugUI.panel) return;
+        this.debugUI.panel = document.getElementById('debugPanel');
+        this.debugUI.toggle = document.getElementById('debugToggleButton');
+        this.debugUI.close = document.getElementById('debugCloseButton');
+        this.debugUI.content = document.getElementById('debugPanelContent');
+
+        const toggleFn = () => {
+            this.game.debug = !this.game.debug;
+            this.updateDebugOverlay(true);
+        };
+
+        this.debugUI.toggle?.addEventListener('click', toggleFn);
+        this.debugUI.close?.addEventListener('click', () => {
+            this.game.debug = false;
+            this.updateDebugOverlay(true);
+        });
+        // Prevent Enter/keyboard form submit behavior
+        if (this.debugUI.toggle) {
+            this.debugUI.toggle.setAttribute('type', 'button');
+            this.debugUI.toggle.tabIndex = -1;
+            this.debugUI.toggle.addEventListener('keydown', (e) => e.preventDefault());
+        }
+        if (this.debugUI.close) {
+            this.debugUI.close.setAttribute('type', 'button');
+            this.debugUI.close.tabIndex = -1;
+            this.debugUI.close.addEventListener('keydown', (e) => e.preventDefault());
+        }
+    }
+
+    updateDebugOverlay(force = false) {
+        if (!this.debugUI.panel) this.setupDebugUI();
+        const { panel, toggle, content } = this.debugUI;
+        if (!panel || !content) return;
+
+        const shouldShow = !!this.game.debug;
+        panel.classList.toggle('hidden', !shouldShow);
+        panel.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+        if (toggle) {
+            toggle.classList.toggle('is-active', shouldShow);
+            toggle.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+        }
+        if (!shouldShow && !force) return;
+
+        const p = this.game.player;
+        const cam = this.game.camera || { x: 0, y: 0 };
+        const stats = [
+            `Player: ${p ? `x=${p.x.toFixed(1)} y=${p.y.toFixed(1)}` : 'n/a'}`,
+            `Velocity: ${p?.velocity ? `vx=${p.velocity.x.toFixed(2)} vy=${p.velocity.y.toFixed(2)}` : 'n/a'}`,
+            `Camera: x=${cam.x.toFixed(1)} y=${cam.y.toFixed(1)}`,
+            `Level: ${this.game.currentLevelId || 'unknown'}`,
+            `Test mode: ${this.game.testMode ? 'on' : 'off'}`,
+            `FPS target: ${this.game.config?.timing?.fps ?? '--'}`
+        ];
+        content.textContent = stats.join('\n');
     }
 
     /**

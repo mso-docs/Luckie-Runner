@@ -11,6 +11,8 @@ class PlayScene {
         this.ctx.stateManager?.setState?.('playing');
         this.ctx.startLoop?.();
         if (audio) {
+            this.ctx.currentLevelMusicId = 'level1';
+            this.ctx.currentLevelMusicVolume = 0.8;
             audio.playMusic?.('level1', 0.8);
         }
     }

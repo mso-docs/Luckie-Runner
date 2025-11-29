@@ -6,10 +6,12 @@ class AudioManager {
     constructor(config = null) {
         this.sounds = {};
         this.music = {};
+        this.musicMix = {};
         this.masterVolume = config?.audio?.master ?? 1.0;
         this.sfxVolume = config?.audio?.sfx ?? 0.8;
         this.musicVolume = config?.audio?.music ?? 0.6;
         this.muted = config?.audio?.muted ?? false;
+        this.currentMusicId = null;
     }
 
     /**
@@ -33,6 +35,7 @@ class AudioManager {
         audio.preload = 'auto';
         audio.loop = true;
         this.music[name] = audio;
+        this.musicMix[name] = 1;
     }
 
     /**
@@ -62,17 +65,28 @@ class AudioManager {
      * @param {number} volume - Volume override (0-1)
      * @returns {Promise} Promise that resolves when music starts or rejects if blocked
      */
-    playMusic(name, volume = 1.0) {
+    playMusic(name, volume = 1.0, options = {}) {
         if (this.muted || !this.music[name]) {
             // Music not played
             return Promise.resolve();
         }
 
-        // Stop current music
-        this.stopAllMusic();
+        const allowParallel = options.allowParallel || false;
+        const restartIfPlaying = options.restartIfPlaying !== undefined ? options.restartIfPlaying : true;
+
+        // Stop current music unless explicitly mixing
+        if (!allowParallel) {
+            this.stopAllMusic(name);
+            this.currentMusicId = name;
+        }
 
         const music = this.music[name];
-        music.volume = this.masterVolume * this.musicVolume * volume;
+        this.musicMix[name] = Math.max(0, Math.min(1, volume));
+        this.updateTrackVolume(name);
+
+        if (!restartIfPlaying && !music.paused) {
+            return Promise.resolve();
+        }
         
         // Attempting to play music
         return music.play().catch(e => {
@@ -84,8 +98,9 @@ class AudioManager {
     /**
      * Stop all music
      */
-    stopAllMusic() {
-        Object.values(this.music).forEach(music => {
+    stopAllMusic(exceptName = null) {
+        Object.entries(this.music).forEach(([name, music]) => {
+            if (exceptName && name === exceptName) return;
             music.pause();
             music.currentTime = 0;
         });
@@ -142,9 +157,32 @@ class AudioManager {
      * Update volumes for all currently playing audio
      */
     updateAllVolumes() {
-        Object.values(this.music).forEach(music => {
-            music.volume = this.masterVolume * this.musicVolume;
-        });
+        Object.keys(this.music).forEach(name => this.updateTrackVolume(name));
+    }
+
+    /**
+     * Update a single track's volume using its mix value.
+     */
+    updateTrackVolume(name) {
+        const music = this.music[name];
+        if (!music) return;
+        const mix = this.musicMix[name] ?? 1;
+        music.volume = this.masterVolume * this.musicVolume * mix;
+    }
+
+    /**
+     * Set a track-specific volume mix (0-1).
+     */
+    setTrackVolume(name, volume) {
+        this.musicMix[name] = Math.max(0, Math.min(1, volume));
+        this.updateTrackVolume(name);
+    }
+
+    /**
+     * Get the mix volume for a specific track.
+     */
+    getTrackVolume(name) {
+        return this.musicMix[name] ?? 0;
     }
 
     /**

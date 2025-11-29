@@ -44,11 +44,28 @@
                 </div>
                 <div class="buff-row hidden" id="climbBuffRow">
                     <div class="buff-icon shoe-icon" aria-hidden="true"></div>
-                    <div class="buff-text">
-                        <div class="buff-name">Climbing Shoes</div>
-                        <div class="buff-timer" id="climbTimer">--:--</div>
-                    </div>
+                <div class="buff-text">
+                    <div class="buff-name">Climbing Shoes</div>
+                    <div class="buff-timer" id="climbTimer">--:--</div>
                 </div>
+            </div>
+        </div>
+
+            <div id="townBanner" class="town-banner hidden" aria-hidden="true">
+                <div class="town-banner__bg"></div>
+                <div id="townBannerText" class="town-banner__text">Town</div>
+            </div>
+
+            <div id="debugControls">
+                <button id="debugToggleButton" type="button" class="debug-toggle" aria-pressed="false">Debug</button>
+            </div>
+
+            <div id="debugPanel" class="debug-panel hidden" aria-hidden="true">
+                <div class="debug-panel__header">
+                    <span>Debug Info</span>
+                    <button id="debugCloseButton" type="button" aria-label="Close debug overlay">×</button>
+                </div>
+                <pre id="debugPanelContent" class="debug-panel__body"></pre>
             </div>
         </div>
 
@@ -374,8 +391,10 @@
     <script src="scripts/core/config/CameraConfig.js"></script>
     <script src="scripts/core/config/LevelDefaultsConfig.js"></script>
     <script src="scripts/core/config/ThemesConfig.js"></script>
+    <script src="scripts/core/config/TownsConfig.js"></script>
     <script src="scripts/core/CollisionBox.js"></script>
     <script src="scripts/core/GameConfig.js"></script>
+    <script src="scripts/town/TownManager.js"></script>
     <script src="scripts/core/EventBus.js"></script>
     <script src="scripts/core/ServiceLocator.js"></script>
     <script src="scripts/core/GameLoop.js"></script>

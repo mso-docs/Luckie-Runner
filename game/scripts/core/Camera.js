@@ -44,12 +44,6 @@ class Camera {
     followPlayer(player, { testMode = false } = {}) {
         if (!player) return;
 
-        if (testMode) {
-            this.x = player.x - this.viewportWidth / 2 + player.width / 2;
-            this.y = 0;
-            return;
-        }
-
         this.target.x = player.x - this.viewportWidth / 2 + player.width / 2 + (this.lead?.x || 0);
         this.target.y = player.y - this.viewportHeight / 2 + player.height / 2 + (this.lead?.y || 0);
 
@@ -59,8 +53,9 @@ class Camera {
         // Clamp to world bounds
         const maxX = Math.max(0, (this.bounds.width || 0) - this.viewportWidth);
         const maxY = Math.max(0, (this.bounds.height || 0) - this.viewportHeight);
+        const minY = testMode ? -400 : 0; // allow looking up in tall test layouts
         this.x = Math.max(0, Math.min(maxX, this.x));
-        this.y = Math.max(0, Math.min(maxY, this.y));
+        this.y = Math.max(minY, Math.min(maxY, this.y));
     }
 
     /**

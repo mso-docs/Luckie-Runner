@@ -27,6 +27,7 @@ class WorldBuilder {
         g.enemies = [];
         g.items = [];
         g.hazards = [];
+        g.townDecor = [];
         g.chests = [];
         g.flag = null;
         g.signBoards = [];
@@ -82,12 +83,15 @@ class WorldBuilder {
 
         const spawn = (levelId === 'testRoom' || g.testMode) ? getTestSpawn() : { x: defaultSpawn.x, y: defaultSpawn.y };
         const contentMaxX = (levelId === 'testRoom' || g.testMode)
-            ? Math.max(4600, g.testRoomMaxX || 0)
+            ? Math.max(
+                20000,
+                (g.testRoomMaxX || 0) + (g.canvas?.width || 800) // give the camera room to scroll past the edge content
+            )
             : (levelDef?.width || this.config.level?.width || g.canvas.width);
 
         g.level = {
             width: contentMaxX,
-            height: levelDef?.height ?? this.config.level?.height ?? g.canvas.height,
+            height: levelDef?.height ?? this.config.level?.height ?? (g.canvas.height + 1200),
             spawnX: spawn.x,
             spawnY: spawn.y
         };
@@ -431,8 +435,15 @@ class WorldBuilder {
 
         if (g.testMode) {
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.level.height - 50);
-            flagY = groundY - flagHeight;
-            flagX = 3880;
+            const endPlatform = g.testBalloonEnd;
+            if (endPlatform) {
+                flagY = endPlatform.y - flagHeight;
+                flagX = endPlatform.x + (endPlatform.width / 2) - 32; // center-ish
+                g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, flagX + 300);
+            } else {
+                flagY = groundY - flagHeight;
+                flagX = (g.testRoomMaxX || g.level.width || 4000) - 200;
+            }
         }
 
         g.flag = this.factory.flag(flagX, flagY);
@@ -483,7 +494,9 @@ class WorldBuilder {
         }));
         balloonParkour.forEach(p => {
             g.platforms.push(this.factory.platform(p.x, p.y, p.width, 14));
+            g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, p.x + p.width + 300);
         });
+        g.testBalloonEnd = balloonParkour[balloonParkour.length - 1] || null;
 
         const smallPalmHeight = 191;
         const smallPalmWidth = 121;
@@ -493,6 +506,14 @@ class WorldBuilder {
         const smallPalm = this.factory.smallPalm(smallPalmX, smallPalmY);
         g.smallPalms.push(smallPalm);
         g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, smallPalmX + smallPalmWidth + 300);
+
+        // Add a small platform beside the palm so players can climb up
+        const palmPlatformWidth = 90;
+        const palmPlatformHeight = 14;
+        const palmPlatformX = smallPalmX + (smallPalmWidth / 2) - (palmPlatformWidth / 2) - 90;
+        const palmPlatformY = smallPalmY + 88;
+        g.platforms.push(this.factory.platform(palmPlatformX, palmPlatformY, palmPlatformWidth, palmPlatformHeight));
+        g.testRoomMaxX = Math.max(g.testRoomMaxX || 0, palmPlatformX + palmPlatformWidth + 300);
 
         const slime = this.factory.slime(300, groundY);
         const slimeGroundY = groundY - slime.height;
@@ -523,7 +544,7 @@ class WorldBuilder {
         g.princess = this.factory.princess(princessX, princessY, 'princess.default');
         g.npcs.push(g.princess);
 
-        const balloonPerch = balloonParkour[balloonParkour.length - 1];
+        const balloonPerch = balloonParkour[Math.max(0, balloonParkour.length - 2)]; // one platform lower than the last
         const balloonFanX = balloonPerch.x + (balloonPerch.width / 2) - (55 / 2);
         const balloonFanY = balloonPerch.y - 63;
         g.balloonFan = this.factory.balloonFan(balloonFanX, balloonFanY, 'balloon.default');

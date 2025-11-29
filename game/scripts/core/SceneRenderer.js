@@ -11,18 +11,21 @@ class SceneRenderer {
         const g = this.game;
 
         // Background
+        // Use camera X/Y for world-aligned layers; parallax managers ignore Y internally
+        const bgCamera = { x: g.camera?.x || 0, y: g.camera?.y || 0 };
+
         if (g.testMode) {
             g.renderTestBackground(ctx, canvas);
         } else {
             g.backgroundLayers.forEach(layer => {
                 if (layer instanceof Background || layer instanceof ProceduralBackground) {
-                    layer.render(ctx, g.camera);
+                    layer.render(ctx, bgCamera);
                 }
             });
         }
 
         // Canvas-based palms just behind platforms
-        g.palmTreeManager.render(ctx, g.camera, g.gameTime);
+        g.palmTreeManager.render(ctx, bgCamera, g.gameTime);
 
         // Platforms
         g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera));
@@ -38,6 +41,9 @@ class SceneRenderer {
 
         // Small palms
         g.smallPalms.forEach(palm => palm?.render?.(ctx, g.camera));
+
+        // Town decor (foreground setpieces/building exteriors)
+        g.townDecor.forEach(decor => decor?.render?.(ctx, g.camera));
 
         // Hazards
         g.hazards.forEach(hazard => hazard?.render?.(ctx, g.camera));

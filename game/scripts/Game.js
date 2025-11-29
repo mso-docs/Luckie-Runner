@@ -19,6 +19,8 @@ class Game {
         this.config = GameConfig;
         this.input = new InputManager();
         this.audioManager = new AudioManager(this.config);
+        this.currentLevelMusicId = 'level1';
+        this.currentLevelMusicVolume = 0.8;
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
@@ -38,6 +40,7 @@ class Game {
         this.projectiles = [];
         this.hazards = [];
         this.platforms = [];
+        this.townDecor = [];
         this.chests = [];
         this.flag = null;
         
@@ -97,6 +100,7 @@ class Game {
         this.progress = new ProgressManager(this, this.services.save);
         this.audioController = new AudioController(this, this.services.audio, this.config);
         this.testRoomManager = new TestRoomManager(this);
+        this.townManager = new TownManager(this, this.config?.towns || {});
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -1135,6 +1139,7 @@ class Game {
         this.items = [];
         this.platforms = [];
         this.hazards = [];
+        this.townDecor = [];
         this.smallPalms = [];
         if (this.camera?.reset) {
             this.camera.reset({ x: 0, y: 0 });

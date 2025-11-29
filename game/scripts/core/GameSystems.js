@@ -28,6 +28,7 @@ class GameSystems {
             g.player.update(deltaTime);
             this.updateCamera();
             g.collisionSystem?.checkPlayerCollisions();
+            g.townManager?.update?.(deltaTime);
         }
 
         // Small palms
