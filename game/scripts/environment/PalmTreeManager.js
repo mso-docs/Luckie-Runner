@@ -140,6 +140,9 @@ class PalmTreeManager {
             y: null
         };
 
+        // Sand texture
+        this.sandTexture = { src: 'art/bg/ground/sand.png', img: null, ready: false, loading: false };
+
         // Mountain texture
         this.mountainTexture = null;
         this.mountainTextureReady = false;
@@ -255,6 +258,7 @@ class PalmTreeManager {
         this.loadPalmSprites();
         this.loadCloudSprites();
         this.loadBushSprites();
+        this.loadSandTexture();
         this.loadMountainTexture();
         this.loadSkyBodyTextures();
     }
@@ -389,6 +393,9 @@ class PalmTreeManager {
         
         ctx.fillStyle = sandGradient;
         ctx.fillRect(0, h * 0.68, w, h * 0.32);
+
+        // Overlay sand texture for detail
+        this.drawSandTexture(ctx, h * 0.68, h, camera);
     }
 
     /**
@@ -425,6 +432,20 @@ class PalmTreeManager {
             img.src = entry.src;
             entry.img = img;
         });
+    }
+
+    /**
+     * Load sand texture once.
+     */
+    loadSandTexture() {
+        const entry = this.sandTexture;
+        if (!entry || entry.loading || entry.ready) return;
+        entry.loading = true;
+        const img = new Image();
+        img.onload = () => { entry.ready = true; entry.loading = false; };
+        img.onerror = () => { entry.ready = false; entry.loading = false; };
+        img.src = entry.src;
+        entry.img = img;
     }
 
     /**
@@ -594,6 +615,34 @@ class PalmTreeManager {
                 ctx.quadraticCurveTo(offsetX + 30, y + waveHeight, offsetX + 40, y);
             }
             ctx.stroke();
+        }
+    }
+
+    /**
+     * Draw tiled sand texture over the beach area.
+     */
+    drawSandTexture(ctx, startY, endY, camera) {
+        this.loadSandTexture();
+        const entry = this.sandTexture;
+        if (!entry || !entry.ready || !entry.img || !entry.img.complete || entry.img.naturalWidth === 0) {
+            return; // fallback to gradient only
+        }
+
+        const img = entry.img;
+        const tileW = img.naturalWidth || img.width || 128;
+        const tileH = img.naturalHeight || img.height || 128;
+        const targetH = Math.min(tileH, (endY - startY) * 0.7);
+        const scale = targetH / tileH;
+        const drawW = tileW * scale;
+        const drawH = tileH * scale;
+
+        const parallax = camera.x * 0.2;
+        const offsetX = -parallax % drawW;
+
+        for (let y = startY; y < endY + drawH; y += drawH) {
+            for (let x = offsetX - drawW; x < ctx.canvas.width + drawW; x += drawW) {
+                ctx.drawImage(img, x, y, drawW, drawH);
+            }
         }
     }
     
