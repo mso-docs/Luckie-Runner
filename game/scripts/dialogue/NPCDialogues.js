@@ -9,6 +9,10 @@ window.NPCDialogues = {
         'You actually made it up here? I promise I will have a real quest soon.',
         'For now, enjoy this breeze and pretend the mountain is much taller.'
     ],
+    'npc.mike': [
+        'Hey there! Enjoying the sea breeze?',
+        'I take a lap through town every day to say hi.'
+    ],
     'sign.postParkour': [
         'Thanks for checking out the balloon parkour!'
     ]

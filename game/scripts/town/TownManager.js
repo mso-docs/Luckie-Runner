@@ -14,6 +14,7 @@ class TownManager {
         this.baseMusicVolume = game.currentLevelMusicVolume ?? 0.8;
         this.activeContent = { buildings: [], setpieces: [] };
         this.doorAutoCloseMs = 2200;
+        this.townNpcs = [];
 
         this.spriteCache = {};
         this.townCache = {};
@@ -40,6 +41,7 @@ class TownManager {
         this.updateMusicTransition(deltaTime);
         this.updateBuildingDoors(deltaTime);
         this.updateSetpieceAnimation(deltaTime);
+        this.updateTownNpcs(deltaTime);
     }
 
     /**
@@ -52,11 +54,15 @@ class TownManager {
         if (cached) {
             this.activeContent = cached.activeContent;
             this.game.townDecor = cached.decor;
+            this.townNpcs = cached.npcs || [];
+            this.restoreTownNpcs();
             return;
         }
         const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
+        const npcs = Array.isArray(town.npcs) ? town.npcs.map(def => this.createNpc(def)) : [];
         this.activeContent = { buildings, setpieces };
+        this.townNpcs = npcs;
 
         // Build renderable sprites so SceneRenderer can draw town content
         const decor = [];
@@ -87,12 +93,14 @@ class TownManager {
         decor.sort((a, b) => (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3));
 
         this.game.townDecor = decor;
-        this.townCache[town.id] = { activeContent: this.activeContent, decor };
+        this.spawnTownNpcs();
+        this.townCache[town.id] = { activeContent: this.activeContent, decor, npcs };
     }
 
     resetTownContent() {
         this.activeContent = { buildings: [], setpieces: [] };
         this.game.townDecor = [];
+        this.removeTownNpcs();
     }
 
     createBuilding(def = {}) {
@@ -205,6 +213,14 @@ class TownManager {
             tileX: def.tileX || false,
             tileWidth: def.tileWidth || null
         };
+    }
+
+    createNpc(def = {}) {
+        const npc = this.game?.entityFactory?.townNpc?.(def);
+        if (npc) {
+            npc.dialogueId = def.dialogueId || npc.dialogueId;
+        }
+        return npc;
     }
 
     getTownForPosition(levelId, x) {
@@ -383,6 +399,33 @@ class TownManager {
                 sp.frameIndex = ((sp.frameIndex || 0) + advance) % sp.frames;
             }
         });
+    }
+
+    spawnTownNpcs() {
+        const g = this.game;
+        if (!Array.isArray(this.townNpcs)) return;
+        this.townNpcs.forEach(npc => {
+            if (!npc) return;
+            npc.game = g;
+            if (!g.npcs.includes(npc)) {
+                g.npcs.push(npc);
+            }
+        });
+    }
+
+    removeTownNpcs() {
+        if (!this.game || !Array.isArray(this.townNpcs) || !Array.isArray(this.game.npcs)) return;
+        this.game.npcs = this.game.npcs.filter(npc => !this.townNpcs.includes(npc));
+        this.townNpcs = [];
+    }
+
+    restoreTownNpcs() {
+        this.spawnTownNpcs();
+    }
+
+    updateTownNpcs(deltaTime = 0) {
+        if (!Array.isArray(this.townNpcs)) return;
+        this.townNpcs.forEach(npc => npc?.update?.(deltaTime));
     }
 
     buildDecorRenderable(def = {}) {
