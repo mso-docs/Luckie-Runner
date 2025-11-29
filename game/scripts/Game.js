@@ -82,12 +82,17 @@ class Game {
         this.speechBubble = this.speechBubbleUI.refs;
 
         // Services (DI)
+        const persistence = new PersistenceService();
         this.services = {
             input: new InputService(this.input),
             audio: new AudioService(this.audioManager),
             render: new RenderContext(this.canvas, this.ctx),
-            persistence: new PersistenceService()
+            persistence,
+            reset: null,
+            save: null
         };
+        this.services.reset = new ResetService(this);
+        this.services.save = new SaveService(persistence);
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -647,6 +652,13 @@ class Game {
      */
     getAudio() {
         return this.services?.audio || this.audioManager || null;
+    }
+
+    /**
+     * Convenience: reset audio/UI/world using ResetService.
+     */
+    resetAll(options = {}) {
+        return this.services?.reset?.resetAll(options);
     }
 
     /**
