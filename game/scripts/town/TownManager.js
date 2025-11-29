@@ -82,7 +82,7 @@ class TownManager {
         setpieces.forEach(sp => addRenderable(sp));
 
         // Layer ordering: ground -> background -> foreground -> default
-        const layerOrder = { ground: 0, background: 1, foreground: 2 };
+        const layerOrder = { ground: 0, background: 1, foreground: 2, overlay: 3 };
         decor.sort((a, b) => (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3));
 
         this.game.townDecor = decor;

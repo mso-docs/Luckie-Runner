@@ -57,6 +57,9 @@ const TownsConfig = {
                 { id: 'lamp_west', name: 'Street Lamp', x: 6900, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
                 { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
                 { id: 'lamp_east', name: 'Street Lamp', x: 9500, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
+
+                // Town overlay fronds (in front of palms/bushes)
+                ,{ id: 'shore_fronds', name: 'Fronds Overlay', x: 6500, y: 0, width: 3500, height: 395, frameWidth: 1022, frameHeight: 988, tileX: true, layer: 'overlay', autoAlignToGround: true, scale: 0.4, sprite: 'art/bg/town backdrop/fronds.png' }
             ],
             interiors: []
         }
