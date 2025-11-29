@@ -607,8 +607,10 @@ class StylizedPlatform {
         const scale = height / texture.height;
         const tileW = texture.width * scale;
         const tileH = height;
+        const overlap = 1; // avoid hairline gaps from fractional widths
+        ctx.imageSmoothingEnabled = false;
         for (let drawX = x; drawX < x + width; drawX += tileW) {
-            const remaining = Math.min(tileW, x + width - drawX);
+            const remaining = Math.min(tileW + overlap, x + width - drawX);
             ctx.drawImage(
                 texture,
                 0, 0,
