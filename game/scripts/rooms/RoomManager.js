@@ -271,13 +271,22 @@ class RoomManager {
         g.currentRoomId = descriptor.id || 'room';
         g.currentLevelId = null;
         g.currentTheme = descriptor.theme || 'interior';
-        g.platforms = Array.isArray(entities.platforms) ? entities.platforms : [];
-        g.enemies = Array.isArray(entities.enemies) ? entities.enemies : [];
-        g.items = Array.isArray(entities.items) ? entities.items : [];
-        g.hazards = Array.isArray(entities.hazards) ? entities.hazards : [];
-        g.chests = Array.isArray(entities.chests) ? entities.chests : [];
-        g.npcs = Array.isArray(entities.npcs) ? entities.npcs : [];
-        g.projectiles = Array.isArray(entities.projectiles) ? entities.projectiles : [];
+        // Hard-clear any lingering level entities before wiring room entities
+        ['platforms', 'enemies', 'items', 'hazards', 'chests', 'npcs', 'projectiles'].forEach(key => {
+            if (Array.isArray(g[key])) {
+                g[key].length = 0;
+            } else {
+                g[key] = [];
+            }
+        });
+
+        g.platforms = Array.isArray(entities.platforms) ? entities.platforms.slice() : [];
+        g.enemies = Array.isArray(entities.enemies) ? entities.enemies.slice() : [];
+        g.items = Array.isArray(entities.items) ? entities.items.slice() : [];
+        g.hazards = Array.isArray(entities.hazards) ? entities.hazards.slice() : [];
+        g.chests = Array.isArray(entities.chests) ? entities.chests.slice() : [];
+        g.npcs = Array.isArray(entities.npcs) ? entities.npcs.slice() : [];
+        g.projectiles = Array.isArray(entities.projectiles) ? entities.projectiles.slice() : [];
         g.townDecor = [];
         g.flag = null;
         g.signBoards = [];
