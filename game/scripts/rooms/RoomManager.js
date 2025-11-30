@@ -226,6 +226,7 @@ class RoomManager {
         this.applyRoomWorld(roomState);
         this.room = roomState.descriptor;
         this.roomEntities = roomState.entities;
+        this.alignRoomNpcsToFloor();
         this.active = true;
         return true;
     }
@@ -258,6 +259,38 @@ class RoomManager {
         this.room = null;
         this.roomEntities = null;
         this.returnInfo = null;
+    }
+
+    alignRoomNpcsToFloor() {
+        if (!this.game) return;
+        const roomNpcs = (this.roomEntities && Array.isArray(this.roomEntities.npcs)) ? this.roomEntities.npcs : [];
+        const gameNpcs = Array.isArray(this.game.npcs) ? this.game.npcs : [];
+        const floorY = this.getRoomFloorY();
+        const spawnY = this.room?.spawn?.y;
+        const align = (npc) => {
+            if (!npc) return;
+            npc.game = this.game;
+            npc.active = npc.active !== false;
+            const targetFloor = (typeof floorY === 'number') ? floorY : (typeof spawnY === 'number' ? spawnY + (npc.height || 0) : null);
+            if (typeof targetFloor === 'number' && typeof npc.height === 'number') {
+                npc.y = targetFloor - npc.height;
+            } else if (typeof spawnY === 'number') {
+                npc.y = spawnY;
+            }
+        };
+        roomNpcs.forEach(align);
+        gameNpcs.forEach(align);
+    }
+
+    getRoomFloorY() {
+        const platforms = this.roomEntities?.platforms || [];
+        const ground = platforms.find(p => p?.type === 'ground');
+        if (ground) return ground.y;
+        if (this.room?.height) {
+            const floorHeight = 40;
+            return this.room.height - floorHeight;
+        }
+        return null;
     }
 
     captureReturnState(returnPosition = null) {
