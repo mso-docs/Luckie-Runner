@@ -20,6 +20,9 @@ class TownManager {
         this.preloadedTownId = null;
         this.pendingTownToLoad = null;
         this.initialWarmDone = false;
+        this.activeInterior = null;
+        this.interiorReturn = null;
+        this.interiorConfigMap = this.buildInteriorMap();
 
         this.spriteCache = {};
         this.spriteDecodePromises = {};
@@ -228,7 +231,8 @@ class TownManager {
                 interactRadius: interactRadiusDefault
             },
             sprite: def.exterior?.sprite || null,
-            interiorId: def.interiorId || null,
+            interiorId: def.interior?.id || def.interiorId || null,
+            interior: def.interior ? this.clonePlain(def.interior) : null,
             npcs: Array.isArray(def.npcs) ? [...def.npcs] : [],
             doorTimer: 0,
             doorOpen: false
@@ -285,6 +289,27 @@ class TownManager {
             npc.dialogueId = def.dialogueId || npc.dialogueId;
         }
         return npc;
+    }
+
+    buildInteriorMap() {
+        const map = {};
+        if (!Array.isArray(this.towns)) return map;
+        this.towns.forEach(town => {
+            (town?.interiors || []).forEach(int => {
+                const id = int?.id || int?.interiorId;
+                if (!id) return;
+                map[id] = this.clonePlain(int);
+            });
+        });
+        return map;
+    }
+
+    getInteriorConfig(id = null, building = null) {
+        if (!id) return null;
+        if (building?.interior && (!building.interior?.id || building.interior?.id === id)) {
+            return building.interior;
+        }
+        return this.interiorConfigMap?.[id] || null;
     }
 
     getTownForPosition(levelId, x) {
@@ -451,6 +476,11 @@ class TownManager {
         };
         if (!consumeInteract()) return false;
 
+        if (this.activeInterior && this.isInsideInteriorLevel() && this.isPlayerAtInteriorExit(p)) {
+            this.exitInterior();
+            return true;
+        }
+
         const building = this.getNearbyBuildingDoor(p);
         if (!building) return false;
         this.enterBuilding(building);
@@ -475,10 +505,38 @@ class TownManager {
 
     enterBuilding(building) {
         const label = building?.name || 'Building';
-        const interiorId = building?.interiorId || 'interior';
+        const interiorId = building?.interiorId || building?.interior?.id || null;
+        if (!interiorId) {
+            this.game?.uiManager?.showSpeechBubble?.(`${label} is locked.`);
+            return;
+        }
+
+        const interiorConfig = this.getInteriorConfig(interiorId, building) || {};
+        if (!this.ensureInteriorLevelRegistered(interiorId, interiorConfig)) {
+            this.game?.uiManager?.showSpeechBubble?.(`Add LevelDefinitions["${interiorId}"] to enter ${label}.`);
+            return;
+        }
+
+        const player = this.game?.player;
+        const returnPosition = this.getExteriorReturnPosition(building, player);
+        const spawnOverride = interiorConfig.spawn || interiorConfig.spawnPoint || null;
+        const exitZone = interiorConfig.exit || interiorConfig.exitZone || this.getDefaultInteriorExit(spawnOverride, player);
+
+        this.interiorReturn = {
+            levelId: this.game?.currentLevelId || null,
+            townId: this.currentTownId,
+            buildingId: building?.id || null,
+            position: returnPosition
+        };
+        this.activeInterior = {
+            id: interiorId,
+            buildingId: building?.id || null,
+            exitZone,
+            label
+        };
+
         this.openBuildingDoor(building);
-        // Placeholder hook for loading interiors; replace with real scene/level switch.
-        this.game?.uiManager?.showSpeechBubble?.(`Entering ${label} (${interiorId})`);
+        this.switchLevelWithPlayer(interiorId, spawnOverride);
     }
 
     openBuildingDoor(building) {
@@ -518,6 +576,110 @@ class TownManager {
                 sp.frameIndex = ((sp.frameIndex || 0) + advance) % sp.frames;
             }
         });
+    }
+
+    ensureInteriorLevelRegistered(interiorId = null, interiorConfig = null) {
+        if (!interiorId) return false;
+        const registry = (typeof window !== 'undefined') ? window.levelRegistry : null;
+        const already = registry?.get?.(interiorId);
+        if (already) return true;
+        const fromConfig = interiorConfig?.level || interiorConfig?.definition || null;
+        const fromGlobals = (typeof window !== 'undefined' && window.LevelDefinitions) ? window.LevelDefinitions[interiorId] : null;
+        const def = fromConfig || fromGlobals;
+        if (def && registry?.register) {
+            registry.register(interiorId, def);
+            return true;
+        }
+        return Boolean(def);
+    }
+
+    switchLevelWithPlayer(levelId = null, spawnOverride = null) {
+        if (!levelId || !this.game) return false;
+        const g = this.game;
+        const player = g.player;
+
+        this.resetTownContent();
+        this.currentTownId = null;
+        g.createLevel?.(levelId);
+
+        const spawnX = spawnOverride?.x ?? g.level?.spawnX ?? player?.x ?? 0;
+        const spawnY = spawnOverride?.y ?? g.level?.spawnY ?? player?.y ?? 0;
+
+        if (player) {
+            player.x = spawnX;
+            player.y = spawnY;
+            if (player.velocity) {
+                player.velocity.x = 0;
+                player.velocity.y = 0;
+            }
+            player.onGround = false;
+        }
+
+        if (g.camera) {
+            g.camera.x = Math.max(0, spawnX - (g.camera.viewportWidth || 0) * 0.35);
+            g.camera.y = 0;
+        }
+
+        const town = this.getTownForPosition(levelId, spawnX);
+        if (town) {
+            this.currentTownId = town.id;
+            this.loadTownContent(town);
+            this.handleTownMusic(town);
+        }
+        return true;
+    }
+
+    getExteriorReturnPosition(building, player = null) {
+        if (!building) return null;
+        const door = building.door || {};
+        const playerWidth = player?.width ?? 48;
+        const playerHeight = player?.height ?? 64;
+        const doorWidth = door.width ?? playerWidth;
+        const doorHeight = door.height ?? playerHeight;
+        const x = (door.x ?? 0) + Math.max(0, (doorWidth - playerWidth) / 2);
+        const y = (door.y ?? 0) + Math.max(0, doorHeight - playerHeight);
+        return { x, y };
+    }
+
+    getDefaultInteriorExit(spawn = null, player = null) {
+        const playerWidth = player?.width ?? 48;
+        const playerHeight = player?.height ?? 64;
+        const fallbackSpawn = spawn || { x: player?.x ?? 80, y: player?.y ?? 0 };
+        return {
+            x: fallbackSpawn.x + playerWidth * 0.5,
+            y: fallbackSpawn.y + playerHeight * 0.5,
+            radius: Math.max(playerWidth, playerHeight) * 0.8
+        };
+    }
+
+    isInsideInteriorLevel() {
+        return Boolean(this.activeInterior && this.game?.currentLevelId === this.activeInterior.id);
+    }
+
+    isPlayerAtInteriorExit(player) {
+        if (!player || !this.activeInterior?.exitZone) return false;
+        const zone = this.activeInterior.exitZone;
+        const px = player.x + (player.width ? player.width / 2 : 0);
+        const py = player.y + (player.height || 0);
+        if (zone.radius) {
+            const dx = px - (zone.x ?? 0);
+            const dy = py - (zone.y ?? 0);
+            return dx * dx + dy * dy <= Math.pow(zone.radius, 2);
+        }
+        const zx = zone.x ?? 0;
+        const zy = zone.y ?? 0;
+        const zw = zone.width ?? 64;
+        const zh = zone.height ?? 64;
+        return px >= zx && px <= zx + zw && py >= zy && py <= zy + zh;
+    }
+
+    exitInterior() {
+        if (!this.activeInterior || !this.interiorReturn) return;
+        const targetLevel = this.interiorReturn.levelId || 'testRoom';
+        const spawn = this.interiorReturn.position || null;
+        this.activeInterior = null;
+        this.interiorReturn = null;
+        this.switchLevelWithPlayer(targetLevel, spawn);
     }
 
     spawnTownNpcs() {
