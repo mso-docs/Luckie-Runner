@@ -101,3 +101,14 @@ See `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/tow
 ## References
 - Current browser implementation docs: `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/debugging.md`, plus scene/battle/cutscene details in `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`.
 - For porting: map each system to engine equivalents (prefabs/scenes/UI/audio/input/physics) and keep data-driven spawning.***
+---
+## Related Guides
+- Scenes/Battles/Cutscenes: `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`
+- Input/Audio: `docs/input.md`, `docs/audio-system.md`
+- Camera/Collision/Renderer: `docs/camera.md`, `docs/collision.md`, `docs/renderer.md`
+- World/Factory: `docs/worldbuilder.md`, `docs/entity-factory.md`
+- Towns/Rooms: `docs/town-manager.md`, `docs/room-manager.md`
+- UI/Dialogue: `docs/ui-manager.md`, `docs/dialogue-system.md`
+- Services/Events: `docs/services.md`, `docs/service-loader.md`, `docs/event-bus.md`
+- Progress/Reset: `docs/progress-manager.md`, `docs/save-reset.md`
+- Config/Content patterns: `docs/config-scripts.md`, `docs/content-patterns.md`

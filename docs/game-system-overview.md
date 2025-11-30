@@ -248,9 +248,26 @@ This document explains how the game is structured, which files/classes are essen
   Object.keys(window.RoomDescriptors || {});
   ```
 
-With these foundations and the linked docs (`docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`, `docs/debugging.md`), you can build and extend the game confidently from scratch. ***
+With these foundations and the linked docs (`docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`, `docs/input.md`, `docs/audio-system.md`, `docs/camera.md`, `docs/collision.md`, `docs/renderer.md`, `docs/worldbuilder.md`, `docs/entity-factory.md`, `docs/game-systems.md`, `docs/services.md`, `docs/service-loader.md`, `docs/progress-manager.md`, `docs/save-reset.md`, `docs/event-bus.md`, `docs/dialogue-system.md`, `docs/ui-manager.md`, `docs/town-manager.md`, `docs/room-manager.md`, `docs/config-scripts.md`, `docs/content-patterns.md`, `docs/debugging.md`), you can build and extend the game confidently from scratch. ***
 
 
 
 
 
+# See Also: Core System Guides
+
+Refer to these for deeper dives:
+- Input: `docs/input.md`
+- Audio: `docs/audio-system.md`
+- Camera: `docs/camera.md`
+- Collision: `docs/collision.md`
+- Renderer stack: `docs/renderer.md`
+- EntityFactory: `docs/entity-factory.md`
+- WorldBuilder: `docs/worldbuilder.md`
+- Town/Rooms: `docs/town-manager.md`, `docs/room-manager.md`
+- UI/Dialogue: `docs/ui-manager.md`, `docs/dialogue-system.md`
+- Services: `docs/services.md`, `docs/service-loader.md`
+- Progress/Save/Reset: `docs/progress-manager.md`, `docs/save-reset.md`
+- Event bus: `docs/event-bus.md`
+- Configs: `docs/config-scripts.md`
+- Content patterns: `docs/content-patterns.md`

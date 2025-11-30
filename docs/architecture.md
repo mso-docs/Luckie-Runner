@@ -34,7 +34,7 @@ This document summarizes the current world-building architecture (levels, towns,
 - `game/scripts/core/services/*` - save/reset/persistence/audio services.
 - `docs/*.md` - reference guides for rooms, towns, levels, items, enemies, NPCs, UI, HUD, shops, projectiles, player, entities, glossary.
 - Scene/renderer/config docs: `docs/camera.md`, `docs/collision.md`, `docs/event-bus.md`, `docs/service-loader.md`, `docs/services.md`, `docs/progress-manager.md`, `docs/renderer.md`, `docs/worldbuilder.md`, `docs/config-scripts.md`.
-- Additional system docs: `docs/input.md`, `docs/audio-system.md`, `docs/game-systems.md`, `docs/entity-factory.md`, `docs/town-manager.md`, `docs/room-manager.md`, `docs/ui-manager.md`, `docs/dialogue-system.md`, `docs/content-patterns.md`, `docs/save-reset.md`.
+  - Additional system docs: `docs/input.md`, `docs/audio-system.md`, `docs/game-systems.md`, `docs/entity-factory.md`, `docs/town-manager.md`, `docs/room-manager.md`, `docs/ui-manager.md`, `docs/dialogue-system.md`, `docs/content-patterns.md`, `docs/save-reset.md`, `docs/_cross-links.md`.
 
 ## Room System
 ### What a Room Is
