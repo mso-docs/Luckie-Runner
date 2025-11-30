@@ -5,6 +5,7 @@ const shoreHouseInteriorRoom = {
     height: 720,
     spawn: { x: 200, y: 520 },
     exit: { x: 200, y: 560, radius: 80 },
+    music: { src: 'music/beach-house.mp3', volume: 0.8 },
     backgroundImage: {
         src: 'art/bg/buildings/interior/house-inside.png',
         width: 1024,

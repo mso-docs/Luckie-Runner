@@ -16,6 +16,14 @@ class SceneRenderer {
 
         const isRoom = g.activeWorld?.kind === 'room';
 
+        // Room backplate: fill black to avoid any leak-through from previous layers
+        if (isRoom) {
+            ctx.save();
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
         if (g.testMode && !isRoom) {
             g.renderTestBackground(ctx, canvas);
         } else {
@@ -34,8 +42,10 @@ class SceneRenderer {
             g.townDecor.filter(d => d.layer === 'backdrop' || d.layer === 'midground').forEach(decor => decor?.render?.(ctx, g.camera));
         }
 
-        // Platforms (ground/floating)
-        g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera, g));
+        // Platforms (ground/floating) - skip drawing in rooms to hide floor visuals
+        if (!isRoom) {
+            g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera, g));
+        }
 
         // Town ground setpieces (e.g., town-specific ground tiles)
         if (!isRoom) {

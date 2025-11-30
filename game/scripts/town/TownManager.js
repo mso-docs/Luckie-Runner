@@ -670,7 +670,9 @@ class TownManager {
         const mgr = this.ensureRoomManager();
         if (roomDesc && mgr) {
             const room = mgr.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
+            this.resetTownContent();
             mgr.enterRoom(room, returnPosition);
+            this.handleRoomMusic(roomDesc);
         } else {
             this.game?.uiManager?.showSpeechBubble?.('Room system is unavailable.');
         }
@@ -785,6 +787,7 @@ class TownManager {
         if (!g || !levelId) return;
         this.resetTownContent();
         this.currentTownId = null;
+        this.handleRoomMusic(null, true);
         g.createLevel?.(levelId);
         const spawnX = spawn?.x ?? g.level?.spawnX ?? g.player?.x ?? 0;
         const spawnY = spawn?.y ?? g.level?.spawnY ?? g.player?.y ?? 0;
@@ -803,6 +806,44 @@ class TownManager {
             this.currentTownId = town.id;
             this.loadTownContent(town);
             this.handleTownMusic(town);
+        }
+    }
+
+    handleRoomMusic(roomDesc = null, stopOnly = false) {
+        const audio = this.getAudioManager();
+        if (!audio) return;
+        const roomMusicId = 'room_theme';
+        const roomMusicSrc = roomDesc?.music?.src || 'music/beach-house.mp3';
+        const roomVolume = roomDesc?.music?.volume ?? 0.8;
+        const baseId = this.getBaseMusicId();
+        const activeTownId = this.activeTownMusicId;
+
+        if (stopOnly || !roomDesc) {
+            audio.music?.[roomMusicId]?.pause?.();
+            if (activeTownId && audio.music?.[activeTownId]) {
+                audio.music[activeTownId].pause();
+                audio.setTrackVolume?.(activeTownId, this.getTownMusicVolume({}));
+            }
+            if (baseId && audio.music?.[baseId]) {
+                audio.setTrackVolume?.(baseId, this.getBaseMusicVolume());
+                audio.playMusic?.(baseId, this.getBaseMusicVolume(), { allowParallel: true, restartIfPlaying: false });
+            }
+            return;
+        }
+
+        if (!audio.music?.[roomMusicId] && roomMusicSrc) {
+            audio.loadMusic?.(roomMusicId, roomMusicSrc);
+        }
+        if (baseId && audio.music?.[baseId]) {
+            audio.setTrackVolume?.(baseId, 0);
+        }
+        if (activeTownId && audio.music?.[activeTownId]) {
+            audio.setTrackVolume?.(activeTownId, 0);
+            audio.music[activeTownId].pause();
+        }
+        if (audio.music?.[roomMusicId]) {
+            audio.playMusic?.(roomMusicId, roomVolume, { allowParallel: true, restartIfPlaying: true });
+            audio.setTrackVolume?.(roomMusicId, roomVolume);
         }
     }
 

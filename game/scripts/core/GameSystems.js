@@ -53,48 +53,45 @@ class GameSystems {
         const render = g.getRenderService();
         g.palmTreeManager.update(g.camera.x, render.width());
 
+        const isRoom = g.activeWorld?.kind === 'room';
+
         // Enemies
         g.enemies = (entities.enemies || []).filter(enemy => {
-            if (enemy.active) {
-                enemy.update(deltaTime);
-                g.collisionSystem?.updateEnemyPhysics(enemy);
-                return true;
-            }
-            this.handleEnemyRemoved(enemy);
-            return false;
+            if (!enemy || !enemy.active) return false;
+            enemy.update(deltaTime);
+            g.collisionSystem?.updateEnemyPhysics(enemy);
+            return true;
         });
         entities.enemies = g.enemies;
 
         // Items
         g.items = (entities.items || []).filter(item => {
-            if (item.active) {
-                item.update(deltaTime);
+            if (!item || !item.active) return false;
+            item.update(deltaTime);
+            if (!isRoom) {
                 g.collisionSystem?.updateItemPhysics(item, deltaTime);
                 g.collisionSystem?.handleItemCollection(item);
-                return item.active !== false;
             }
-            return false;
+            return item.active !== false;
         });
         entities.items = g.items;
 
         // Projectiles
         g.projectiles = (entities.projectiles || []).filter(projectile => {
-            if (projectile.active) {
-                projectile.update(deltaTime);
+            if (!projectile || !projectile.active) return false;
+            projectile.update(deltaTime);
+            if (!isRoom) {
                 g.collisionSystem?.updateProjectilePhysics(projectile);
-                return true;
             }
-            return false;
+            return true;
         });
         entities.projectiles = g.projectiles;
 
         // Hazards
         g.hazards = (entities.hazards || []).filter(hazard => {
-            if (hazard.active) {
-                hazard.update(deltaTime);
-                return true;
-            }
-            return false;
+            if (!hazard || !hazard.active) return false;
+            hazard.update(deltaTime);
+            return true;
         });
         entities.hazards = g.hazards;
         g.collisionSystem?.updateHazardCollisions();

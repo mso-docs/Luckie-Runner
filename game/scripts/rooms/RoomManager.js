@@ -222,6 +222,9 @@ class RoomManager {
             signBoards: (g.signBoards || []).slice(),
             signBoard: g.signBoard || null,
             smallPalms: (g.smallPalms || []).slice(),
+            shopGhost: g.shopGhost || null,
+            princess: g.princess || null,
+            balloonFan: g.balloonFan || null,
             playerPos: returnPosition || { x: g.player?.x || 0, y: g.player?.y || 0 },
             testMode: g.testMode
         };
@@ -247,6 +250,9 @@ class RoomManager {
         g.signBoards = snap.signBoards || [];
         g.signBoard = snap.signBoard || null;
         g.smallPalms = snap.smallPalms || [];
+        g.shopGhost = snap.shopGhost || null;
+        g.princess = snap.princess || null;
+        g.balloonFan = snap.balloonFan || null;
         g.currentTheme = snap.theme || g.currentTheme;
         if (g.player) {
             g.player.x = snap.playerPos?.x || 0;
@@ -265,19 +271,31 @@ class RoomManager {
         g.currentRoomId = descriptor.id || 'room';
         g.currentLevelId = null;
         g.currentTheme = descriptor.theme || 'interior';
-        g.platforms = entities.platforms || [];
-        g.enemies = entities.enemies || [];
-        g.items = entities.items || [];
-        g.hazards = entities.hazards || [];
-        g.chests = entities.chests || [];
-        g.npcs = entities.npcs || [];
-        g.projectiles = entities.projectiles || [];
+        g.platforms = Array.isArray(entities.platforms) ? entities.platforms : [];
+        g.enemies = Array.isArray(entities.enemies) ? entities.enemies : [];
+        g.items = Array.isArray(entities.items) ? entities.items : [];
+        g.hazards = Array.isArray(entities.hazards) ? entities.hazards : [];
+        g.chests = Array.isArray(entities.chests) ? entities.chests : [];
+        g.npcs = Array.isArray(entities.npcs) ? entities.npcs : [];
+        g.projectiles = Array.isArray(entities.projectiles) ? entities.projectiles : [];
         g.townDecor = [];
         g.flag = null;
         g.signBoards = [];
         g.signBoard = null;
         g.smallPalms = [];
-        g.backgroundLayers = backgroundLayers || [];
+        g.shopGhost = null;
+        g.princess = null;
+        g.balloonFan = null;
+        const fallbackBg = [{
+            render: (ctx) => {
+                ctx.save();
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.restore();
+            },
+            update: () => {}
+        }];
+        g.backgroundLayers = (Array.isArray(backgroundLayers) && backgroundLayers.length) ? backgroundLayers : fallbackBg;
 
         const spawn = descriptor.spawn || { x: 100, y: 400 };
         g.level = {
