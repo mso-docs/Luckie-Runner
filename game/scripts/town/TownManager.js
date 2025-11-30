@@ -474,24 +474,36 @@ class TownManager {
         this.preloadedTownId = null;
     }
 
-    handleTownMusic(town) {
+    handleTownMusic(town, options = {}) {
         const audio = this.getAudioManager();
         if (!audio) return;
         const baseId = this.getBaseMusicId();
         const baseVolume = this.getBaseMusicVolume();
+        const fromRoom = options.fromRoom === true;
 
         if (town) {
             const townMusicId = this.getTownMusicId(town);
             if (!townMusicId) return;
             this.ensureTownMusicLoaded(town);
-            this.ensureTrackPlaying(baseId, baseVolume);
+            if (fromRoom && audio.music?.[baseId]) {
+                audio.setTrackVolume?.(baseId, 0);
+                audio.music[baseId].pause();
+            } else {
+                this.ensureTrackPlaying(baseId, baseVolume);
+            }
             this.activeTownMusicId = townMusicId;
-            this.beginTownEntryTransition({
-                baseId,
-                townId: townMusicId,
-                fromBase: audio.getTrackVolume?.(baseId) ?? baseVolume,
-                toTown: this.getTownMusicVolume(town)
-            });
+            if (fromRoom) {
+                this.ensureTrackPlaying(townMusicId, this.getTownMusicVolume(town));
+                audio.setTrackVolume?.(townMusicId, this.getTownMusicVolume(town));
+                this.musicTransition = null;
+            } else {
+                this.beginTownEntryTransition({
+                    baseId,
+                    townId: townMusicId,
+                    fromBase: audio.getTrackVolume?.(baseId) ?? baseVolume,
+                    toTown: this.getTownMusicVolume(town)
+                });
+            }
             return;
         }
 
@@ -776,14 +788,14 @@ class TownManager {
         this.interiorReturn = null;
         if (this.roomManager?.isActive()) {
             this.roomManager.exitRoom();
-            this.handleRoomMusic(null, true);
+            this.handleRoomMusic(null, true, { resumeBase: false });
             const g = this.game;
             const playerX = g?.player?.x ?? 0;
             const town = this.getTownForPosition(g?.currentLevelId, playerX);
             if (town) {
                 this.currentTownId = town.id;
                 this.loadTownContent(town);
-                this.handleTownMusic(town);
+                this.handleTownMusic(town, { fromRoom: true });
             } else {
                 this.handleTownMusic(null);
             }
@@ -819,7 +831,7 @@ class TownManager {
         }
     }
 
-    handleRoomMusic(roomDesc = null, stopOnly = false) {
+    handleRoomMusic(roomDesc = null, stopOnly = false, options = {}) {
         const audio = this.getAudioManager();
         if (!audio) return;
         const roomMusicId = 'room_theme';
@@ -827,6 +839,7 @@ class TownManager {
         const roomVolume = roomDesc?.music?.volume ?? 0.8;
         const baseId = this.getBaseMusicId();
         const activeTownId = this.activeTownMusicId;
+        const resumeBase = options.resumeBase !== false;
 
         if (stopOnly || !roomDesc) {
             audio.music?.[roomMusicId]?.pause?.();
@@ -834,7 +847,7 @@ class TownManager {
                 audio.music[activeTownId].pause();
                 audio.setTrackVolume?.(activeTownId, this.getTownMusicVolume({}));
             }
-            if (baseId && audio.music?.[baseId]) {
+            if (resumeBase && baseId && audio.music?.[baseId]) {
                 audio.setTrackVolume?.(baseId, this.getBaseMusicVolume());
                 audio.playMusic?.(baseId, this.getBaseMusicVolume(), { allowParallel: true, restartIfPlaying: false });
             }
