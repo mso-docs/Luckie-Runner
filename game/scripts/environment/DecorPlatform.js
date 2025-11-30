@@ -8,6 +8,7 @@ class DecorPlatform extends Entity {
         const width = config.width ?? 120;
         const height = config.height ?? 32;
         super(x ?? 0, y ?? 0, width, height);
+        this.type = config.type || 'decor_platform';
 
         // Collision
         this.solid = true;

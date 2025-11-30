@@ -1466,7 +1466,10 @@ class TownManager {
             const collider = factory.create(colliderDef);
             if (collider) {
                 collider.game = g;
+                collider.type = 'decor_platform';
                 collider.invisible = true;
+                collider.hidden = true;
+                collider.render = false;
                 g.platforms.push(collider);
                 this.activeTownColliders.push(collider);
             }
