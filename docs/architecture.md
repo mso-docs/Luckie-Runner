@@ -7,6 +7,7 @@ This document summarizes the current world-building architecture (levels, towns,
 - **Town**: A themed segment inside a level. Managed by `TownManager`; attaches decor, buildings (with interior doors), and town NPCs to the active level without replacing it.
 - **Room**: A fully isolated interior container (e.g., building interiors). Managed by `RoomManager`; swaps world state, provides its own background, solid bounds/floor, and entities. Uses the HUD and physics but shares nothing else with the level.
 - **Active World**: The game tracks whether the current container is a `level` or `room` (`game.activeWorld.kind`). Rendering and physics respect this flag.
+- **Scenes/State**: SceneManager swaps high-level modes (`menu`, `play`, `pause`, `battle`, `cutscene`); GameStateManager mirrors the logical state and gates which subsystem ticks. Battle/cutscene scenes are modal and restore the prior scene when finished.
 - **EntityFactory**: Central factory that builds entities from plain data objects using a `type` key (platforms, enemies, items, NPCs, projectiles, signs, etc.). Extend it to add new types without changing world builders.
 - **UI/Overlays**: DOM-based overlays for HUD, inventory, chest, shop, menus, dialogue. Can be edited via HTML/CSS and wired in `UIManager`.
 - **Services**: Save/load (`ProgressManager`/`SaveService`), reset (`ResetService`), audio (`AudioController`/`AudioManager`), persistence, and event bus.
@@ -24,6 +25,8 @@ This document summarizes the current world-building architecture (levels, towns,
 - `game/scripts/levels/*` - level definitions (overworld-style).
 - `game/scripts/ui/*` - UI managers, overlays (inventory, shop, chest, dialogue, menus).
 - `game/scripts/core/EntityFactory.js` - creates entities (platforms, enemies, items, NPCs, projectiles) from data `type` keys.
+- `game/scripts/core/SceneManager.js` / `game/scripts/core/GameStateManager.js` - scene/state orchestration (menu/play/pause/battle/cutscene).
+- `game/scripts/core/scene/BattleScene.js`, `game/scripts/core/scene/CutsceneScene.js`, `game/scripts/battle/BattleManager.js`, `game/scripts/cutscene/CutscenePlayer.js` - modal battle/cutscene flows.
 - `game/scripts/player/*` - player logic and animations.
 - `game/scripts/enemies/*` - enemy types; register in EntityFactory to spawn from level/room data.
 - `game/scripts/items/*` - item classes; register in EntityFactory to drop/place or sell in shops.

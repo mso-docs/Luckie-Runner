@@ -11,7 +11,7 @@ This document outlines how to recreate the current game architecture from scratc
 3) **Entity system:** A base `Entity` class (position, size, update/render hooks) and an `EntityFactory` to create instances from data.
 4) **World containers:** Level (overworld) and Room (interior) structures, each with their own entity lists and backgrounds.
 5) **Builders:** WorldBuilder (levels), RoomWorldBuilder (rooms) to construct worlds from data.
-6) **Managers:** TownManager (town regions/doors), RoomManager (enter/exit rooms), UIManager (HUD/overlays), DialogueManager (speech), AudioManager (music/SFX).
+6) **Managers:** TownManager (town regions/doors), RoomManager (enter/exit rooms), UIManager (HUD/overlays), DialogueManager (speech), AudioManager (music/SFX), SceneManager/GameStateManager (menu/play/pause/battle/cutscene flow).
 7) **Renderer:** Draw backgrounds, platforms, and entities based on the active world; draw UI via HTML/CSS or canvas overlays.
 8) **Collision/Physics:** Basic AABB collision (player/platforms, projectiles/targets, items/pickups).
 9) **UI overlays:** HUD (health/coins/rocks/buffs), inventory/chest/shop, speech bubbles, menus.
@@ -85,7 +85,7 @@ See `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/tow
 2) Add an entity base and renderer; draw a sprite.
 3) Add collision/physics; stand on a platform.
 4) Implement an entity factory; spawn from data.
-5) Add scene management (level/room swap), camera, and parallax backgrounds.
+5) Add scene management (level/room/battle/cutscene swap), camera, and parallax backgrounds.
 6) Layer in UI for HUD/dialogue; add an audio module.
 7) Add managers for towns/interiors if needed (region triggers, doors).
 8) Add save/load and debug overlays.
@@ -99,5 +99,5 @@ See `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/tow
 
 ---
 ## References
-- Current browser implementation docs: `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/debugging.md`.
+- Current browser implementation docs: `docs/game-system-overview.md`, `docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/debugging.md`, plus scene/battle/cutscene details in `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`.
 - For porting: map each system to engine equivalents (prefabs/scenes/UI/audio/input/physics) and keep data-driven spawning.***

@@ -67,6 +67,9 @@ class Game {
             theme: this.currentTheme || this.config?.theme || 'beach',
             bounds: { width: this.level.width, height: this.level.height }
         };
+        this.sceneReturnInfo = null;
+        this.pendingBattleDef = null;
+        this.pendingCutsceneScript = null;
         
         // Background layers for parallax
         this.backgroundLayers = [];
@@ -111,6 +114,8 @@ class Game {
             ? RoomManager
             : (typeof window !== 'undefined' ? window.RoomManager : null);
         this.roomManager = RoomManagerCtor ? new RoomManagerCtor(this) : null;
+        this.battleManager = new BattleManager(this);
+        this.cutscenePlayer = new CutscenePlayer(this);
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -159,6 +164,7 @@ class Game {
         }
         this.renderer = new Renderer(this, this.services);
         this.sceneContext = {
+            game: this,
             stateManager: this.stateManager,
             audio: this.services.audio,
             services: this.services,
@@ -174,7 +180,15 @@ class Game {
             render: () => this.render(),
             setRunning: (val) => { this.running = val; },
             getGameTime: () => this.gameTime,
-            ensureTitleMusicPlaying: () => this.ensureTitleMusicPlaying()
+            ensureTitleMusicPlaying: () => this.ensureTitleMusicPlaying(),
+            battleManager: this.battleManager,
+            cutscenePlayer: this.cutscenePlayer,
+            startBattle: (def) => this.startBattle(def),
+            finishBattle: (result) => this.finishBattle(result),
+            startCutscene: (script) => this.startCutscene(script),
+            finishCutscene: () => this.finishCutscene(),
+            resumePreviousScene: () => this.resumePreviousScene?.(),
+            getRenderService: () => this.getRenderService()
         };
         this.sceneManager = new SceneManager(this, this.sceneContext);
         
@@ -285,6 +299,8 @@ class Game {
             this.sceneManager.register('menu', new MenuScene());
             this.sceneManager.register('play', new PlayScene());
             this.sceneManager.register('pause', new PauseScene());
+            this.sceneManager.register('battle', new BattleScene());
+            this.sceneManager.register('cutscene', new CutsceneScene());
             this.sceneManager.change('menu');
         } else {
             this.stateManager.showMenu('startMenu');
@@ -352,6 +368,42 @@ class Game {
                 });
             }
         }
+    }
+
+    /**
+     * Capture scene/music/state so we can restore after battle or cutscene.
+     */
+    captureSceneReturnInfo() {
+        const audio = this.getAudio();
+        this.sceneReturnInfo = {
+            scene: this.sceneManager?.currentName || 'play',
+            state: this.stateManager?.getState?.() || this.stateManager?.states?.PLAYING || 'playing',
+            musicId: this.currentLevelMusicId,
+            musicVolume: this.currentLevelMusicVolume,
+            audioVolume: audio?.getMusicVolume ? audio.getMusicVolume() : (audio?.musicVolume ?? 1)
+        };
+    }
+
+    /**
+     * Restore scene/music/state captured before a modal scene.
+     */
+    resumePreviousScene() {
+        const info = this.sceneReturnInfo || {};
+        const audio = this.getAudio();
+        if (info.musicId && audio?.playMusic) {
+            audio.playMusic(info.musicId, info.musicVolume ?? info.audioVolume ?? 0.8);
+        }
+        if (info.scene) {
+            this.sceneManager?.change(info.scene);
+        }
+        if (info.state) {
+            this.stateManager?.setState(info.state);
+        } else {
+            this.stateManager?.setState(this.stateManager?.states?.PLAYING || 'playing');
+        }
+        this.running = true;
+        this.startLoop();
+        this.sceneReturnInfo = null;
     }
     
     /**
@@ -762,6 +814,61 @@ class Game {
     }
 
     /**
+     * Start a battle scene using a provided battle definition.
+     */
+    startBattle(battleDef = {}) {
+        this.captureSceneReturnInfo();
+        this.pendingBattleDef = battleDef;
+        this.battleManager.queue(battleDef);
+        this.battleManager.onComplete = (result) => this.finishBattle(result);
+        this.stateManager.setState(this.stateManager.states.BATTLE);
+        const audio = this.getAudio();
+        if (battleDef?.music?.id && audio?.playMusic) {
+            audio.playMusic(battleDef.music.id, battleDef.music.volume ?? 0.9);
+        } else if (audio?.stopAllMusic) {
+            audio.stopAllMusic();
+        }
+        this.sceneManager?.change('battle');
+        this.running = true;
+        this.startLoop();
+    }
+
+    /**
+     * Finish the active battle and return to the prior scene.
+     */
+    finishBattle(result = {}) {
+        if (result && !result.outcome) {
+            result.outcome = 'win';
+        }
+        this.pendingBattleDef = null;
+        this.battleManager.state = 'resolved';
+        this.resumePreviousScene();
+    }
+
+    /**
+     * Start a cutscene by queueing its script and switching scene.
+     */
+    startCutscene(script = null) {
+        this.captureSceneReturnInfo();
+        this.pendingCutsceneScript = script;
+        this.cutscenePlayer.queue(script);
+        this.cutscenePlayer.onComplete = () => this.finishCutscene();
+        this.stateManager.setState(this.stateManager.states.CUTSCENE);
+        this.sceneManager?.change('cutscene');
+        this.running = true;
+        this.startLoop();
+    }
+
+    /**
+     * Finish the active cutscene and restore the prior scene.
+     */
+    finishCutscene() {
+        this.pendingCutsceneScript = null;
+        this.cutscenePlayer.isRunning = false;
+        this.resumePreviousScene();
+    }
+
+    /**
      * Retrieve the live entity collections for the active world container.
      */
     getActiveEntities() {
@@ -1002,10 +1109,16 @@ class Game {
         this.deltaTime = deltaTime;
         this.gameTime = info.gameTime ?? (this.gameTime + deltaTime);
         this.frameCount = info.frame ?? (this.frameCount + 1);
-        
+
         if (this.stateManager.isPlaying()) {
             this.update(this.deltaTime);
             this.render();
+        } else if (this.stateManager.isBattle()) {
+            this.battleManager?.update(this.deltaTime, this.input);
+            this.battleManager?.render(this.getRenderService());
+        } else if (this.stateManager.isCutscene()) {
+            this.cutscenePlayer?.update(this.deltaTime, this.input);
+            this.cutscenePlayer?.render(this.getRenderService());
         }
     }
 

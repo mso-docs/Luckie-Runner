@@ -4,24 +4,25 @@ This document explains how the game is structured, which files/classes are essen
 
 ---
 ## Big Picture
-- **Game loop:** Repeats every frame → read input → update world/entities → render scene/UI → play sounds.
-- **Active world:** The game can be in a **level** (overworld) or **room** (interior). `game.activeWorld.kind` is `'level'` or `'room'`. Physics/rendering respect this flag.
+- **Game loop:** Repeats every frame: read input -> update world/entities -> render scene/UI -> play sounds.
+- **Scene system:** SceneManager swaps modes (`menu`, `play`, `pause`, `battle`, `cutscene`). GameStateManager mirrors logical state so the loop can route to play vs battle vs cutscene subsystems.
+- **Active world:** The world container is a **level** (overworld) or **room** (interior). `game.activeWorld.kind` is `'level'` or `'room'`. Battle/cutscene scenes temporarily replace overworld updates/rendering and then restore.
 - **Data-first design:** Levels, rooms, towns, entities are mostly plain objects, consumed by builders/managers.
-- **Factories/Managers:** EntityFactory creates entities from `{ type: '...' }` data. World/Room/Town managers build or swap worlds and handle flow.
+- **Factories/Managers:** EntityFactory creates entities from `{ type: '...' }` data. World/Room/Town managers build or swap worlds and handle flow. BattleManager runs battles; CutscenePlayer runs scripted sequences; both return to the prior scene cleanly.
 - **UI:** DOM-based overlays (HUD, inventory, shop, dialogue, menus) are updated by UIManager and related classes.
-- **Audio:** AudioManager/AudioController handle music/SFX with master/music/sfx volumes.
-
+- **Audio:** AudioManager/AudioController handle music/SFX with master/music/sfx volumes; modal scenes duck/stop and restore.
 ---
 ## Essential Files and Classes (by area)
 
 ### Core Loop and State
-- `game/scripts/Game.js` — Main class; owns the loop, player, entities, managers, services.
-- `game/scripts/core/GameSystems.js` — Per-frame system orchestration (update logic).
-- `game/scripts/core/GameLoop.js` — Timing for the game loop.
-- `game/scripts/core/CollisionSystem.js` — Physics/collision checks.
-- `game/scripts/core/SceneRenderer.js` — Rendering for backgrounds/entities depending on active world.
-- `game/scripts/core/GameStateManager.js` — Handles states (menu, playing, paused, game over).
-- `game/scripts/core/Renderer.js` — High-level render integration (delegates to SceneRenderer/UI).
+- `game/scripts/Game.js` - Main class; owns the loop, player, entities, managers, services; routes to play/battle/cutscene logic based on GameStateManager.
+- `game/scripts/core/GameSystems.js` - Per-frame system orchestration (update logic) for the play scene.
+- `game/scripts/core/GameLoop.js` - Timing for the game loop.
+- `game/scripts/core/CollisionSystem.js` - Physics/collision checks.
+- `game/scripts/core/SceneRenderer.js` - Rendering for backgrounds/entities depending on active world.
+- `game/scripts/core/Renderer.js` - High-level render integration (delegates to SceneRenderer/UI).
+- Scenes/state: `game/scripts/core/SceneManager.js` (register/change scenes) and `game/scripts/core/GameStateManager.js` (states: menu, playing, paused, battle, cutscene, gameOver, victory).
+- Modal scenes: `game/scripts/core/scene/BattleScene.js`, `game/scripts/core/scene/CutsceneScene.js` with logic in `game/scripts/battle/BattleManager.js` and `game/scripts/cutscene/CutscenePlayer.js`. See `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`.
 
 ### World Construction
 - `game/scripts/core/WorldBuilder.js` — Builds levels from LevelDefinitions (platforms, enemies, items, background layers).
@@ -50,6 +51,7 @@ This document explains how the game is structured, which files/classes are essen
 
 ---
 ## Game Loop (Step-by-Step)
+- State routing: if `GameStateManager` reports `battle`, `BattleManager.update/render` runs; if `cutscene`, `CutscenePlayer.update/render` runs; otherwise the play loop below runs.
 1) **Input:** InputManager reads keyboard/mouse; UIInputController captures UI keys.
 2) **Update:** GameSystems updates:
    - Player movement/physics and animations.
@@ -246,4 +248,9 @@ This document explains how the game is structured, which files/classes are essen
   Object.keys(window.RoomDescriptors || {});
   ```
 
-With these foundations and the linked docs (`docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/debugging.md`), you can build and extend the game confidently from scratch. ***
+With these foundations and the linked docs (`docs/levels.md`, `docs/rooms.md`, `docs/towns.md`, `docs/entities.md`, `docs/ui.md`, `docs/audio.md`, `docs/dialogue.md`, `docs/scenes.md`, `docs/battles.md`, `docs/cutscenes.md`, `docs/debugging.md`), you can build and extend the game confidently from scratch. ***
+
+
+
+
+

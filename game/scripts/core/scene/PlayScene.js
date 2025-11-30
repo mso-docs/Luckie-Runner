@@ -5,6 +5,17 @@ class PlayScene {
 
     enter() {
         const audio = this.ctx?.audio || this.ctx?.services?.audio;
+        const hasWorld = !!(this.ctx?.game?.player || this.ctx?.player);
+        if (hasWorld) {
+            // Resume without rebuilding the world (pause/battle/cutscene return).
+            this.ctx.setRunning?.(true);
+            this.ctx.stateManager?.setState?.(this.ctx.stateManager?.states?.PLAYING || 'playing');
+            this.ctx.startLoop?.();
+            if (audio && this.ctx.game?.currentLevelMusicId) {
+                audio.playMusic?.(this.ctx.game.currentLevelMusicId, this.ctx.game.currentLevelMusicVolume ?? 0.8);
+            }
+            return;
+        }
         this.ctx.resetAll?.({ resetAudio: true, resetUI: true, resetWorld: true });
         this.ctx.initializeGameSystems?.();
         this.ctx.setRunning?.(true);
