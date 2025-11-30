@@ -48,6 +48,10 @@ class TownPatrolNPC extends Entity {
         this.gravity = 0;
         this.onGround = true;
         this.active = true;
+
+        // Hit reaction
+        this.hitRecoverMs = 0;
+        this.hitRecoverDuration = 220;
     }
 
     setTalking(isTalking) {
@@ -80,8 +84,12 @@ class TownPatrolNPC extends Entity {
 
     update(deltaTime) {
         if (!this.active) return;
+        // Brief pause after hit knockback
+        if (this.hitRecoverMs > 0) {
+            this.hitRecoverMs = Math.max(0, this.hitRecoverMs - deltaTime);
+        }
         // Stop patrol while talking
-        if (!this.isTalking && this.patrol.length > 1) {
+        if (!this.isTalking && this.hitRecoverMs <= 0 && this.patrol.length > 1) {
             if (this.pauseTimer > 0) {
                 this.pauseTimer = Math.max(0, this.pauseTimer - deltaTime);
             } else {
@@ -102,6 +110,24 @@ class TownPatrolNPC extends Entity {
 
         // Advance animation frames
         this.updateAnimation(deltaTime);
+    }
+
+    /**
+     * Reaction when hit by a projectile (no damage).
+     */
+    onProjectileHit(projectile) {
+        const audio = this.game?.services?.audio || this.game?.audioManager;
+        audio?.playSound?.('ow', 0.85);
+
+        const knockDir = projectile?.x < this.x ? 1 : -1;
+        this.x += knockDir * 14;
+        this.hitRecoverMs = this.hitRecoverDuration;
+        this.pauseTimer = Math.max(this.pauseTimer, this.hitRecoverDuration);
+
+        // Small tilt/flash feedback
+        this.tileAnimationFrames = this.walkFrames;
+        this.tileAnimationIndex = this.idleFrame;
+        this.tileAnimationTime = 0;
     }
 }
 

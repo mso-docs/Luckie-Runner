@@ -245,6 +245,25 @@ class CollisionSystem {
                 hazard.checkProjectileCollision(projectile);
             }
         });
+
+        // NPC collisions for player-owned projectiles
+        if (projectile.ownerType === 'player' && Array.isArray(g.npcs)) {
+            g.npcs.forEach(npc => {
+                if (!npc || npc.solid === false) return;
+                if (!CollisionDetection.entityCollision(projectile, npc)) return;
+                if (!projectile.canHit(npc)) return;
+
+                // Trigger NPC reaction
+                if (typeof npc.onProjectileHit === 'function') {
+                    npc.onProjectileHit(projectile);
+                } else {
+                    const knockDir = projectile.x < npc.x ? 1 : -1;
+                    npc.x += knockDir * 12;
+                }
+
+                projectile.hitTarget(npc);
+            });
+        }
     }
 
     /**
