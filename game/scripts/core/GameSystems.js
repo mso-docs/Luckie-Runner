@@ -13,6 +13,7 @@ class GameSystems {
      */
     update(deltaTime) {
         const g = this.game;
+        const entities = g.getActiveEntities();
 
         // Input and UI gate
         const input = g.services?.input || g.input;
@@ -21,14 +22,20 @@ class GameSystems {
         if (g.uiManager?.isOverlayBlocking()) return;
 
         // NPCs
-        g.npcs.forEach(npc => npc?.update?.(deltaTime));
+        (entities.npcs || []).forEach(npc => {
+            if (!npc) return;
+            this.applyNpcKnockback(npc, deltaTime);
+            npc.update?.(deltaTime);
+        });
 
         // Player
         if (g.player) {
             g.player.update(deltaTime);
             this.updateCamera();
             g.collisionSystem?.checkPlayerCollisions();
-            g.townManager?.update?.(deltaTime);
+            if (g.activeWorld?.kind !== 'room') {
+                g.townManager?.update?.(deltaTime);
+            }
         }
 
         // Small palms
@@ -40,7 +47,7 @@ class GameSystems {
         g.uiManager?.updateFrame(deltaTime);
 
         // Background layers
-        g.backgroundLayers.forEach(layer => {
+        (entities.backgroundLayers || []).forEach(layer => {
             if (layer instanceof Background || layer instanceof ProceduralBackground) {
                 layer.update(g.camera.x, deltaTime);
             }
@@ -50,46 +57,50 @@ class GameSystems {
         const render = g.getRenderService();
         g.palmTreeManager.update(g.camera.x, render.width());
 
+        const isRoom = g.activeWorld?.kind === 'room';
+
         // Enemies
-        g.enemies = g.enemies.filter(enemy => {
-            if (enemy.active) {
-                enemy.update(deltaTime);
-                g.collisionSystem?.updateEnemyPhysics(enemy);
-                return true;
+        g.enemies = (entities.enemies || []).filter(enemy => {
+            if (!enemy || !enemy.active) {
+                this.handleEnemyRemoved(enemy);
+                return false;
             }
-            this.handleEnemyRemoved(enemy);
-            return false;
+            enemy.update(deltaTime);
+            g.collisionSystem?.updateEnemyPhysics(enemy);
+            return true;
         });
+        entities.enemies = g.enemies;
 
         // Items
-        g.items = g.items.filter(item => {
-            if (item.active) {
-                item.update(deltaTime);
+        g.items = (entities.items || []).filter(item => {
+            if (!item || !item.active) return false;
+            item.update(deltaTime);
+            if (!isRoom) {
                 g.collisionSystem?.updateItemPhysics(item, deltaTime);
                 g.collisionSystem?.handleItemCollection(item);
-                return item.active !== false;
             }
-            return false;
+            return item.active !== false;
         });
+        entities.items = g.items;
 
         // Projectiles
-        g.projectiles = g.projectiles.filter(projectile => {
-            if (projectile.active) {
-                projectile.update(deltaTime);
+        g.projectiles = (entities.projectiles || []).filter(projectile => {
+            if (!projectile || !projectile.active) return false;
+            projectile.update(deltaTime);
+            if (!isRoom) {
                 g.collisionSystem?.updateProjectilePhysics(projectile);
-                return true;
             }
-            return false;
+            return true;
         });
+        entities.projectiles = g.projectiles;
 
         // Hazards
-        g.hazards = g.hazards.filter(hazard => {
-            if (hazard.active) {
-                hazard.update(deltaTime);
-                return true;
-            }
-            return false;
+        g.hazards = (entities.hazards || []).filter(hazard => {
+            if (!hazard || !hazard.active) return false;
+            hazard.update(deltaTime);
+            return true;
         });
+        entities.hazards = g.hazards;
         g.collisionSystem?.updateHazardCollisions();
 
         // Flag
@@ -104,6 +115,31 @@ class GameSystems {
 
         // Game over checks
         this.checkGameOver();
+    }
+
+    applyNpcKnockback(npc, deltaTime) {
+        const dt = deltaTime / 1000;
+        const isPatroller = Array.isArray(npc.patrol) && npc.patrol.length > 1;
+
+        if (npc.knockbackRecoverMs && npc.knockbackRecoverMs > 0) {
+            npc.knockbackRecoverMs = Math.max(0, npc.knockbackRecoverMs - deltaTime);
+        }
+
+        if (npc.knockbackVelocityX) {
+            npc.x += npc.knockbackVelocityX * dt;
+            npc.knockbackVelocityX *= 0.7;
+            if (Math.abs(npc.knockbackVelocityX) < 1) {
+                npc.knockbackVelocityX = 0;
+            }
+        }
+
+        // Return-to-home drift only for non-patrolling NPCs
+        if (!isPatroller && typeof npc.homeX === 'number' && !npc.knockbackVelocityX) {
+            const diff = npc.homeX - npc.x;
+            if (Math.abs(diff) > 0.5) {
+                npc.x += diff * Math.min(1, dt * 3);
+            }
+        }
     }
 
     updateCamera() {

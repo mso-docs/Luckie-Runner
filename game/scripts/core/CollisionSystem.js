@@ -245,6 +245,38 @@ class CollisionSystem {
                 hazard.checkProjectileCollision(projectile);
             }
         });
+
+        // NPC collisions for player-owned projectiles
+        if (projectile.ownerType === 'player' && Array.isArray(g.npcs)) {
+            g.npcs.forEach(npc => {
+                if (!npc || npc.active === false) return;
+                if (!CollisionDetection.entityCollision(projectile, npc)) return;
+                if (!projectile.canHit(npc)) return;
+
+                this.handleNpcProjectileHit(npc, projectile);
+                projectile.hitTarget(npc);
+            });
+        }
+    }
+
+    handleNpcProjectileHit(npc, projectile) {
+        const audio = this.game?.services?.audio?.managerRef || this.game?.audioManager;
+        audio?.playSound?.('ow', 0.95);
+
+        if (typeof npc.onProjectileHit === 'function') {
+            npc.onProjectileHit(projectile);
+            return;
+        }
+
+        const knockDir = projectile?.x < npc.x ? 1 : -1;
+        npc.homeX = (typeof npc.homeX === 'number') ? npc.homeX : npc.x;
+        const horizontal = 820;
+        const vertical = -420;
+        npc.knockbackVelocityX = knockDir * horizontal;
+        npc.velocity = npc.velocity || { x: 0, y: 0 };
+        npc.velocity.y = Math.min(npc.velocity.y || 0, vertical);
+        npc.knockbackRecoverMs = Math.max(npc.knockbackRecoverMs || 0, 450);
+        npc.onGround = false;
     }
 
     /**
