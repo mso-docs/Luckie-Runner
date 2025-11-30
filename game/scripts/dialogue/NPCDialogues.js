@@ -15,5 +15,10 @@ window.NPCDialogues = {
     ],
     'sign.postParkour': [
         'Thanks for checking out the balloon parkour!'
-    ]
+    ],
+    'npc.melissa': [
+        'Welcome to Beachside! It\'s a %lovely% place to relax by the sea.',
+        'If you need any help or directions, #just# let me know!',
+        `Also, don\'t miss the %fountain% in the town square—it\'s a popular spot for visitors.`
+    ]   
 };

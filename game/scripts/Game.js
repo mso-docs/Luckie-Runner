@@ -732,7 +732,11 @@ class Game {
      */
     createLevel(levelId = null) {
         const target = levelId || this.progress?.consumePendingLevelId?.(this.currentLevelId || 'testRoom') || this.currentLevelId || 'testRoom';
-        return this.worldBuilder?.createLevel(target);
+        const result = this.worldBuilder?.createLevel(target);
+        // Re-warm town content after world rebuilds (platforms/ground must exist for alignment)
+        this.townManager?.warmLevelTownCache?.();
+        this.townManager?.warmFirstTownContent?.(true);
+        return result;
     }
 
     /**

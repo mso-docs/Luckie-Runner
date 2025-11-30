@@ -6,6 +6,7 @@ class TownManager {
     constructor(game, config = {}) {
         this.game = game;
         this.towns = (config && config.towns) ? [...config.towns] : [];
+        this.preloadDistance = config.preloadDistance ?? null;
         this.currentTownId = null;
         this.lastBannerAt = 0;
         this.activeTownMusicId = null;
@@ -15,8 +16,10 @@ class TownManager {
         this.activeContent = { buildings: [], setpieces: [] };
         this.doorAutoCloseMs = 2200;
         this.townNpcs = [];
+        this.loadedTownId = null;
         this.preloadedTownId = null;
         this.pendingTownToLoad = null;
+        this.initialWarmDone = false;
 
         this.spriteCache = {};
         this.spriteDecodePromises = {};
@@ -26,6 +29,7 @@ class TownManager {
 
         this.preloadTownSprites();
         this.preloadTownMusic();
+        this.warmFirstTownContent();
     }
 
     /**
@@ -35,6 +39,8 @@ class TownManager {
         const g = this.game;
         const p = g.player;
         if (!p || !g.level) return;
+
+        this.ensureUpcomingTownPrepared();
 
         const town = this.getTownForPosition(g.currentLevelId, p.x);
         const townId = town?.id || null;
@@ -63,9 +69,12 @@ class TownManager {
     loadTownContent(town) {
         this.resetTownContent();
         if (!town) return;
-        const buildings = Array.isArray(town.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
-        const setpieces = Array.isArray(town.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
-        const npcs = Array.isArray(town.npcs) ? town.npcs.map(def => this.createNpc(def)) : [];
+        this.loadedTownId = town?.id || null;
+        this.preloadedTownId = this.loadedTownId;
+        const blueprint = this.getTownBlueprint(town);
+        const buildings = blueprint.buildings.map(b => this.clonePlain(b));
+        const setpieces = blueprint.setpieces.map(s => this.clonePlain(s));
+        const npcs = blueprint.npcDefs.map(def => this.createNpc(def));
         this.activeContent = { buildings, setpieces };
         this.townNpcs = npcs;
 
@@ -101,10 +110,61 @@ class TownManager {
         this.spawnTownNpcs();
     }
 
+    /**
+     * Preload first town content as soon as sprites finish decoding to avoid first-entry pop-in.
+     */
+    warmFirstTownContent(force = false) {
+        if (!Array.isArray(this.towns) || !this.towns.length) return;
+        const currentLevel = this.game?.currentLevelId;
+        const firstTown = this.towns.find(t => !t.levelId || t.levelId === currentLevel) || this.towns[0];
+        if (!firstTown) return;
+        if (!force && this.initialWarmDone && this.loadedTownId === firstTown.id) return;
+        const load = () => {
+            this.loadTownContent(firstTown);
+            this.initialWarmDone = true;
+        };
+        if (this.spritePreloadPromise) {
+            this.spritePreloadPromise.then(load).catch(load);
+        } else {
+            load();
+        }
+    }
+
     resetTownContent() {
         this.activeContent = { buildings: [], setpieces: [] };
         this.game.townDecor = [];
         this.removeTownNpcs();
+        this.loadedTownId = null;
+    }
+
+    getTownBlueprint(town) {
+        const id = town?.id || '__unknown';
+        if (!this.townCache[id]) {
+            this.townCache[id] = this.buildTownBlueprint(town);
+        }
+        return this.townCache[id];
+    }
+
+    buildTownBlueprint(town) {
+        const buildings = Array.isArray(town?.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
+        const setpieces = Array.isArray(town?.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
+        const npcDefs = Array.isArray(town?.npcs) ? town.npcs.map(def => this.clonePlain(def)) : [];
+        // Prime renderables offscreen to reduce pop-in
+        const renderables = [...buildings.map(b => this.buildDecorRenderable({
+            x: b.exterior?.x ?? 0,
+            y: b.exterior?.y ?? 0,
+            width: b.displayWidth ?? b.exterior?.displayWidth ?? b.exterior?.width ?? b.width ?? b.frameWidth,
+            height: b.displayHeight ?? b.exterior?.displayHeight ?? b.exterior?.height ?? b.height ?? b.frameHeight,
+            sprite: b.sprite || b.exterior?.sprite,
+            frames: b.frames,
+            frameHeight: b.frameHeight,
+            frameWidth: b.frameWidth,
+            frameDirection: b.frameDirection,
+            frameIndexRef: b,
+            layer: b.exterior?.layer || 'foreground'
+        })), ...setpieces.map(sp => this.buildDecorRenderable(sp))].filter(Boolean);
+        renderables.forEach(r => this.primeRenderable(r));
+        return { buildings, setpieces, npcDefs };
     }
 
     createBuilding(def = {}) {
@@ -230,6 +290,56 @@ class TownManager {
     getTownForPosition(levelId, x) {
         if (!Array.isArray(this.towns)) return null;
         return this.towns.find(t => (!t.levelId || t.levelId === levelId) && x >= (t.region?.startX ?? Infinity) && x <= (t.region?.endX ?? -Infinity)) || null;
+    }
+
+    /**
+     * Load upcoming town content before it reaches the viewport to avoid pop-in.
+     */
+    ensureUpcomingTownPrepared() {
+        if (!Array.isArray(this.towns) || !this.towns.length) return;
+        const g = this.game;
+        const camera = g.camera || {};
+        const viewportWidth = camera.viewportWidth || g.canvas?.width || 0;
+        const cameraRight = (camera.x || 0) + viewportWidth;
+        const lookahead = this.getTownPreloadDistance(viewportWidth);
+        const upcoming = this.towns.find(town => {
+            if (town.levelId && town.levelId !== g.currentLevelId) return false;
+            const startX = town.region?.startX ?? Infinity;
+            const endX = town.region?.endX ?? -Infinity;
+            if (cameraRight > endX) return false; // already passed this town
+            if (startX > cameraRight + lookahead) return false; // still too far away
+            if (this.preloadedTownId === town.id) return false; // already loaded
+            if (this.currentTownId && this.currentTownId !== town.id) return false; // don't replace an active town
+            return true;
+        });
+        if (!upcoming) return;
+
+        // If sprites are still decoding, defer until they're ready.
+        if (!this.spritePreloadReady && this.spritePreloadPromise) {
+            this.pendingTownToLoad = this.pendingTownToLoad || upcoming;
+            return;
+        }
+
+        this.loadTownContent(upcoming);
+    }
+
+    getTownPreloadDistance(viewportWidth = 0) {
+        const base = viewportWidth ? viewportWidth * 1.1 : 1200;
+        const minimum = 900;
+        return Math.max(minimum, this.preloadDistance || base);
+    }
+
+    /**
+     * Build and cache renderables for all towns on the current level without changing active decor.
+     */
+    warmLevelTownCache() {
+        if (!Array.isArray(this.towns)) return;
+        const levelId = this.game?.currentLevelId;
+        this.towns
+            .filter(t => !t.levelId || t.levelId === levelId)
+            .forEach(town => {
+                this.townCache[town.id || '__unknown'] = this.buildTownBlueprint(town);
+            });
     }
 
     handleTownEntry(town) {
@@ -540,7 +650,9 @@ class TownManager {
         if (this.spriteCache[path]) return this.spriteCache[path];
         const img = new Image();
         img.decoding = 'async';
-        img.src = path;
+        // Normalize paths with spaces to avoid fetch/load failures
+        const normalizedSrc = encodeURI(path);
+        img.src = normalizedSrc;
         this.spriteCache[path] = img;
         if (typeof img.decode === 'function') {
             this.spriteDecodePromises[path] = img.decode().catch(() => {});
@@ -559,18 +671,36 @@ class TownManager {
                 if (sp?.sprite) paths.add(sp.sprite);
             });
         });
-        // Preload and wait for decode where supported
+        // Preload via Image + fetch(blob) to force network/cache, then decode and prime GPU upload
         const promises = [];
         paths.forEach(p => {
             const img = this.getSprite(p);
             if (img && typeof img.decode === 'function') {
-                const promise = img.decode().catch(() => {});
+                const promise = img.decode().then(() => this.primeSpriteUpload(img)).catch(() => {});
                 this.spriteDecodePromises[p] = promise;
                 promises.push(promise);
             }
+            if (typeof fetch === 'function') {
+                const fetchPromise = fetch(encodeURI(p), { cache: 'force-cache' })
+                    .then(res => res.ok ? res.blob() : null)
+                    .then(blob => {
+                        if (!blob || !img) return null;
+                        const objectUrl = URL.createObjectURL(blob);
+                        img.src = objectUrl;
+                        if (typeof img.decode === 'function') {
+                            const decodePromise = img.decode().then(() => this.primeSpriteUpload(img)).catch(() => {});
+                            this.spriteDecodePromises[p] = decodePromise;
+                            return decodePromise;
+                        }
+                        return null;
+                    })
+                    .catch(() => null);
+                promises.push(fetchPromise);
+            }
         });
-        if (promises.length) {
-            this.spritePreloadPromise = Promise.all(promises)
+        const filtered = promises.filter(Boolean);
+        if (filtered.length) {
+            this.spritePreloadPromise = Promise.all(filtered)
                 .then(() => {
                     this.spritePreloadReady = true;
                     if (!this.preloadedTownId && this.towns?.length) {
@@ -586,6 +716,59 @@ class TownManager {
                 .catch(() => { this.spritePreloadReady = true; });
         } else {
             this.spritePreloadReady = true;
+        }
+    }
+
+    /**
+     * Draw once to a tiny offscreen canvas to force GPU upload and avoid first-draw hitch/pop.
+     */
+    primeSpriteUpload(img) {
+        if (!img || !img.width || !img.height) return;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.min(2, img.width);
+            canvas.height = Math.min(2, img.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    /**
+     * Draw renderable offscreen once to encourage eager upload.
+     */
+    primeRenderable(renderable) {
+        if (!renderable || typeof renderable.render !== 'function') return;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 4;
+            canvas.height = 4;
+            const ctx = canvas.getContext('2d');
+            renderable.render(ctx, { x: 0, y: 0 });
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    /**
+     * Clone plain data (no functions/cycles). Falls back to the source if cloning fails.
+     */
+    clonePlain(obj) {
+        if (obj === null || obj === undefined) return obj;
+        try {
+            if (typeof structuredClone === 'function') return structuredClone(obj);
+            return JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            return obj;
+        }
+    }
+
+    cloneObject(obj) {
+        try {
+            return typeof structuredClone === 'function' ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            return JSON.parse(JSON.stringify(obj));
         }
     }
 

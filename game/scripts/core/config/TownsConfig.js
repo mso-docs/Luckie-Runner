@@ -2,6 +2,7 @@
  * TownsConfig - data-only definitions for towns and their regions/assets.
  */
 const TownsConfig = {
+    preloadDistance: 3600, // lookahead in px for loading town assets
     towns: [
         {
             id: 'shoreTown',
@@ -84,6 +85,26 @@ const TownsConfig = {
                     patrol: [
                         { x: 8000 },
                         { x: 8800 }
+                    ]
+                },
+                {
+                    id: 'melissa',
+                    type: 'townNpc',
+                    name: 'Melissa',
+                    sprite: 'art/sprites/melissa.png',
+                    width: 57,
+                    height: 75,
+                    frames: 4,
+                    idleFrame: 2,
+                    walkFrames: [3, 4],
+                    talkFrames: [1, 0],
+                    dialogueId: 'npc.melissa',
+                    speed: 30,
+                    pauseMs: 40,
+                    x: 9000,
+                    patrol: [
+                        { x: 9000 },
+                        { x: 9800 }
                     ]
                 }
             ]
