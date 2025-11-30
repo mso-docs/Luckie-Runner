@@ -10,3 +10,18 @@
 - [x] Move UI strings into `UIConfig`; centralize dialogue formatting in `DialogueManager` and keep speech/NPC/sign dialogue routed through it.
 - [ ] Add more modular render targets (multi-canvas/offscreen) using `RenderTarget` abstraction.
 - [ ] Hook UI/Audio responses to event bus signals for further decoupling.
+- [ ] Make the ability to go into houses (most buildings have 2 frames-- door open and door closed).
+- [ ] Allow players to press Enter in front of a house to open the door and go inside
+- [ ] Players can go into a room, which is a separate scene constrained to the size of an image
+- [ ] Rooms feature an NPC or items, like a chest. Some can even have platforming challenges!
+- [ ] Player can exit the room by clicking enter
+- [ ] Town objects/lamps/etc have invisible platforms on them/collisions, like NPCs, entities
+- [ ] Towns at minimum, always spawn with a shop and 2-3 houses. I also want to have custom houses in some towns
+- [ ] I want complete documentation of how to build a town and level using the modular system we have. I want tech docs on how the game works and what you can do to add more levels, characters, abilities, and more.
+- [ ] I want a complete guide to the UI interface and a guide of next steps for converting the UI interface completely into canvas or a javascript format. 
+- [ ] I want to add the ability to throw objects at NPC characters and they get knockback. I don't want any damage, just an "ow!" sound effect and knockback
+- [ ] I want the player to get the ability to ground pound using the down arrow, squashing their sprite in the process
+- [ ] Set up framework for boss battles or battle screens
+- [ ] Set up documentation for the projectile class, how it works, what it does and how to add new projectiles to the game
+- [ ] Add abilities for the player to pick up
+- [ ] Add a save block for the player to tap and save their game automatically.

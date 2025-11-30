@@ -101,6 +101,10 @@ class Game {
         this.audioController = new AudioController(this, this.services.audio, this.config);
         this.testRoomManager = new TestRoomManager(this);
         this.townManager = new TownManager(this, this.config?.towns || {});
+        const RoomManagerCtor = (typeof RoomManager !== 'undefined')
+            ? RoomManager
+            : (typeof window !== 'undefined' ? window.RoomManager : null);
+        this.roomManager = RoomManagerCtor ? new RoomManagerCtor(this) : null;
 
         // Inventory overlay UI state
         this.inventoryUI = {
@@ -732,7 +736,11 @@ class Game {
      */
     createLevel(levelId = null) {
         const target = levelId || this.progress?.consumePendingLevelId?.(this.currentLevelId || 'testRoom') || this.currentLevelId || 'testRoom';
-        return this.worldBuilder?.createLevel(target);
+        const result = this.worldBuilder?.createLevel(target);
+        // Re-warm town content after world rebuilds (platforms/ground must exist for alignment)
+        this.townManager?.warmLevelTownCache?.();
+        this.townManager?.warmFirstTownContent?.(true);
+        return result;
     }
 
     /**

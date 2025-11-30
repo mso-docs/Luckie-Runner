@@ -80,6 +80,15 @@ class EntityFactory {
         return flag;
     }
 
+    townNpc(def = {}) {
+        const NPCtor = (typeof TownPatrolNPC !== 'undefined')
+            ? TownPatrolNPC
+            : (typeof window !== 'undefined' ? window.TownPatrolNPC : null);
+        if (!NPCtor) return null;
+        const npc = new NPCtor(this.game, def);
+        return npc;
+    }
+
     /**
      * Register a new entity type builder.
      */
@@ -104,6 +113,7 @@ class EntityFactory {
         this.registerType('balloonFan', (def) => this.balloonFan(def.x, def.y, def.dialogueLines || null));
         this.registerType('sign', (def) => this.sign(def.x, def.y, def.spriteSrc, def.dialogueLines || null));
         this.registerType('flag', (def) => this.flag(def.x, def.y));
+        this.registerType('townNpc', (def) => this.townNpc(def));
     }
 
     /**

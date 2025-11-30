@@ -9,7 +9,16 @@ window.NPCDialogues = {
         'You actually made it up here? I promise I will have a real quest soon.',
         'For now, enjoy this breeze and pretend the mountain is much taller.'
     ],
+    'npc.mike': [
+        'Hey there! Enjoying the sea breeze?',
+        'I take a lap through town every day to say hi.'
+    ],
     'sign.postParkour': [
         'Thanks for checking out the balloon parkour!'
-    ]
+    ],
+    'npc.melissa': [
+        'Welcome to Beachside! It\'s a %lovely% place to relax by the sea.',
+        'If you need any help or directions, #just# let me know!',
+        `Also, don\'t miss the %fountain% in the town square—it\'s a popular spot for visitors.`
+    ]   
 };

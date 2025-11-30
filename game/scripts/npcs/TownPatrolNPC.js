@@ -1,0 +1,113 @@
+/**
+ * TownPatrolNPC - modular town NPC with patrol loop and talk animation.
+ */
+class TownPatrolNPC extends Entity {
+    constructor(game, config = {}) {
+        const width = config.width ?? 38;
+        const height = config.height ?? 63;
+        const patrolPath = Array.isArray(config.patrol) && config.patrol.length ? config.patrol : [{ x: config.x ?? 0, y: config.y ?? 0 }];
+        const startX = (config.x !== undefined ? config.x : patrolPath[0]?.x) ?? 0;
+        const startY = config.y ?? patrolPath[0]?.y ?? 0;
+        super(startX, startY, width, height);
+        this.game = game;
+
+        const sprite = config.sprite || 'art/sprites/mike.png';
+        const frames = config.frames ?? 4;
+        this.loadTileSheet(sprite, width, height, [0], 500);
+
+        // Animation sets
+        this.idleFrame = config.idleFrame ?? 2; // first walk frame is idle
+        this.walkFrames = config.walkFrames ?? [2, 3]; // last two = walk cycle
+        this.talkFrames = config.talkFrames ?? [0, 1]; // first two = talk
+        this.tileAnimationFrames = this.walkFrames;
+        this.tileAnimationSpeed = 320;
+
+        // Patrol
+        this.patrol = patrolPath.map(p => ({ x: p.x ?? startX, y: p.y ?? startY }));
+        this.patrolIndex = 0;
+        this.speed = config.speed ?? 40;
+        this.pauseMs = config.pauseMs ?? 30; // brief pause when turning
+        this.pauseTimer = 0;
+        this.isTalking = false;
+
+        this.dialogueId = config.dialogueId || 'npc.default';
+        this.interactRadius = config.interactRadius ?? 110;
+        this.canTalk = true;
+
+        // Keep feet on ground
+        const groundY = this.game?.townManager?.getGroundY();
+        if (groundY !== null && groundY !== undefined) {
+            this.y = groundY - this.height;
+            this.patrol = this.patrol.map(p => ({
+                x: p.x,
+                y: groundY - this.height
+            }));
+        }
+
+        // Disable gravity so patrol stays flat
+        this.gravity = 0;
+        this.onGround = true;
+        this.active = true;
+    }
+
+    setTalking(isTalking) {
+        if (isTalking) {
+            this.isTalking = true;
+            this.tileAnimationFrames = this.talkFrames;
+            this.tileAnimationSpeed = 280;
+            this.tileAnimationIndex = 0;
+            this.tileAnimationTime = 0;
+        } else {
+            this.isTalking = false;
+            this.tileAnimationFrames = this.walkFrames;
+            this.tileAnimationSpeed = 320;
+            this.tileAnimationIndex = 0;
+            this.tileAnimationTime = 0;
+            this.tileIndex = this.idleFrame;
+        }
+    }
+
+    onDialogueClosed() {
+        this.setTalking(false);
+    }
+
+    isPlayerNearby(player, radius) {
+        const r = radius || this.interactRadius;
+        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
+        const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
+        return Math.hypot(dx, dy) <= r;
+    }
+
+    update(deltaTime) {
+        if (!this.active) return;
+        // Stop patrol while talking
+        if (!this.isTalking && this.patrol.length > 1) {
+            if (this.pauseTimer > 0) {
+                this.pauseTimer = Math.max(0, this.pauseTimer - deltaTime);
+            } else {
+                const target = this.patrol[this.patrolIndex];
+                const dir = Math.sign((target.x ?? this.x) - this.x);
+                const move = dir * this.speed * (deltaTime / 1000);
+                const nextX = this.x + move;
+                const reached = (dir >= 0 && nextX >= target.x) || (dir < 0 && nextX <= target.x);
+                this.x = reached ? target.x : nextX;
+                this.flipX = dir < 0;
+
+                if (reached) {
+                    this.patrolIndex = (this.patrolIndex + 1) % this.patrol.length;
+                    this.pauseTimer = this.pauseMs;
+                }
+            }
+        }
+
+        // Advance animation frames
+        this.updateAnimation(deltaTime);
+    }
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = TownPatrolNPC;
+}
+if (typeof window !== 'undefined') {
+    window.TownPatrolNPC = TownPatrolNPC;
+}

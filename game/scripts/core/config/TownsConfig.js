@@ -2,6 +2,7 @@
  * TownsConfig - data-only definitions for towns and their regions/assets.
  */
 const TownsConfig = {
+    preloadDistance: 3600, // lookahead in px for loading town assets
     towns: [
         {
             id: 'shoreTown',
@@ -19,90 +20,123 @@ const TownsConfig = {
             },
             buildings: [
                 {
-                    id: 'boba_shop',
-                    name: 'Beachside Boba',
-                    exterior: {
-                        x: 6700,
-                        y: 360,
-                        width: 320,
-                        height: 230,
-                        sprite: 'art/bg/buildings/exterior/beachside-boba.png'
-                    },
-                    door: {
-                        x: 6835,
-                        y: 420,
-                        width: 54,
-                        height: 78,
-                        interactRadius: 54
-                    },
-                    interiorId: 'boba_shop_interior',
-                    npcs: [
-                        { id: 'barista', name: 'Lani', role: 'Barista', dialogueId: 'shop.boba' }
-                    ]
-                },
-                {
-                    id: 'club_cidic',
-                    name: 'Club Cidic',
-                    exterior: {
-                        x: 7100,
-                        y: 350,
-                        width: 360,
-                        height: 240,
-                        sprite: 'art/bg/buildings/exterior/club-cidic.png'
-                    },
-                    door: {
-                        x: 7260,
-                        y: 420,
-                        width: 60,
-                        height: 82,
-                        interactRadius: 56
-                    },
-                    interiorId: 'club_cidic_interior',
-                    npcs: [
-                        { id: 'dj', name: 'Cid', role: 'Host', dialogueId: 'club.cidic' }
-                    ]
-                },
-                {
                     id: 'shore_house',
-                    name: 'Seashell House',
+                    name: 'House',
                     exterior: {
-                        x: 7600,
-                        y: 370,
-                        width: 280,
-                        height: 210,
+                        x: 8800,
+                        y: 0, // auto aligned to ground
+                        width: 689, // source frame width (display is scaled via scale)
+                        height: 768, // source frame height
+                        frames: 2, // closed + open
+                        frameWidth: 689, // source frame dimensions (do not scale)
+                        frameHeight: 768,
+                        frameDirection: 'horizontal',
+                        scale: 0.4,
+                        autoAlignToGround: true,
                         sprite: 'art/bg/buildings/exterior/house.png'
                     },
                     door: {
-                        x: 7720,
-                        y: 430,
-                        width: 50,
-                        height: 76,
-                        interactRadius: 50
+                        width: 180, // raw door size; scaled by exterior.scale
+                        height: 210,
+                        // Door art rectangle: x=118..298, y=498..708 on the source sprite
+                        spriteOffsetX: 118,
+                        spriteOffsetY: 498,
+                        interactRadius: 160
                     },
-                    interiorId: 'shore_house_interior',
-                    npcs: [
-                        { id: 'resident', name: 'Mara', role: 'Local', dialogueId: 'resident.default' }
-                    ]
+                    interior: {
+                        id: 'shorehouseinterior',
+                        spawn: { x: 200, y: 520 },
+                        exit: { x: 200, y: 560, radius: 80 },
+                        // Inline level definition matching house-inside.png bounds
+                        room: {
+                            width: 1024,
+                            height: 720,
+                            spawn: { x: 200, y: 520 },
+                            exit: { x: 200, y: 560, radius: 80 },
+                            backgroundImage: {
+                                src: 'art/bg/buildings/interior/house-inside.png',
+                                width: 1024,
+                                height: 720
+                            },
+                            platforms: [
+                                { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
+                                { x: 0, y: 0, width: 32, height: 720, type: 'ground' },
+                                { x: 1024 - 32, y: 0, width: 32, height: 720, type: 'ground' },
+                                { x: 0, y: 0, width: 1024, height: 32, type: 'ground' }
+                            ],
+                            enemies: [],
+                            items: [],
+                            npcs: [],
+                            theme: 'interior'
+                        }
+                    },
+                    npcs: []
                 }
             ],
             setpieces: [
-                // Town center fountain with benches
-                { id: 'fountain_center', name: 'Fountain', x: 8200, y: 420, width: 140, height: 140, layer: 'foreground', sprite: 'art/bg/exterior-decor/fountain.png' },
-                { id: 'bench_west', name: 'Bench', x: 8060, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
-                { id: 'bench_east', name: 'Bench', x: 8340, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
+                // Ground tiling across town region (replaces platform texture)
+                { id: 'shore_ground', name: 'Cobble Ground', x: 6500, y: 0, width: 3500, height: 40, frameWidth: 1024, frameHeight: 1024, tileX: true, layer: 'ground', autoAlignToGround: true, scale: 0.04, sprite: 'art/bg/tiles/beach-cobble.png' },
 
-                // Additional benches spread through town
-                { id: 'bench_entry', name: 'Bench', x: 6580, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
-                { id: 'bench_far', name: 'Bench', x: 9600, y: 450, width: 120, height: 64, layer: 'foreground', sprite: 'art/bg/exterior-decor/bench.png' },
+                // Fountain (animated, scales with player)
+                { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, scale: 0.4, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png' },
 
-                // Street lamps for ambience
-                { id: 'lamp_west', name: 'Street Lamp', x: 6500, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_mid_west', name: 'Street Lamp', x: 7000, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_mid_east', name: 'Street Lamp', x: 9000, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' },
-                { id: 'lamp_east', name: 'Street Lamp', x: 9900, y: 360, width: 64, height: 180, layer: 'foreground', sprite: 'art/bg/exterior-decor/street-lamp.png' }
+                // Fixed bench
+                { id: 'bench_center', name: 'Bench', x: 8000, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png' },
+
+                // Three fixed street lamps
+                { id: 'lamp_west', name: 'Street Lamp', x: 6900, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
+                { id: 'lamp_center', name: 'Street Lamp', x: 8200, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' },
+                { id: 'lamp_east', name: 'Street Lamp', x: 9500, y: 0, width: 64, height: 180, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/street-lamp.png' }
+
+                // Town overlay fronds (in front of palms/bushes)
+                ,{ id: 'shore_fronds_start', name: 'Fronds Start', x: 6500, y: 0, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/frond-start.png' }
+                ,{ id: 'shore_fronds_mid', name: 'Fronds Mid', x: 6602, y: 0, width: 35000, frameWidth: 1022, frameHeight: 988, tileX: true, tileWidth: 128, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/fronds.png' }
+                ,{ id: 'shore_fronds_end', name: 'Fronds End', x: 10102, y: 0, frameWidth: 1022, frameHeight: 988, tileX: false, layer: 'midground', autoAlignToGround: true, scale: 0.10, sprite: 'art/bg/town backdrop/frond-end.png' }
             ],
             interiors: []
+            ,
+            npcs: [
+                {
+                    id: 'mike',
+                    type: 'townNpc',
+                    name: 'Mike',
+                    sprite: 'art/sprites/mike.png',
+                    width: 38,
+                    height: 63,
+                    frames: 4,
+                    idleFrame: 2,
+                    walkFrames: [2, 3],
+                    talkFrames: [0, 1],
+                    dialogueId: 'npc.mike',
+                    speed: 40,
+                    pauseMs: 30,
+                    x: 8200,
+                    patrol: [
+                        { x: 8000 },
+                        { x: 8800 }
+                    ]
+                },
+                {
+                    id: 'melissa',
+                    type: 'townNpc',
+                    name: 'Melissa',
+                    sprite: 'art/sprites/melissa.png',
+                    width: 57,
+                    height: 75,
+                    frames: 4,
+                    idleFrame: 2,
+                    walkFrames: [3, 4],
+                    talkFrames: [1, 0],
+                    dialogueId: 'npc.melissa',
+                    speed: 30,
+                    pauseMs: 40,
+                    x: 9000,
+                    patrol: [
+                        { x: 9000 },
+                        { x: 9800 }
+                    ]
+                }
+            ]
         }
     ]
 };
