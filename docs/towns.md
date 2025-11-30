@@ -179,3 +179,52 @@ NPCs that belong to the town region.
 - Decor not visible: Check sprite paths; ensure images load (open DevTools Network tab).
 - Door not interactable: Verify `interactRadius` and player proximity; ensure `door` coordinates are correct (use `debug` mode to see door overlays).
 - Interior loads the wrong room: Double-check `interior.id` and that the correct room is registered before TownManager resolves it.
+
+## Backdrops and Layering (e.g., Palm Fronds)
+You can add backdrops/overlays via `setpieces` in `TownsConfig`. Key fields:
+- `layer`: Controls draw order. Lower numbers are farther back; TownManager sorts with `{ background: 0, backdrop: 0.5, midground: 1, ground: 2, foreground: 3, overlay: 4 }`.
+- `tileX`: Repeat the frame horizontally across `width` if true.
+- `tileWidth`: Step size for tiling (defaults to `frameWidth * scale` if omitted).
+- `autoAlignToGround`: If true, y is auto-set based on ground.
+- `scale`: Scales the sprite frames.
+
+Example (palm fronds backdrop):
+```js
+setpieces: [
+  { id: 'shore_fronds_start', name: 'Fronds Start',
+    x: 6500, y: 0,
+    frameWidth: 1022, frameHeight: 988,
+    tileX: false,
+    layer: 'midground',
+    autoAlignToGround: true,
+    scale: 0.10,
+    sprite: 'art/bg/town backdrop/frond-start.png'
+  },
+  { id: 'shore_fronds_mid', name: 'Fronds Mid',
+    x: 6602, y: 0,
+    width: 35000,
+    frameWidth: 1022, frameHeight: 988,
+    tileX: true, tileWidth: 128,
+    layer: 'midground',
+    autoAlignToGround: true,
+    scale: 0.10,
+    sprite: 'art/bg/town backdrop/fronds.png'
+  },
+  { id: 'shore_fronds_end', name: 'Fronds End',
+    x: 10102, y: 0,
+    frameWidth: 1022, frameHeight: 988,
+    tileX: false,
+    layer: 'midground',
+    autoAlignToGround: true,
+    scale: 0.10,
+    sprite: 'art/bg/town backdrop/frond-end.png'
+  }
+]
+```
+
+Troubleshooting tips (based on fronds experience):
+- **Not visible:** Check sprite paths; verify images load (DevTools Network). Ensure `tileX` and `width` are set if you expect repetition.
+- **Wrong layer order:** Adjust `layer` to `background/backdrop/midground/foreground/overlay`. Fronds typically in `midground` so buildings/characters appear in front.
+- **Misaligned to ground:** Set `autoAlignToGround: true` so y snaps to ground. If still off, adjust `y` manually or tweak `scale`.
+- **Tiling gaps/stretch:** Set `tileWidth` to match your intended repeat step (often equals `frameWidth * scale`); ensure `width` covers your town span.
+- **Performance:** Large tiled spans are fine, but keep images optimized and sizes reasonable.
