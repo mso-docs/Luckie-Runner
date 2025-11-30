@@ -142,9 +142,8 @@ class TownManager {
 
     getTownBlueprint(town) {
         const id = town?.id || '__unknown';
-        if (!this.townCache[id]) {
-            this.townCache[id] = this.buildTownBlueprint(town);
-        }
+        // Always rebuild so config tweaks (door offsets, interiors) take effect immediately
+        this.townCache[id] = this.buildTownBlueprint(town);
         return this.townCache[id];
     }
 
@@ -208,8 +207,14 @@ class TownManager {
         const doorWidth = (def.door?.width ?? def.exterior?.doorWidth ?? 36) * scale;
         const doorHeight = (def.door?.height ?? def.exterior?.doorHeight ?? 48) * scale;
         const exteriorBottom = (exterior?.y ?? 0) + displayHeight;
-        const doorXDefault = (exterior?.x ?? 0) + ((displayWidth - doorWidth) / 2);
-        const doorYDefault = exteriorBottom - doorHeight;
+        const spriteOffsetX = def.door?.spriteOffsetX;
+        const spriteOffsetY = def.door?.spriteOffsetY;
+        const doorXDefault = (spriteOffsetX !== undefined)
+            ? (exterior?.x ?? 0) + (spriteOffsetX * scale)
+            : (exterior?.x ?? 0) + ((displayWidth - doorWidth) / 2);
+        const doorYDefault = (spriteOffsetY !== undefined)
+            ? (exterior?.y ?? 0) + (spriteOffsetY * scale)
+            : exteriorBottom - doorHeight;
         const interactRadiusDefault = (def.door?.interactRadius ?? Math.max(doorWidth, doorHeight) * 0.6);
 
         return {

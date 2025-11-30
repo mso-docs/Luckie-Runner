@@ -20,27 +20,34 @@ const TownsConfig = {
             },
             buildings: [
                 {
-                    id: 'shore_villa',
-                    name: 'Seabreeze Villa',
+                    id: 'shore_house',
+                    name: 'House',
                     exterior: {
                         x: 8800,
                         y: 0, // auto aligned to ground
-                        width: 701, // source frame width (display is scaled via scale)
-                        height: 769, // source frame height
+                        width: 689, // source frame width (display is scaled via scale)
+                        height: 768, // source frame height
                         frames: 2, // closed + open
-                        frameWidth: 701, // source frame dimensions (do not scale)
-                        frameHeight: 769,
+                        frameWidth: 689, // source frame dimensions (do not scale)
+                        frameHeight: 768,
                         frameDirection: 'horizontal',
                         scale: 0.4,
                         autoAlignToGround: true,
                         sprite: 'art/bg/buildings/exterior/house.png'
                     },
                     door: {
-                        width: 120, // raw door size; scaled by exterior.scale
-                        height: 190,
-                        interactRadius: 96
+                        width: 180, // raw door size; scaled by exterior.scale
+                        height: 210,
+                        // Door art rectangle: x=118..298, y=498..708 on the source sprite
+                        spriteOffsetX: 118,
+                        spriteOffsetY: 498,
+                        interactRadius: 160
                     },
-                    interiorId: 'shore_villa_interior',
+                    interior: {
+                        id: 'shore_house_interior',
+                        spawn: { x: 120, y: 400 },
+                        exit: { x: 120, y: 460, radius: 70 }
+                    },
                     npcs: []
                 }
             ],
