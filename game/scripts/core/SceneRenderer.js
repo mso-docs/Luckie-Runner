@@ -14,30 +14,38 @@ class SceneRenderer {
         // Use camera X/Y for world-aligned layers; parallax managers ignore Y internally
         const bgCamera = { x: g.camera?.x || 0, y: g.camera?.y || 0 };
 
-        if (g.testMode) {
+        const isRoom = g.activeWorld?.kind === 'room';
+
+        if (g.testMode && !isRoom) {
             g.renderTestBackground(ctx, canvas);
         } else {
             g.backgroundLayers.forEach(layer => {
-                if (layer instanceof Background || layer instanceof ProceduralBackground) {
+                if (layer?.render) {
                     layer.render(ctx, bgCamera);
                 }
             });
         }
 
-        // Palms (should sit behind fronds/town elements)
-        g.palmTreeManager.render(ctx, bgCamera, g.gameTime);
+        if (!isRoom) {
+            // Palms (should sit behind fronds/town elements)
+            g.palmTreeManager.render(ctx, bgCamera, g.gameTime);
 
-        // Town fronds/backdrop layer (in front of palms/background, behind ground/town elements)
-        g.townDecor.filter(d => d.layer === 'backdrop' || d.layer === 'midground').forEach(decor => decor?.render?.(ctx, g.camera));
+            // Town fronds/backdrop layer (in front of palms/background, behind ground/town elements)
+            g.townDecor.filter(d => d.layer === 'backdrop' || d.layer === 'midground').forEach(decor => decor?.render?.(ctx, g.camera));
+        }
 
         // Platforms (ground/floating)
         g.platforms.forEach(platform => StylizedPlatform.renderPlatform(ctx, platform, g.camera, g));
 
         // Town ground setpieces (e.g., town-specific ground tiles)
-        g.townDecor.filter(d => d.layer === 'ground').forEach(decor => decor?.render?.(ctx, g.camera));
+        if (!isRoom) {
+            g.townDecor.filter(d => d.layer === 'ground').forEach(decor => decor?.render?.(ctx, g.camera));
+        }
 
         // Foreground town elements (buildings, lamps, benches, etc.)
-        g.townDecor.filter(d => d.layer === 'foreground' || d.layer === undefined || d.layer === null).forEach(decor => decor?.render?.(ctx, g.camera));
+        if (!isRoom) {
+            g.townDecor.filter(d => d.layer === 'foreground' || d.layer === undefined || d.layer === null).forEach(decor => decor?.render?.(ctx, g.camera));
+        }
 
         // Signs
         g.signBoards.forEach(sign => sign?.render?.(ctx, g.camera));

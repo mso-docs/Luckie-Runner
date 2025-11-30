@@ -219,6 +219,9 @@ class RoomManager {
             backgroundLayers: (g.backgroundLayers || []).slice(),
             townDecor: (g.townDecor || []).slice(),
             projectiles: (g.projectiles || []).slice(),
+            signBoards: (g.signBoards || []).slice(),
+            signBoard: g.signBoard || null,
+            smallPalms: (g.smallPalms || []).slice(),
             playerPos: returnPosition || { x: g.player?.x || 0, y: g.player?.y || 0 },
             testMode: g.testMode
         };
@@ -241,6 +244,9 @@ class RoomManager {
         g.backgroundLayers = snap.backgroundLayers || [];
         g.townDecor = snap.townDecor || [];
         g.projectiles = snap.projectiles || [];
+        g.signBoards = snap.signBoards || [];
+        g.signBoard = snap.signBoard || null;
+        g.smallPalms = snap.smallPalms || [];
         g.currentTheme = snap.theme || g.currentTheme;
         if (g.player) {
             g.player.x = snap.playerPos?.x || 0;
@@ -268,6 +274,9 @@ class RoomManager {
         g.projectiles = entities.projectiles || [];
         g.townDecor = [];
         g.flag = null;
+        g.signBoards = [];
+        g.signBoard = null;
+        g.smallPalms = [];
         g.backgroundLayers = backgroundLayers || [];
 
         const spawn = descriptor.spawn || { x: 100, y: 400 };

@@ -334,14 +334,20 @@ class TownManager {
         return instance;
     }
 
+    ensureRoomManager() {
+        if (this.roomManager && typeof this.roomManager.enterRoom === 'function') return this.roomManager;
+        this.roomManager = this.resolveRoomManager(this.game);
+        return this.roomManager;
+    }
+
     registerLegacyInteriorsAsRooms() {
         if (typeof window === 'undefined') return;
         window.RoomDescriptors = window.RoomDescriptors || {};
         const defs = window.LevelDefinitions || {};
         Object.entries(defs).forEach(([id, def]) => {
             if (!def) return;
-            // Only convert ones that look like interior/capsule spaces (have width/height/platforms)
-            const isInteriorLike = def.theme === 'interior' || def.backgroundImage || Array.isArray(def.platforms);
+            // Only convert explicit interiors (avoid normal levels like testRoom)
+            const isInteriorLike = def.theme === 'interior' || def.isInterior === true || def.backgroundImage;
             if (!isInteriorLike) return;
             if (window.RoomDescriptors[id]) return;
             const room = this.convertLevelDefinitionToRoom(id, def);
@@ -661,9 +667,10 @@ class TownManager {
         };
 
         this.openBuildingDoor(building);
-        if (roomDesc && this.roomManager) {
-            const room = this.roomManager.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
-            this.roomManager.enterRoom(room, returnPosition);
+        const mgr = this.ensureRoomManager();
+        if (roomDesc && mgr) {
+            const room = mgr.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
+            mgr.enterRoom(room, returnPosition);
         } else {
             this.game?.uiManager?.showSpeechBubble?.('Room system is unavailable.');
         }
