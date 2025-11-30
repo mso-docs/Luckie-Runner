@@ -557,6 +557,11 @@ class StylizedPlatform {
         const screenX = platform.x - camera.x;
         const screenY = platform.y - camera.y;
 
+        // Skip invisible/collision-only or decor platforms
+        if (platform.invisible || platform.hidden === true || platform.render === false || platform.type === 'decor_platform') {
+            return;
+        }
+
         // Only render if on screen
         if (screenX + platform.width >= 0 && screenX <= ctx.canvas.width &&
             screenY + platform.height >= 0 && screenY <= ctx.canvas.height) {

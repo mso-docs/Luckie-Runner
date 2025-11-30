@@ -43,6 +43,8 @@ class TownManager {
         this.doorAutoCloseMs = 2200;
         this.townNpcs = [];
         this.activeTownItems = [];
+        this.activeTownColliders = [];
+        this.activeRoomMusicId = null;
         this.loadedTownId = null;
         this.preloadedTownId = null;
         this.pendingTownToLoad = null;
@@ -574,6 +576,7 @@ class TownManager {
 
         this.game.townDecor = decor;
         this.spawnTownItems(items, town);
+        this.spawnTownColliders([...buildings, ...setpieces]);
         this.spawnTownNpcs();
     }
 
@@ -599,6 +602,7 @@ class TownManager {
 
     resetTownContent() {
         this.removeTownItems();
+        this.removeTownColliders();
         this.activeContent = { buildings: [], setpieces: [], items: [] };
         this.game.townDecor = [];
         this.removeTownNpcs();
@@ -707,7 +711,8 @@ class TownManager {
             interior: def.interior ? this.clonePlain(def.interior) : null,
             npcs: Array.isArray(def.npcs) ? [...def.npcs] : [],
             doorTimer: 0,
-            doorOpen: false
+            doorOpen: false,
+            collider: def.collider ? { ...def.collider } : null
         };
     }
 
@@ -757,7 +762,8 @@ class TownManager {
             frameTimeMs: def.frameTimeMs ?? 120,
             scale,
             tileX: def.tileX || false,
-            tileWidth: def.tileWidth || null
+            tileWidth: def.tileWidth || null,
+            collider: def.collider ? { ...def.collider } : null
         };
     }
 
@@ -1317,7 +1323,7 @@ class TownManager {
     handleRoomMusic(roomDesc = null, stopOnly = false, options = {}) {
         const audio = this.getAudioManager();
         if (!audio) return;
-        const roomMusicId = 'room_theme';
+        const roomMusicId = roomDesc?.music?.id || this.activeRoomMusicId || 'room_theme';
         const roomMusicSrc = roomDesc?.music?.src || 'music/beach-house.mp3';
         const roomVolume = roomDesc?.music?.volume ?? 0.8;
         const baseId = this.getBaseMusicId();
@@ -1325,7 +1331,12 @@ class TownManager {
         const resumeBase = options.resumeBase !== false;
 
         if (stopOnly || !roomDesc) {
-            audio.music?.[roomMusicId]?.pause?.();
+            const stopId = this.activeRoomMusicId || roomMusicId;
+            if (stopId && audio.music?.[stopId]) {
+                audio.music[stopId].pause();
+                audio.setTrackVolume?.(stopId, 0);
+            }
+            this.activeRoomMusicId = null;
             if (activeTownId && audio.music?.[activeTownId]) {
                 audio.music[activeTownId].pause();
                 audio.setTrackVolume?.(activeTownId, this.getTownMusicVolume({}));
@@ -1350,6 +1361,7 @@ class TownManager {
         if (audio.music?.[roomMusicId]) {
             audio.playMusic?.(roomMusicId, roomVolume, { allowParallel: true, restartIfPlaying: true });
             audio.setTrackVolume?.(roomMusicId, roomVolume);
+            this.activeRoomMusicId = roomMusicId;
         }
     }
 
@@ -1422,6 +1434,49 @@ class TownManager {
             }
         });
         this.activeTownItems = spawned;
+    }
+
+    spawnTownColliders(items = []) {
+        const g = this.game;
+        const factory = g?.entityFactory;
+        if (!g || !factory || !Array.isArray(items)) return;
+        this.removeTownColliders();
+
+        items.forEach(item => {
+            if (!item?.collider) return;
+            const baseX = item.exterior?.x ?? item.x ?? 0;
+            const baseY = item.exterior?.y ?? item.y ?? 0;
+            const col = item.collider;
+            const colX = baseX + (col.offsetX ?? 0);
+            const colY = baseY + (col.offsetY ?? 0);
+            const colWidth = col.width ?? item.displayWidth ?? item.width ?? 64;
+            const colHeight = col.height ?? 16;
+            const colliderDef = {
+                type: 'decor_platform',
+                x: colX,
+                y: colY,
+                width: colWidth,
+                height: colHeight,
+                hitboxWidth: col.hitboxWidth,
+                hitboxHeight: col.hitboxHeight,
+                hitboxOffsetX: col.hitboxOffsetX,
+                hitboxOffsetY: col.hitboxOffsetY,
+                sprite: null
+            };
+            const collider = factory.create(colliderDef);
+            if (collider) {
+                collider.game = g;
+                collider.invisible = true;
+                g.platforms.push(collider);
+                this.activeTownColliders.push(collider);
+            }
+        });
+    }
+
+    removeTownColliders() {
+        if (!this.game || !Array.isArray(this.activeTownColliders) || !Array.isArray(this.game.platforms)) return;
+        this.game.platforms = this.game.platforms.filter(p => !this.activeTownColliders.includes(p));
+        this.activeTownColliders = [];
     }
 
     removeTownItems() {
