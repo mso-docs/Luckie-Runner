@@ -107,6 +107,19 @@ When you define entities in level/room data, you typically set:
 - `width`, `height` (numbers): Size.
 - Additional, type-specific fields (e.g., `speed`, `health`, `damage`, `patrol`, `sprite`, `frames`, `frameDirection`).
 
+### New: decor_platform (modular, jumpable decor with optional art)
+Add via data to place invisible or skinned solid platforms (separate from SmallPalm):
+```js
+{ type: 'decor_platform', x: 1200, y: 780, width: 140, height: 32 }
+// With art + custom hitbox
+{ type: 'decor_platform', x: 1800, y: 760, width: 160, height: 50,
+  sprite: 'art/bg/custom-plant.png', frameWidth: 160, frameHeight: 120,
+  hitboxWidth: 160, hitboxHeight: 32, hitboxOffsetX: 0, hitboxOffsetY: 88 }
+```
+- Collision: always solid; you can override hitbox size/offset with `hitboxWidth/height/offsetX/offsetY`.
+- Visuals: optional `sprite`, `frameWidth`, `frameHeight`, `frames`, `frameDirection`; if omitted, a simple filled rectangle shows.
+- Use this for jumpable/invisible pads; keep `SmallPalm` for its special animation/drop behavior.
+
 ## Where Entities Get Created from Data
 - **Levels** (`game/scripts/levels/*.js`): `WorldBuilder` reads `platforms/enemies/items/npcs/...` arrays and calls `entityFactory.create(def)`.
 - **Rooms** (`game/scripts/rooms/*.js`): `RoomWorldBuilder` does the same for room descriptors.
