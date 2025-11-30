@@ -23,7 +23,8 @@ class TownManager {
         this.activeInterior = null;
         this.interiorReturn = null;
         this.interiorConfigMap = this.buildInteriorMap();
-        this.autoEnterDoorsInDebug = true;
+        this.autoEnterDoorsInDebug = true; // allow debug auto-enter when standing in door radius
+        this.roomManager = game?.roomManager || null;
 
         this.spriteCache = {};
         this.spriteDecodePromises = {};
@@ -557,8 +558,13 @@ class TownManager {
         }
 
         const interiorConfig = this.getInteriorConfig(interiorId, building) || {};
-        if (!this.ensureInteriorLevelRegistered(interiorId, interiorConfig)) {
-            this.game?.uiManager?.showSpeechBubble?.(`Add LevelDefinitions["${interiorId}"] to enter ${label}.`);
+        const roomDesc =
+            interiorConfig.room ||
+            interiorConfig.level ||
+            interiorConfig.definition ||
+            (typeof window !== 'undefined' ? (window.RoomDescriptors?.[interiorId] || window.RoomDescriptors?.[interiorId.replace('_', '')]) : null);
+        if (!roomDesc && !this.ensureInteriorLevelRegistered(interiorId, interiorConfig)) {
+            this.game?.uiManager?.showSpeechBubble?.(`Add Room "${interiorId}" or LevelDefinitions["${interiorId}"] to enter ${label}.`);
             return;
         }
 
@@ -587,7 +593,14 @@ class TownManager {
         };
 
         this.openBuildingDoor(building);
-        this.switchLevelWithPlayer(interiorId, spawnOverride);
+        if (roomDesc && this.game?.roomManager) {
+            const room = this.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
+            this.game.roomManager.enterRoom(room, returnPosition);
+        } else {
+            // Fallback: use inline descriptor as level definition so background/bounds still apply
+            const inlineDef = roomDesc || interiorConfig.level || interiorConfig.definition;
+            this.switchLevelWithPlayer(interiorId, spawnOverride, { forceNonTest: true, inlineLevelDef: inlineDef });
+        }
     }
 
     openBuildingDoor(building) {
@@ -644,14 +657,26 @@ class TownManager {
         return Boolean(def);
     }
 
-    switchLevelWithPlayer(levelId = null, spawnOverride = null) {
+    switchLevelWithPlayer(levelId = null, spawnOverride = null, options = {}) {
         if (!levelId || !this.game) return false;
         const g = this.game;
         const player = g.player;
+        const opts = options || {};
+
+        const originalTestMode = g.testMode;
+        if (opts.forceNonTest) {
+            g.testMode = false;
+        }
 
         this.resetTownContent();
         this.currentTownId = null;
-        g.createLevel?.(levelId);
+
+        const inlineDef = opts.inlineLevelDef || null;
+        if (inlineDef) {
+            this.buildInlineLevel(levelId, inlineDef, spawnOverride);
+        } else {
+            g.createLevel?.(levelId);
+        }
 
         const spawnX = spawnOverride?.x ?? g.level?.spawnX ?? player?.x ?? 0;
         const spawnY = spawnOverride?.y ?? g.level?.spawnY ?? player?.y ?? 0;
@@ -677,7 +702,79 @@ class TownManager {
             this.loadTownContent(town);
             this.handleTownMusic(town);
         }
+
+        if (opts.forceNonTest) {
+            // Do not restore here; caller can restore after exit if needed.
+            g.testMode = false;
+        } else {
+            g.testMode = originalTestMode;
+        }
         return true;
+    }
+
+    buildInlineLevel(levelId, def = {}, spawnOverride = null) {
+        const g = this.game;
+        const factory = g.entityFactory || this.game?.worldBuilder?.factory;
+        g.currentLevelId = levelId;
+        g.currentTheme = def.theme || 'interior';
+        g.platforms = [];
+        g.enemies = [];
+        g.items = [];
+        g.hazards = [];
+        g.chests = [];
+        g.flag = null;
+        g.signBoards = [];
+        g.signBoard = null;
+        g.npcs = [];
+        g.backgroundLayers = [];
+        g.townDecor = [];
+
+        if (def.backgroundImage?.src) {
+            const bg = def.backgroundImage;
+            const img = this.getSprite(bg.src);
+            g.backgroundLayers = [{
+                render: (ctx, camera) => {
+                    if (!ctx || !img || !img.complete) return;
+                    const w = bg.width || img.width;
+                    const h = bg.height || img.height;
+                    const destX = -(camera?.x || 0);
+                    const destY = -(camera?.y || 0);
+                    ctx.drawImage(img, 0, 0, w, h, destX, destY, w, h);
+                },
+                update: () => {}
+            }];
+        }
+
+        const platforms = Array.isArray(def.platforms) ? def.platforms : [];
+        platforms.forEach(p => {
+            let plat = null;
+            const subtype = p.type || p.subtype || p.kind || 'platform';
+            if (factory?.create) {
+                plat = factory.create({ type: 'platform', subtype, x: p.x, y: p.y, width: p.width, height: p.height });
+            } else if (factory?.platform) {
+                plat = factory.platform(p.x, p.y, p.width, p.height, subtype);
+            }
+            if (plat) g.platforms.push(plat);
+        });
+
+        const spawn = spawnOverride || def.spawn || { x: 100, y: 400 };
+        const levelWidth = def.width || 1200;
+        const levelHeight = def.height || 720;
+        g.level = {
+            width: levelWidth,
+            height: levelHeight,
+            spawnX: spawn.x,
+            spawnY: spawn.y
+        };
+
+        // Build a blocking floor at the bottom if none exists
+        const hasGround = g.platforms.some(p => p && p.type === 'ground');
+        if (!hasGround) {
+            const floor = factory?.platform
+                ? factory.platform(0, levelHeight - 40, levelWidth, 40, 'ground')
+                : (factory?.create ? factory.create({ type: 'platform', subtype: 'ground', x: 0, y: levelHeight - 40, width: levelWidth, height: 40 }) : null);
+            if (floor) g.platforms.push(floor);
+        }
     }
 
     getExteriorReturnPosition(building, player = null) {
@@ -733,7 +830,19 @@ class TownManager {
         }
         this.activeInterior = null;
         this.interiorReturn = null;
-        this.switchLevelWithPlayer(targetLevel, spawn);
+        if (this.game?.roomManager?.isActive()) {
+            this.game.roomManager.exitRoom();
+            return;
+        }
+        this.switchLevelWithPlayer(targetLevel, spawn, { forceNonTest: false });
+    }
+
+    buildRoomDescriptor(id, base = {}, spawnOverride = null, exitOverride = null) {
+        const room = this.clonePlain(base) || {};
+        room.id = id || room.id || 'room';
+        room.spawn = spawnOverride || room.spawn || { x: 200, y: 520 };
+        room.exit = exitOverride || room.exit || { x: room.spawn.x, y: room.spawn.y + 40, radius: 80 };
+        return room;
     }
 
     spawnTownNpcs() {

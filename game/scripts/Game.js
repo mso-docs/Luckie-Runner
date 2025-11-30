@@ -101,6 +101,10 @@ class Game {
         this.audioController = new AudioController(this, this.services.audio, this.config);
         this.testRoomManager = new TestRoomManager(this);
         this.townManager = new TownManager(this, this.config?.towns || {});
+        const RoomManagerCtor = (typeof RoomManager !== 'undefined')
+            ? RoomManager
+            : (typeof window !== 'undefined' ? window.RoomManager : null);
+        this.roomManager = RoomManagerCtor ? new RoomManagerCtor(this) : null;
 
         // Inventory overlay UI state
         this.inventoryUI = {

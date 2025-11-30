@@ -45,13 +45,25 @@ const TownsConfig = {
                     },
                     interior: {
                         id: 'shorehouseinterior',
-                        spawn: { x: 120, y: 400 },
-                        exit: { x: 120, y: 460, radius: 70 },
-                        // Inline level definition to guarantee availability even if the script isn't loaded
-                        level: {
-                            spawn: { x: 120, y: 400 },
-                            exit: { x: 120, y: 460, radius: 70 },
-                            platforms: [],
+                        spawn: { x: 200, y: 520 },
+                        exit: { x: 200, y: 560, radius: 80 },
+                        // Inline level definition matching house-inside.png bounds
+                        room: {
+                            width: 1024,
+                            height: 720,
+                            spawn: { x: 200, y: 520 },
+                            exit: { x: 200, y: 560, radius: 80 },
+                            backgroundImage: {
+                                src: 'art/bg/buildings/interior/house-inside.png',
+                                width: 1024,
+                                height: 720
+                            },
+                            platforms: [
+                                { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
+                                { x: 0, y: 0, width: 32, height: 720, type: 'ground' },
+                                { x: 1024 - 32, y: 0, width: 32, height: 720, type: 'ground' },
+                                { x: 0, y: 0, width: 1024, height: 32, type: 'ground' }
+                            ],
                             enemies: [],
                             items: [],
                             npcs: [],
