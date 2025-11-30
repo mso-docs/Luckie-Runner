@@ -20,6 +20,8 @@ This guide walks you through defining a brand-new town, wiring it into the game,
 - `setpieces` (array, optional): Static/animated decor props (benches, lamps, ground tiles, backdrop fronds).
 - `npcs` (array, optional): Town NPC definitions (`type: 'townNpc'`, sprite, patrol points, dialogue id).
 - `interiors` (array, optional): Standalone interior metadata map (rarely needed if you inline interiors per building).
+- `assetKit` (string, optional): Key for the asset bundle defined in `TownsConfig.assetKits` to auto-seed backdrops/ground/lamps/houses.
+- `houseCount` / `streetLampCount` / `itemPlan` (optional): Override defaults for required houses, lamp count, and guaranteed town items.
 
 ## Town Data Shape (TownsConfig)
 Add or edit entries in `game/scripts/core/config/TownsConfig.js`. Example of a minimal new town:
@@ -93,6 +95,33 @@ Add or edit entries in `game/scripts/core/config/TownsConfig.js`. Example of a m
   interiors: [] // optional shared interior metadata map
 }
 ```
+
+## Asset Kits, Required Props, and Guaranteed Items
+- **Defaults** live in `TownsConfig.defaults`. They currently enforce:
+  - A backdrop, a ground tile, at least 2 houses (max 3 by default), and at least 1 street lamp per town.
+  - A minimum item count (default 2) spawned inside the town region.
+- **Asset kits** (`TownsConfig.assetKits`) bundle swappable art for the required pieces (`groundTile`, `backdropSlices`, `streetLamp`, `house` with interior). Reference a kit per town with `assetKit: 'shore'` (or override specific pieces via `town.assets`).
+- **Positioning/overrides** per town:
+  - `houseCount`, `streetLampCount`, `houseSlots`, `lampSlots` set how many to spawn and where.
+  - `itemPlan: { count, spacing, pool }` guarantees a set number of items; `itemSlots` can pin them to exact x positions.
+  - Add/remove animation frames by editing the kit entry (e.g., change `frames`, `frameDirection`, `frameTimeMs` on `backdropSlices`, `streetLamp`, or `house.exterior`).
+
+Example (shore town):
+```js
+{
+  id: 'shoreTown',
+  assetKit: 'shore',
+  houseCount: { min: 3, max: 3 },
+  houseSlots: [7200, 8800, 9600],
+  lampSlots: [6900, 8200, 9500],
+  itemPlan: { count: 3, spacing: 420 },
+  setpieces: [
+    { id: 'fountain_center', /* ... */ },
+    { id: 'bench_center', /* ... */ }
+  ]
+}
+```
+This auto-adds a tiled ground, the frond backdrop, 3 lamps, and enough houses/interiors to meet the counts while keeping the custom fountain/bench.
 
 ### Field Explanations
 - `region.startX` / `region.endX`: World x-range that defines town boundaries. TownManager checks player.x each update.
