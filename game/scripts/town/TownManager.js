@@ -236,8 +236,19 @@ class TownManager {
         this.ensureStreetLamps(normalized, kit, requirements);
         this.ensureHouses(normalized, kit, requirements);
         this.ensureTownItems(normalized, requirements);
+        this.applySetpieceDefaults(normalized.setpieces);
 
         return normalized;
+    }
+
+    applySetpieceDefaults(setpieces = []) {
+        setpieces.forEach(sp => {
+            if (!sp) return;
+            // Keep horizontal continuity (ground/backdrop) stable between towns, but let height scale with player
+            if (sp.role === 'groundTile' || sp.role === 'backdrop') {
+                sp.preserveAbsoluteSize = true;
+            }
+        });
     }
 
     mergeRequirements(town = {}) {
@@ -310,9 +321,11 @@ class TownManager {
             const slot = slice.slot || 'mid';
             if (slot === 'start') {
                 piece.x = piece.x ?? span.start;
+                piece.width = piece.width ?? startWidth;
             } else if (slot === 'end') {
                 const estimatedWidth = this.getSliceDisplayWidth(piece);
-                piece.x = piece.x ?? (span.end - estimatedWidth);
+                piece.width = piece.width ?? endWidth;
+                piece.x = piece.x ?? (span.end - (piece.width || estimatedWidth));
             } else {
                 const available = Math.max(0, span.width - startWidth - endWidth);
                 piece.x = piece.x ?? (span.start + startWidth);
