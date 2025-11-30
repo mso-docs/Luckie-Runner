@@ -15,10 +15,16 @@ class TownManager {
         this.activeContent = { buildings: [], setpieces: [] };
         this.doorAutoCloseMs = 2200;
         this.townNpcs = [];
+        this.preloadedTownId = null;
+        this.pendingTownToLoad = null;
 
         this.spriteCache = {};
+        this.spriteDecodePromises = {};
+        this.spritePreloadReady = false; // set true after decode promises resolve
+        this.spritePreloadPromise = null;
         this.townCache = {};
 
+        this.preloadTownSprites();
         this.preloadTownMusic();
     }
 
@@ -36,6 +42,12 @@ class TownManager {
             this.handleTownEntry(town);
         } else if (!townId) {
             this.handleTownExit();
+        }
+
+        // If a town load was deferred until sprites decoded, load now
+        if (this.pendingTownToLoad && this.spritePreloadReady) {
+            this.loadTownContent(this.pendingTownToLoad);
+            this.pendingTownToLoad = null;
         }
 
         this.updateMusicTransition(deltaTime);
@@ -225,6 +237,10 @@ class TownManager {
         this.currentTownId = town.id;
         this.lastBannerAt = g.gameTime || 0;
         g.uiManager?.showTownBanner?.(town);
+        if (!this.spritePreloadReady && this.spritePreloadPromise) {
+            this.pendingTownToLoad = town;
+            return;
+        }
         this.loadTownContent(town);
         this.handleTownMusic(town);
     }
@@ -233,6 +249,7 @@ class TownManager {
         if (!this.currentTownId) return;
         this.handleTownMusic(null);
         this.currentTownId = null;
+        this.preloadedTownId = null;
     }
 
     handleTownMusic(town) {
@@ -522,9 +539,54 @@ class TownManager {
         if (!path) return null;
         if (this.spriteCache[path]) return this.spriteCache[path];
         const img = new Image();
+        img.decoding = 'async';
         img.src = path;
         this.spriteCache[path] = img;
+        if (typeof img.decode === 'function') {
+            this.spriteDecodePromises[path] = img.decode().catch(() => {});
+        }
         return img;
+    }
+
+    preloadTownSprites() {
+        if (!Array.isArray(this.towns)) return;
+        const paths = new Set();
+        this.towns.forEach(town => {
+            (town?.buildings || []).forEach(b => {
+                if (b?.exterior?.sprite) paths.add(b.exterior.sprite);
+            });
+            (town?.setpieces || []).forEach(sp => {
+                if (sp?.sprite) paths.add(sp.sprite);
+            });
+        });
+        // Preload and wait for decode where supported
+        const promises = [];
+        paths.forEach(p => {
+            const img = this.getSprite(p);
+            if (img && typeof img.decode === 'function') {
+                const promise = img.decode().catch(() => {});
+                this.spriteDecodePromises[p] = promise;
+                promises.push(promise);
+            }
+        });
+        if (promises.length) {
+            this.spritePreloadPromise = Promise.all(promises)
+                .then(() => {
+                    this.spritePreloadReady = true;
+                    if (!this.preloadedTownId && this.towns?.length) {
+                        const firstTown = this.towns[0];
+                        this.preloadedTownId = firstTown.id;
+                        this.loadTownContent(firstTown);
+                    }
+                    if (this.pendingTownToLoad) {
+                        this.loadTownContent(this.pendingTownToLoad);
+                        this.pendingTownToLoad = null;
+                    }
+                })
+                .catch(() => { this.spritePreloadReady = true; });
+        } else {
+            this.spritePreloadReady = true;
+        }
     }
 
     updateMusicTransition(deltaTime = 0) {
