@@ -300,22 +300,43 @@ class TownManager {
         const slices = Array.isArray(kit?.backdropSlices) ? kit.backdropSlices.map(slice => this.clonePlain(slice)) : [];
         if (!slices.length) return;
 
+        const startSlice = slices.find(s => (s.slot || 'mid') === 'start');
+        const endSlice = slices.find(s => (s.slot || 'mid') === 'end');
+        const startWidth = this.getSliceDisplayWidth(startSlice);
+        const endWidth = this.getSliceDisplayWidth(endSlice);
+
         slices.forEach(slice => {
             const piece = { ...slice, role: slice.role || 'backdrop' };
             const slot = slice.slot || 'mid';
             if (slot === 'start') {
                 piece.x = piece.x ?? span.start;
             } else if (slot === 'end') {
-                const estimatedWidth = piece.width || (piece.frameWidth ? piece.frameWidth * (piece.scale || 1) : 0);
+                const estimatedWidth = this.getSliceDisplayWidth(piece);
                 piece.x = piece.x ?? (span.end - estimatedWidth);
             } else {
-                piece.x = piece.x ?? span.start;
-                piece.width = piece.width ?? span.width;
+                const available = Math.max(0, span.width - startWidth - endWidth);
+                piece.x = piece.x ?? (span.start + startWidth);
+                const desired = piece.width ?? (available || span.width);
+                // Cover the gap without overshooting the end slice; mark as absolute so we don't re-scale later
+                piece.width = available > 0 ? available : desired;
+                piece.preserveAbsoluteSize = true;
                 piece.tileX = piece.tileX ?? true;
             }
             setpieces.push(piece);
         });
         town.setpieces = setpieces;
+    }
+
+    getSliceDisplayWidth(slice = null) {
+        if (!slice) return 0;
+        const scale = slice.scale ?? 1;
+        if (typeof slice.width === 'number') {
+            return slice.width * scale;
+        }
+        if (typeof slice.frameWidth === 'number') {
+            return slice.frameWidth * scale;
+        }
+        return 0;
     }
 
     ensureStreetLamps(town, kit, requirements) {
@@ -683,10 +704,16 @@ class TownManager {
         const frameDirection = def.frameDirection || 'vertical';
         const frameHeight = def.frameHeight || null;
         const frameWidth = def.frameWidth || null;
-        const baseWidth = def.width ?? frameWidth;
-        const baseHeight = def.height ?? frameHeight;
-        const displayWidth = (baseWidth || frameWidth || 0) * scale || (def.width ?? 64);
-        const displayHeight = (baseHeight || frameHeight || 0) * scale || (def.height ?? 64);
+        const preserveAbsoluteSize = def.preserveAbsoluteSize === true;
+        const hasExplicitWidth = def.width !== undefined && def.width !== null;
+        const hasExplicitHeight = def.height !== undefined && def.height !== null;
+        const baseWidth = hasExplicitWidth ? def.width : (frameWidth || def.width);
+        const baseHeight = hasExplicitHeight ? def.height : (frameHeight || def.height);
+        const scaledWidth = (baseWidth || frameWidth || 0) * scale || (def.width ?? 64);
+        const scaledHeight = (baseHeight || frameHeight || 0) * scale || (def.height ?? 64);
+        // When preserving absolute size, keep width fixed but still scale height to stay proportional to the player
+        const displayWidth = preserveAbsoluteSize ? (baseWidth || scaledWidth) : scaledWidth;
+        const displayHeight = preserveAbsoluteSize ? scaledHeight : scaledHeight;
         const autoAlignToGround = def.autoAlignToGround ?? true;
         let y = def.y ?? 0;
         if (autoAlignToGround && displayHeight) {
