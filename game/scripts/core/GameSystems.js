@@ -13,6 +13,7 @@ class GameSystems {
      */
     update(deltaTime) {
         const g = this.game;
+        const entities = g.getActiveEntities();
 
         // Input and UI gate
         const input = g.services?.input || g.input;
@@ -21,14 +22,16 @@ class GameSystems {
         if (g.uiManager?.isOverlayBlocking()) return;
 
         // NPCs
-        g.npcs.forEach(npc => npc?.update?.(deltaTime));
+        (entities.npcs || []).forEach(npc => npc?.update?.(deltaTime));
 
         // Player
         if (g.player) {
             g.player.update(deltaTime);
             this.updateCamera();
             g.collisionSystem?.checkPlayerCollisions();
-            g.townManager?.update?.(deltaTime);
+            if (g.activeWorld?.kind !== 'room') {
+                g.townManager?.update?.(deltaTime);
+            }
         }
 
         // Small palms
@@ -40,7 +43,7 @@ class GameSystems {
         g.uiManager?.updateFrame(deltaTime);
 
         // Background layers
-        g.backgroundLayers.forEach(layer => {
+        (entities.backgroundLayers || []).forEach(layer => {
             if (layer instanceof Background || layer instanceof ProceduralBackground) {
                 layer.update(g.camera.x, deltaTime);
             }
@@ -51,7 +54,7 @@ class GameSystems {
         g.palmTreeManager.update(g.camera.x, render.width());
 
         // Enemies
-        g.enemies = g.enemies.filter(enemy => {
+        g.enemies = (entities.enemies || []).filter(enemy => {
             if (enemy.active) {
                 enemy.update(deltaTime);
                 g.collisionSystem?.updateEnemyPhysics(enemy);
@@ -60,9 +63,10 @@ class GameSystems {
             this.handleEnemyRemoved(enemy);
             return false;
         });
+        entities.enemies = g.enemies;
 
         // Items
-        g.items = g.items.filter(item => {
+        g.items = (entities.items || []).filter(item => {
             if (item.active) {
                 item.update(deltaTime);
                 g.collisionSystem?.updateItemPhysics(item, deltaTime);
@@ -71,9 +75,10 @@ class GameSystems {
             }
             return false;
         });
+        entities.items = g.items;
 
         // Projectiles
-        g.projectiles = g.projectiles.filter(projectile => {
+        g.projectiles = (entities.projectiles || []).filter(projectile => {
             if (projectile.active) {
                 projectile.update(deltaTime);
                 g.collisionSystem?.updateProjectilePhysics(projectile);
@@ -81,15 +86,17 @@ class GameSystems {
             }
             return false;
         });
+        entities.projectiles = g.projectiles;
 
         // Hazards
-        g.hazards = g.hazards.filter(hazard => {
+        g.hazards = (entities.hazards || []).filter(hazard => {
             if (hazard.active) {
                 hazard.update(deltaTime);
                 return true;
             }
             return false;
         });
+        entities.hazards = g.hazards;
         g.collisionSystem?.updateHazardCollisions();
 
         // Flag

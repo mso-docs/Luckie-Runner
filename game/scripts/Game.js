@@ -61,6 +61,12 @@ class Game {
             spawnY: GameConfig.level?.spawn?.y ?? 400,
             scrollSpeed: GameConfig.level?.scrollSpeed ?? 2
         };
+        this.activeWorld = {
+            kind: 'level',
+            id: null,
+            theme: this.currentTheme || this.config?.theme || 'beach',
+            bounds: { width: this.level.width, height: this.level.height }
+        };
         
         // Background layers for parallax
         this.backgroundLayers = [];
@@ -744,6 +750,35 @@ class Game {
     }
 
     /**
+     * Track which world container is active (level vs room) and its bounds/metadata.
+     */
+    setActiveWorld(kind = 'level', meta = {}) {
+        this.activeWorld = {
+            kind,
+            id: meta.id || null,
+            theme: meta.theme || this.currentTheme || this.config?.theme || 'beach',
+            bounds: meta.bounds || { width: this.level?.width, height: this.level?.height }
+        };
+    }
+
+    /**
+     * Retrieve the live entity collections for the active world container.
+     */
+    getActiveEntities() {
+        return {
+            platforms: this.platforms,
+            enemies: this.enemies,
+            items: this.items,
+            hazards: this.hazards,
+            chests: this.chests,
+            npcs: this.npcs,
+            projectiles: this.projectiles,
+            backgroundLayers: this.backgroundLayers,
+            townDecor: this.townDecor
+        };
+    }
+
+    /**
      * Record the pristine test room layout so resets can rebuild it exactly
      */
     captureInitialTestRoomState() {
@@ -1183,6 +1218,7 @@ class Game {
         this.smallPalms = [];
         this.chestUI.currentChest = null;
         this.flag = null;
+        this.activeWorld = { kind: 'level', id: null, theme: this.currentTheme, bounds: { width: this.level?.width, height: this.level?.height } };
 
         // Reset managers
         this.palmTreeManager.reset();

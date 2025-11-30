@@ -15,6 +15,7 @@ class WorldBuilder {
     createLevel(levelId = 'testRoom') {
         this.game.currentLevelId = levelId;
         const g = this.game;
+        g.currentRoomId = null;
         const registry = (typeof window !== 'undefined' && window.levelRegistry) ? window.levelRegistry : null;
         const levelDef = registry ? registry.get(levelId) : null;
         const validated = registry ? registry.validate(levelDef) : { valid: true, errors: [] };
@@ -27,6 +28,7 @@ class WorldBuilder {
         g.enemies = [];
         g.items = [];
         g.hazards = [];
+        g.projectiles = [];
         g.townDecor = [];
         g.chests = [];
         g.flag = null;
@@ -96,12 +98,14 @@ class WorldBuilder {
             spawnY: spawn.y
         };
 
+        this.ensureFloor(g.platforms, g.level.width, g.level.height);
         this.createFlag();
         if ((levelId === 'testRoom' || g.testMode) && !g.initialTestRoomState) {
             this.captureInitialTestRoomState();
         }
 
         this.buildBackground(levelDef?.theme || this.config?.theme || 'beach');
+        g.setActiveWorld?.('level', { id: levelId, theme: g.currentTheme, bounds: { width: g.level.width, height: g.level.height } });
     }
 
     /**
@@ -612,5 +616,17 @@ class WorldBuilder {
             }
         ]);
         g.chests.push(parkourChest);
+    }
+
+    ensureFloor(platforms, width, height) {
+        const hasGround = platforms.some(p => p && p.type === 'ground');
+        if (hasGround) return;
+        const floorHeight = 40;
+        const y = Math.max(0, (height || 720) - floorHeight);
+        const w = width || 1200;
+        const floor = this.factory?.platform
+            ? this.factory.platform(0, y, w, floorHeight, 'ground')
+            : { x: 0, y, width: w, height: floorHeight, type: 'ground' };
+        platforms.push(floor);
     }
 }
