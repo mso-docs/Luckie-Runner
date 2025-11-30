@@ -7,6 +7,9 @@ This document summarizes the current world-building architecture (levels, towns,
 - **Town**: A themed segment inside a level. Managed by `TownManager`; attaches decor, buildings (with interior doors), and town NPCs to the active level without replacing it.
 - **Room**: A fully isolated interior container (e.g., building interiors). Managed by `RoomManager`; swaps world state, provides its own background, solid bounds/floor, and entities. Uses the HUD and physics but shares nothing else with the level.
 - **Active World**: The game tracks whether the current container is a `level` or `room` (`game.activeWorld.kind`). Rendering and physics respect this flag.
+- **EntityFactory**: Central factory that builds entities from plain data objects using a `type` key (platforms, enemies, items, NPCs, projectiles, signs, etc.). Extend it to add new types without changing world builders.
+- **UI/Overlays**: DOM-based overlays for HUD, inventory, chest, shop, menus, dialogue. Can be edited via HTML/CSS and wired in `UIManager`.
+- **Services**: Save/load (`ProgressManager`/`SaveService`), reset (`ResetService`), audio (`AudioController`/`AudioManager`), persistence, and event bus.
 
 ## File Map
 - `game/scripts/core/WorldBuilder.js` - builds levels.
@@ -19,6 +22,14 @@ This document summarizes the current world-building architecture (levels, towns,
 - `game/scripts/core/config/TownsConfig.js` - town data (buildings, interiors, music, etc.).
 - `game/scripts/rooms/*` - room descriptors (e.g., `ShoreHouseInterior.js`).
 - `game/scripts/levels/*` - level definitions (overworld-style).
+- `game/scripts/ui/*` - UI managers, overlays (inventory, shop, chest, dialogue, menus).
+- `game/scripts/core/EntityFactory.js` - creates entities (platforms, enemies, items, NPCs, projectiles) from data `type` keys.
+- `game/scripts/player/*` - player logic and animations.
+- `game/scripts/enemies/*` - enemy types; register in EntityFactory to spawn from level/room data.
+- `game/scripts/items/*` - item classes; register in EntityFactory to drop/place or sell in shops.
+- `game/scripts/core/Projectile.js` - projectile base (rocks, arrows, custom shots).
+- `game/scripts/core/services/*` - save/reset/persistence/audio services.
+- `docs/*.md` - reference guides for rooms, towns, levels, items, enemies, NPCs, UI, HUD, shops, projectiles, player, entities, glossary.
 
 ## Room System
 ### What a Room Is
@@ -154,6 +165,13 @@ The `LevelRegistry` reads these on game init and `WorldBuilder` uses them when y
 - **New Building**: add to `TownsConfig` with `door` and `interior` ids; provide matching room descriptor.
 - **New Town**: append to `TownsConfig.towns` with region, music, decor, buildings.
 - **New Level**: add `game/scripts/levels/YourLevel.js` and ensure `window.LevelDefinitions` includes it.
+- **New Entity Type**: create a class, register a `type` in `EntityFactory`, then use `{ type: 'YourType', ... }` in level/room data.
+- **New NPC**: use `type: 'townNpc'` with `TownPatrolNPC` data, or register a custom NPC type in `EntityFactory`.
+- **New Enemy**: add a class under `game/scripts/enemies`, register in `EntityFactory`, place with `{ type: 'YourEnemy', x, y }`.
+- **New Item**: extend `Item`, register in `EntityFactory`, place in `items` arrays or shops.
+- **New Projectile**: extend `Projectile`, register in `EntityFactory`, spawn from player/enemy logic.
+- **New UI/Overlay**: add HTML in `index.html`, style in CSS, wire in `UIManager` with show/hide/update helpers.
+- **New Modal/Canvas UI**: add DOM modal (`docs/modals.md`) or draw via canvas (`docs/canvas-ui-conversion.md`).
 - **Music/SFX**: add files under `music/` or `sfx/`, load via `AudioManager` (`initializeGameSounds` or custom load), and reference by id.
 
 ## Common Pitfalls
@@ -161,3 +179,6 @@ The `LevelRegistry` reads these on game init and `WorldBuilder` uses them when y
 - Reusing a level definition as a room without converting it (rooms expect backgroundImage/platforms, not procedural level themes).
 - Missing town music id/src (town will enter silently).
 - Interact key: door entry uses the same interact press as chests/signs (`E/Enter`).
+- EntityFactory registration missing: if you add a new type but forget to register it, the world builders cannot create it from data.
+- Misplaced scripts: ensure new files are loaded in `index.html` (or your bundler) before they are referenced.
+- Path typos: asset paths (sprites, music) must match real files or loads will fail silently.
