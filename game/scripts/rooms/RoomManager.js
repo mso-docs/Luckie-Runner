@@ -65,10 +65,14 @@ class RoomWorldBuilder {
             } else {
                 plat = { ...p, type: subtype };
             }
-            if (plat) entities.platforms.push(plat);
+            if (plat) {
+                plat.solid = plat.solid !== false;
+                entities.platforms.push(plat);
+            }
         });
 
         this.ensureFloor(entities.platforms, bounds);
+        this.ensureRoomWalls(entities.platforms, bounds);
 
         const backgroundLayers = this.buildBackgroundLayers(room.backgroundImage);
 
@@ -89,7 +93,26 @@ class RoomWorldBuilder {
         const floor = this.factory?.platform
             ? this.factory.platform(0, y, floorWidth, floorHeight, 'ground')
             : { x: 0, y, width: floorWidth, height: floorHeight, type: 'ground' };
+        if (floor) floor.solid = floor.solid !== false;
         platforms.push(floor);
+    }
+
+    ensureRoomWalls(platforms, bounds) {
+        const width = bounds.width || 1024;
+        const height = bounds.height || 720;
+        const wallThickness = 32;
+        const addWall = (x, y, w, h) => {
+            const wall = this.factory?.platform
+                ? this.factory.platform(x, y, w, h, 'wall')
+                : { x, y, width: w, height: h, type: 'wall' };
+            if (wall) {
+                wall.solid = wall.solid !== false;
+                platforms.push(wall);
+            }
+        };
+        addWall(-wallThickness, 0, wallThickness, height); // left
+        addWall(width, 0, wallThickness, height); // right
+        addWall(0, 0, width, wallThickness); // ceiling
     }
 
     buildBackgroundLayers(bgConfig) {
