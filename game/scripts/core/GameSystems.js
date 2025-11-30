@@ -22,7 +22,11 @@ class GameSystems {
         if (g.uiManager?.isOverlayBlocking()) return;
 
         // NPCs
-        (entities.npcs || []).forEach(npc => npc?.update?.(deltaTime));
+        (entities.npcs || []).forEach(npc => {
+            if (!npc) return;
+            this.applyNpcKnockback(npc, deltaTime);
+            npc.update?.(deltaTime);
+        });
 
         // Player
         if (g.player) {
@@ -108,6 +112,31 @@ class GameSystems {
 
         // Game over checks
         this.checkGameOver();
+    }
+
+    applyNpcKnockback(npc, deltaTime) {
+        const dt = deltaTime / 1000;
+        const isPatroller = Array.isArray(npc.patrol) && npc.patrol.length > 1;
+
+        if (npc.knockbackRecoverMs && npc.knockbackRecoverMs > 0) {
+            npc.knockbackRecoverMs = Math.max(0, npc.knockbackRecoverMs - deltaTime);
+        }
+
+        if (npc.knockbackVelocityX) {
+            npc.x += npc.knockbackVelocityX * dt;
+            npc.knockbackVelocityX *= 0.7;
+            if (Math.abs(npc.knockbackVelocityX) < 1) {
+                npc.knockbackVelocityX = 0;
+            }
+        }
+
+        // Return-to-home drift only for non-patrolling NPCs
+        if (!isPatroller && typeof npc.homeX === 'number' && !npc.knockbackVelocityX) {
+            const diff = npc.homeX - npc.x;
+            if (Math.abs(diff) > 0.5) {
+                npc.x += diff * Math.min(1, dt * 3);
+            }
+        }
     }
 
     updateCamera() {

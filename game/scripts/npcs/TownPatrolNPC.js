@@ -52,6 +52,7 @@ class TownPatrolNPC extends Entity {
         // Hit reaction
         this.hitRecoverMs = 0;
         this.hitRecoverDuration = 220;
+        this.homeX = this.x;
     }
 
     setTalking(isTalking) {
@@ -116,12 +117,11 @@ class TownPatrolNPC extends Entity {
      * Reaction when hit by a projectile (no damage).
      */
     onProjectileHit(projectile) {
-        const audio = this.game?.services?.audio || this.game?.audioManager;
-        audio?.playSound?.('ow', 0.85);
-
         const knockDir = projectile?.x < this.x ? 1 : -1;
-        this.x += knockDir * 14;
-        this.hitRecoverMs = this.hitRecoverDuration;
+        this.homeX = this.homeX ?? this.x;
+        this.knockbackVelocityX = knockDir * 820;
+        this.velocity.y = Math.min(this.velocity.y || 0, -420);
+        this.hitRecoverMs = Math.max(this.hitRecoverDuration, 450);
         this.pauseTimer = Math.max(this.pauseTimer, this.hitRecoverDuration);
 
         // Small tilt/flash feedback
