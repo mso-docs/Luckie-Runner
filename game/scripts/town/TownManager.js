@@ -670,7 +670,6 @@ class TownManager {
         const mgr = this.ensureRoomManager();
         if (roomDesc && mgr) {
             const room = mgr.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
-            this.resetTownContent();
             mgr.enterRoom(room, returnPosition);
             this.handleRoomMusic(roomDesc);
         } else {
@@ -777,6 +776,17 @@ class TownManager {
         this.interiorReturn = null;
         if (this.roomManager?.isActive()) {
             this.roomManager.exitRoom();
+            this.handleRoomMusic(null, true);
+            const g = this.game;
+            const playerX = g?.player?.x ?? 0;
+            const town = this.getTownForPosition(g?.currentLevelId, playerX);
+            if (town) {
+                this.currentTownId = town.id;
+                this.loadTownContent(town);
+                this.handleTownMusic(town);
+            } else {
+                this.handleTownMusic(null);
+            }
             return;
         }
         this.restoreExteriorWorld(targetLevel, spawn);
