@@ -562,7 +562,7 @@ class TownManager {
             return input.consumeInteractPress?.();
         };
         const pressed = consumeInteract();
-        const allowAuto = this.autoEnterDoorsInDebug && g.debug;
+        const allowAuto = this.autoEnterDoorsInDebug;
         if (!pressed && !allowAuto) return false;
 
         // Interior exit handling: only care about exit zones, ignore building doors
