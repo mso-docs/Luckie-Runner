@@ -123,6 +123,154 @@ Example (shore town):
 ```
 This auto-adds a tiled ground, the frond backdrop, 3 lamps, and enough houses/interiors to meet the counts while keeping the custom fountain/bench.
 
+## Asset Kits Deep Dive (What/Why/How)
+Asset kits let you swap art and sizing rules for all required town props without touching code. TownManager pulls one kit per town (`assetKit`) and auto-fills:
+- `groundTile` (tiled across the town span)
+- `backdropSlices` (start / mid / end slices for fronds or other backdrops)
+- `streetLamp`
+- `house` (with interior)
+
+### How scaling works (consistent with player size)
+- **Width continuity:** Ground tiles and backdrop slices preserve their intended horizontal width when the manager auto-fills the town span. Start/end slices keep their sprite width × scale; the mid slice is widened to cover the gap and tiles horizontally.
+- **Height stays proportional:** Even when width is preserved, height still uses your `scale`, so props stay in proportion to the player.
+- **Start/End caps:** They reuse their native frame width and your `scale`; no stretching if `frameWidth/frameHeight` are set.
+- **Mid slice:** Fills the region between caps. Set `tileX: true` and (optionally) `tileWidth` to control repeat step.
+- **Ground tiles:** Use `tileX: true`, set `frameWidth/frameHeight`, and a sensible `scale` (0.03–0.05 is typical for 1024px atlases against the player sprite).
+
+### Define an asset kit
+Add under `TownsConfig.assetKits`:
+```js
+assetKits: {
+  shore: {
+    groundTile: {
+      id: 'shore_ground',
+      role: 'groundTile',
+      sprite: 'art/bg/tiles/beach-cobble.png',
+      frameWidth: 1024,
+      frameHeight: 1024,
+      tileX: true,
+      scale: 0.04,
+      layer: 'ground',
+      autoAlignToGround: true
+    },
+    backdropSlices: [
+      { id: 'shore_fronds_start', role: 'backdrop', slot: 'start', sprite: 'art/bg/town backdrop/frond-start.png', frameWidth: 1022, frameHeight: 988, scale: 0.10, layer: 'midground', autoAlignToGround: true },
+      { id: 'shore_fronds_mid',   role: 'backdrop', slot: 'mid',   sprite: 'art/bg/town backdrop/fronds.png',      frameWidth: 1022, frameHeight: 988, tileX: true, tileWidth: 128, scale: 0.10, layer: 'midground', autoAlignToGround: true },
+      { id: 'shore_fronds_end',   role: 'backdrop', slot: 'end',   sprite: 'art/bg/town backdrop/frond-end.png',   frameWidth: 1022, frameHeight: 988, scale: 0.10, layer: 'midground', autoAlignToGround: true }
+    ],
+    streetLamp: {
+      id: 'shore_lamp',
+      role: 'streetLamp',
+      sprite: 'art/bg/exterior-decor/street-lamp.png',
+      width: 64, height: 180,
+      layer: 'foreground',
+      autoAlignToGround: true
+    },
+    house: {
+      id: 'shore_house_template',
+      exterior: {
+        sprite: 'art/bg/buildings/exterior/house.png',
+        frameWidth: 689, frameHeight: 768,
+        frames: 2, frameDirection: 'horizontal',
+        scale: 0.4,
+        autoAlignToGround: true
+      },
+      door: { width: 180, height: 210, spriteOffsetX: 118, spriteOffsetY: 498, interactRadius: 160 },
+      interior: { id: 'shore_house_interior' } // can inline a room or register separately
+    }
+  }
+}
+```
+
+### Use a kit in a town (and override safely)
+```js
+{
+  id: 'forestTown',
+  assetKit: 'shore',           // base kit
+  assets: {                    // optional per-town overrides (no code changes)
+    backdropSlices: [
+      { slot: 'mid', scale: 0.085 },   // shorter fronds, same art
+      { slot: 'mid', width: 42000 }    // widen the tiled span if needed
+    ],
+    groundTile: { scale: 0.038 }       // slimmer planks
+  },
+  houseSlots: [12000, 13200],
+  lampSlots: [11800, 13600]
+}
+```
+Rules:
+- `slot` picks which slice to override (`start`, `mid`, `end`).
+- `scale` changes both width and height proportionally; start/end use sprite width × scale; mid fills the span and tiles.
+- `width` on the mid slice sets the span to tile across; height still follows `scale`.
+- Start/end typically avoid explicit `width`—use `scale` plus `frameWidth/frameHeight` to prevent stretching.
+- Ground tiles always tile in X; set `frameWidth/frameHeight/scale` and let TownManager stretch them across the town region.
+
+### Create a brand-new kit
+1) Drop art under `game/art/...`.
+2) Add a new entry to `assetKits` with the four keys (`groundTile`, `backdropSlices`, `streetLamp`, `house`).
+3) Give each slice/frame proper `frameWidth/frameHeight` and a sensible `scale` (0.08–0.12 for 1k frond sheets; ~0.04 for 1k tiles).
+4) Point a town at it via `assetKit: 'yourKit'`. Override per-town via `assets` if needed.
+
+### Troubleshooting scaling/continuity
+- **Fronds not continuous:** ensure mid slice has `tileX: true` and either omit `width` or set it wide enough; TownManager will auto-fill between start/end.
+- **Caps stretched:** set `frameWidth/frameHeight` and use `scale`; avoid overriding `width` on start/end.
+- **Ground too tall/short:** tweak `scale` on `groundTile`; height uses `scale`, width is auto-spanned.
+- **Everything too big/small relative to player:** adjust `scale` in the kit; TownManager keeps proportions consistent across towns.
+
+## Quick Recipes (Scaling, Backdrops, Assets)
+- **Make fronds shorter/taller (keep continuity):**
+```js
+assets: {
+  backdropSlices: [
+    { slot: 'mid', scale: 0.085 }, // shorter
+    { slot: 'start', scale: 0.085 },
+    { slot: 'end', scale: 0.085 }
+  ]
+}
+```
+Height follows `scale`; width stays continuous.
+
+- **Widen the frond span (keep same height):**
+```js
+assets: {
+  backdropSlices: [
+    { slot: 'mid', width: 42000 } // tiles across a larger span
+  ]
+}
+```
+Width is absolute for the span; height still uses `scale`.
+
+- **Slim down ground planks:**
+```js
+assets: {
+  groundTile: { scale: 0.038 } // lowers plank height; width still spans town
+}
+```
+
+- **Swap all assets for a new biome (no code changes):**
+```js
+assetKit: 'forest',
+assets: {
+  streetLamp: { sprite: 'art/bg/exterior-decor/forest-lamp.png' },
+  house: { exterior: { sprite: 'art/bg/buildings/exterior/forest-house.png', scale: 0.36 } }
+}
+```
+
+- **Per-town lamp/house counts and placement:**
+```js
+houseCount: { min: 2, max: 3 },
+houseSlots: [12000, 13200, 14400],
+streetLampCount: 2,
+lampSlots: [11800, 14000]
+```
+
+- **Guarantee a specific number of town items:**
+```js
+itemPlan: { count: 3, spacing: 320, pool: [{ type: 'coffee' }, { type: 'health_potion', healAmount: 25 }] }
+```
+
+With these patterns, you can reskin or resize towns entirely in `TownsConfig`—no JS edits needed. TownManager applies the scaling rules uniformly so future towns inherit the same proportions and backdrop continuity.
+
 ### Field Explanations
 - `region.startX` / `region.endX`: World x-range that defines town boundaries. TownManager checks player.x each update.
 - `music.id`: Track key used by AudioManager; unique per town. `music.src`: path to the file. `music.volume`: 0–1 linear gain.
