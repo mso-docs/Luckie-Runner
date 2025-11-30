@@ -23,6 +23,7 @@ class TownManager {
         this.activeInterior = null;
         this.interiorReturn = null;
         this.interiorConfigMap = this.buildInteriorMap();
+        this.autoEnterDoorsInDebug = true;
 
         this.spriteCache = {};
         this.spriteDecodePromises = {};
@@ -99,7 +100,8 @@ class TownManager {
             frameWidth: b.frameWidth,
             frameDirection: b.frameDirection,
             frameIndexRef: b,
-            layer: b.exterior?.layer || 'foreground'
+            layer: b.exterior?.layer || 'foreground',
+            doorRef: b
         }));
 
         setpieces.forEach(sp => addRenderable(sp));
@@ -163,7 +165,8 @@ class TownManager {
             frameWidth: b.frameWidth,
             frameDirection: b.frameDirection,
             frameIndexRef: b,
-            layer: b.exterior?.layer || 'foreground'
+            layer: b.exterior?.layer || 'foreground',
+            doorRef: b
         })), ...setpieces.map(sp => this.buildDecorRenderable(sp))].filter(Boolean);
         renderables.forEach(r => this.primeRenderable(r));
         return { buildings, setpieces, npcDefs };
@@ -479,17 +482,54 @@ class TownManager {
             if (typeof input.consumeInteract === 'function') return input.consumeInteract();
             return input.consumeInteractPress?.();
         };
-        if (!consumeInteract()) return false;
+        const pressed = consumeInteract();
+        const allowAuto = this.autoEnterDoorsInDebug && g.debug;
+        if (!pressed && !allowAuto) return false;
 
-        if (this.activeInterior && this.isInsideInteriorLevel() && this.isPlayerAtInteriorExit(p)) {
-            this.exitInterior();
+        // Interior exit handling: only care about exit zones, ignore building doors
+        if (this.activeInterior && this.isInsideInteriorLevel()) {
+            if (this.isPlayerAtInteriorExit(p)) {
+                this.exitInterior();
+            } else if (pressed) {
+                g.uiManager?.showSpeechBubble?.('Move closer to the exit to leave.');
+            }
             return true;
         }
 
         const building = this.getNearbyBuildingDoor(p);
-        if (!building) return false;
-        this.enterBuilding(building);
-        return true;
+        if (building) {
+            this.enterBuilding(building);
+            return true;
+        }
+
+        // Debug aid: report nearest door distance when interact is pressed but no door found
+        if (g.debug && Array.isArray(this.activeContent?.buildings)) {
+            let nearest = null;
+            let bestDistSq = Infinity;
+            const px = p.x + (p.width ? p.width / 2 : 0);
+            const py = p.y + (p.height ? p.height : 0);
+            this.activeContent.buildings.forEach(b => {
+                const door = b.door || {};
+                const cx = (door.x ?? 0) + (door.width || 0) / 2;
+                const cy = (door.y ?? 0) + (door.height || 0) / 2;
+                const dx = px - cx;
+                const dy = py - cy;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    nearest = { building: b, door, distSq };
+                }
+            });
+            if (nearest) {
+                const dist = Math.sqrt(nearest.distSq);
+                const radius = nearest.door.interactRadius ?? 0;
+                g.uiManager?.showSpeechBubble?.(`Door too far: ${dist.toFixed(1)} (radius ${radius})`);
+            } else {
+                g.uiManager?.showSpeechBubble?.('No building doors loaded');
+            }
+        }
+
+        return false;
     }
 
     getNearbyBuildingDoor(player) {
@@ -527,11 +567,17 @@ class TownManager {
         const spawnOverride = interiorConfig.spawn || interiorConfig.spawnPoint || null;
         const exitZone = interiorConfig.exit || interiorConfig.exitZone || this.getDefaultInteriorExit(spawnOverride, player);
 
+        const prevTestMode = this.game?.testMode;
+        if (this.game) {
+            this.game.testMode = false; // force non-test layout for interiors
+        }
+
         this.interiorReturn = {
             levelId: this.game?.currentLevelId || null,
             townId: this.currentTownId,
             buildingId: building?.id || null,
-            position: returnPosition
+            position: returnPosition,
+            prevTestMode
         };
         this.activeInterior = {
             id: interiorId,
@@ -682,6 +728,9 @@ class TownManager {
         if (!this.activeInterior || !this.interiorReturn) return;
         const targetLevel = this.interiorReturn.levelId || 'testRoom';
         const spawn = this.interiorReturn.position || null;
+        if (this.game && typeof this.interiorReturn.prevTestMode === 'boolean') {
+            this.game.testMode = this.interiorReturn.prevTestMode;
+        }
         this.activeInterior = null;
         this.interiorReturn = null;
         this.switchLevelWithPlayer(targetLevel, spawn);
@@ -748,6 +797,7 @@ class TownManager {
         const ref = def.frameIndexRef;
         const tileX = !!def.tileX;
         const tileWidth = def.tileWidth || (frameWidth * scale);
+        const manager = this;
         return {
             x: def.x || 0,
             y: def.y || 0,
@@ -789,6 +839,25 @@ class TownManager {
                         width,
                         height
                     );
+                }
+
+                // Debug overlay for building doors (visible when debug is enabled)
+                if (manager?.game?.debug && def.doorRef?.door) {
+                    const door = def.doorRef.door;
+                    const doorX = (door.x || 0) - (camera?.x || 0);
+                    const doorY = (door.y || 0) - (camera?.y || 0);
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(0, 200, 255, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(doorX, doorY, door.width || 0, door.height || 0);
+                    const radius = door.interactRadius || 0;
+                    if (radius > 0) {
+                        ctx.beginPath();
+                        ctx.arc(doorX + (door.width || 0) / 2, doorY + (door.height || 0) / 2, radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(0, 200, 100, 0.6)';
+                        ctx.stroke();
+                    }
+                    ctx.restore();
                 }
             }
         };

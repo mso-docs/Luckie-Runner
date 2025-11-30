@@ -44,9 +44,19 @@ const TownsConfig = {
                         interactRadius: 160
                     },
                     interior: {
-                        id: 'shore_house_interior',
+                        id: 'shorehouseinterior',
                         spawn: { x: 120, y: 400 },
-                        exit: { x: 120, y: 460, radius: 70 }
+                        exit: { x: 120, y: 460, radius: 70 },
+                        // Inline level definition to guarantee availability even if the script isn't loaded
+                        level: {
+                            spawn: { x: 120, y: 400 },
+                            exit: { x: 120, y: 460, radius: 70 },
+                            platforms: [],
+                            enemies: [],
+                            items: [],
+                            npcs: [],
+                            theme: 'interior'
+                        }
                     },
                     npcs: []
                 }
