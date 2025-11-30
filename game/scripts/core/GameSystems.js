@@ -61,7 +61,10 @@ class GameSystems {
 
         // Enemies
         g.enemies = (entities.enemies || []).filter(enemy => {
-            if (!enemy || !enemy.active) return false;
+            if (!enemy || !enemy.active) {
+                this.handleEnemyRemoved(enemy);
+                return false;
+            }
             enemy.update(deltaTime);
             g.collisionSystem?.updateEnemyPhysics(enemy);
             return true;
