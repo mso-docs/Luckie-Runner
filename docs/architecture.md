@@ -9,15 +9,16 @@ This document summarizes the current world-building architecture (levels, towns,
 - **Active World**: The game tracks whether the current container is a `level` or `room` (`game.activeWorld.kind`). Rendering and physics respect this flag.
 
 ## File Map
-- `game/scripts/core/WorldBuilder.js` — builds levels.
-- `game/scripts/town/TownManager.js` — manages towns, building doors, and interior entry/exit.
-- `game/scripts/rooms/RoomManager.js` — builds/swaps room worlds.
-- `game/scripts/core/GameSystems.js` — per-frame updates; respects `activeWorld` and room isolation.
-- `game/scripts/core/CollisionSystem.js` — physics/collision; includes projectile→NPC reactions.
-- `game/scripts/core/SceneRenderer.js` — rendering; hides level decor/platforms in rooms.
-- `game/scripts/core/config/TownsConfig.js` — town data (buildings, interiors, music, etc.).
-- `game/scripts/rooms/*` — room descriptors (e.g., `ShoreHouseInterior.js`).
-- `game/scripts/levels/*` — level definitions (overworld-style).
+- `game/scripts/core/WorldBuilder.js` - builds levels.
+- `game/scripts/town/TownManager.js` - manages towns, building doors, and interior entry/exit.
+- `game/scripts/rooms/RoomManager.js` - builds/swaps room worlds.
+- `game/scripts/rooms/RoomRegistry.js` - room catalogue/normalizer with defaults and aliases.
+- `game/scripts/core/GameSystems.js` - per-frame updates; respects `activeWorld` and room isolation.
+- `game/scripts/core/CollisionSystem.js` - physics/collision; includes projectile+NPC reactions.
+- `game/scripts/core/SceneRenderer.js` - rendering; hides level decor/platforms in rooms.
+- `game/scripts/core/config/TownsConfig.js` - town data (buildings, interiors, music, etc.).
+- `game/scripts/rooms/*` - room descriptors (e.g., `ShoreHouseInterior.js`).
+- `game/scripts/levels/*` - level definitions (overworld-style).
 
 ## Room System
 ### What a Room Is
@@ -66,6 +67,11 @@ if (typeof window !== 'undefined') {
   window.RoomDescriptors.my_room = myRoom;
 }
 ```
+
+### Room Registry (data-first additions)
+- `RoomRegistry` keeps normalized rooms with defaults for size/spawn/exit/music (`music/beach-house.mp3`), plus optional `autoFloor/autoWalls` flags.
+- Register new interiors just like NPC data: `roomRegistry.register('shorehouseinterior', {...})`; override per-building pieces with `roomRegistry.build('id', { width: 800 })`.
+- Registry syncs to `window.RoomDescriptors` so legacy lookups still work; TownManager prefers registry entries when entering buildings.
 
 ### Adding an Interior to a Building
 In `TownsConfig` building entry:

@@ -359,15 +359,29 @@ class TownManager {
 
     resolveInteriorRoom(interiorId = null, interiorConfig = {}) {
         if (!interiorId) return null;
+        const registry = this.roomManager?.resolveRoomRegistry?.() || (typeof window !== 'undefined' ? window.roomRegistry : null);
         const explicitRoom = interiorConfig.room || interiorConfig.descriptor;
-        if (explicitRoom) return this.clonePlain(explicitRoom);
+        if (explicitRoom) {
+            if (registry?.normalize) return registry.normalize(explicitRoom, { id: interiorId });
+            return this.clonePlain(explicitRoom);
+        }
+
+        if (registry?.get?.(interiorId)) {
+            const built = registry.build(interiorId, interiorConfig.overrides || {});
+            if (built) return built;
+        }
 
         const globalRoom = this.getGlobalRoomDescriptor(interiorId);
-        if (globalRoom) return globalRoom;
+        if (globalRoom) {
+            if (registry?.register) registry.register(interiorId, globalRoom);
+            return globalRoom;
+        }
 
         const levelDef = interiorConfig.level || interiorConfig.definition || (typeof window !== 'undefined' ? window.LevelDefinitions?.[interiorId] : null);
         if (levelDef) {
-            return this.convertLevelDefinitionToRoom(interiorId, levelDef);
+            const converted = this.convertLevelDefinitionToRoom(interiorId, levelDef);
+            if (converted && registry?.register) registry.register(interiorId, converted);
+            return converted;
         }
         return null;
     }

@@ -23,6 +23,13 @@ const shoreHouseInteriorRoom = {
     theme: 'interior'
 };
 
+// Register through the shared room registry for easy overrides/customization.
+const activeRoomRegistry = (typeof window !== 'undefined' ? window.roomRegistry : null);
+if (activeRoomRegistry?.register) {
+    activeRoomRegistry.register('shorehouseinterior', shoreHouseInteriorRoom);
+    activeRoomRegistry.register('shore_house_interior', shoreHouseInteriorRoom);
+}
+
 // Optional global export so RoomManager users can fetch it.
 if (typeof window !== 'undefined') {
     window.RoomDescriptors = window.RoomDescriptors || {};
