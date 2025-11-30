@@ -71,10 +71,16 @@ class RoomWorldBuilder {
             }
         });
 
-        this.ensureFloor(entities.platforms, bounds);
-        this.ensureRoomWalls(entities.platforms, bounds);
+        if (room.autoFloor !== false) {
+            this.ensureFloor(entities.platforms, bounds);
+        }
+        if (room.autoWalls !== false) {
+            this.ensureRoomWalls(entities.platforms, bounds);
+        }
 
-        const backgroundLayers = this.buildBackgroundLayers(room.backgroundImage);
+        const backgroundLayers = Array.isArray(room.backgroundLayers) && room.backgroundLayers.length
+            ? room.backgroundLayers.map(layer => ({ ...layer }))
+            : this.buildBackgroundLayers(room.backgroundImage);
 
         return {
             descriptor: { ...room, spawn, exit },
@@ -165,6 +171,7 @@ class RoomManager {
         this.room = null;
         this.roomEntities = null;
         this.builder = new RoomWorldBuilder(game);
+        this.roomRegistry = this.resolveRoomRegistry(game);
     }
 
     isActive() {
@@ -172,14 +179,39 @@ class RoomManager {
     }
 
     buildRoomDescriptor(id, base = {}, spawnOverride = null, exitOverride = null) {
-        const room = this.builder.clonePlain(base) || {};
-        room.id = id || room.id || 'room';
+        const registry = this.resolveRoomRegistry();
+        const isId = typeof id === 'string';
+        const merged = isId
+            ? { ...(registry?.get?.(id) || {}), ...(this.builder.clonePlain(base) || {}) }
+            : (this.builder.clonePlain(id || base) || {});
+        const resolvedId = isId ? id : (merged.id || merged.roomId || merged.name || 'room');
+        if (registry?.normalize) {
+            const normalized = registry.normalize(merged, { id: resolvedId, spawnOverride, exitOverride });
+            if (normalized) normalized.__normalizedRoom = true;
+            return normalized;
+        }
+        const room = merged || {};
+        room.id = resolvedId || room.id || 'room';
         room.width = room.width || 1024;
         room.height = room.height || 720;
         room.spawn = spawnOverride || room.spawn || { x: 200, y: room.height - 200 };
         room.exit = exitOverride || room.exit || { x: room.spawn.x, y: room.spawn.y + 40, radius: 80 };
         room.theme = room.theme || 'interior';
+        room.__normalizedRoom = true;
         return room;
+    }
+
+    resolveRoomDescriptor(roomLike, spawnOverride = null, exitOverride = null) {
+        if (typeof roomLike === 'string') {
+            return this.buildRoomDescriptor(roomLike, {}, spawnOverride, exitOverride);
+        }
+        if (!roomLike) return null;
+        return this.buildRoomDescriptor(roomLike.id || roomLike.roomId || roomLike.name, roomLike, spawnOverride, exitOverride);
+    }
+
+    enterRoomById(id, overrides = {}, returnPosition = null, spawnOverride = null, exitOverride = null) {
+        const descriptor = this.buildRoomDescriptor(id, overrides, spawnOverride, exitOverride);
+        return this.enterRoom(descriptor, returnPosition);
     }
 
     /**
@@ -187,12 +219,14 @@ class RoomManager {
      */
     enterRoom(room = {}, returnPosition = null) {
         if (!this.game || !room) return false;
-        const descriptor = this.buildRoomDescriptor(room.id || room.roomId || room.name, room);
+        const descriptor = room.__normalizedRoom ? room : this.resolveRoomDescriptor(room);
+        if (!descriptor) return false;
         this.captureReturnState(returnPosition);
         const roomState = this.builder.build(descriptor);
         this.applyRoomWorld(roomState);
         this.room = roomState.descriptor;
         this.roomEntities = roomState.entities;
+        this.alignRoomNpcsToFloor();
         this.active = true;
         return true;
     }
@@ -225,6 +259,38 @@ class RoomManager {
         this.room = null;
         this.roomEntities = null;
         this.returnInfo = null;
+    }
+
+    alignRoomNpcsToFloor() {
+        if (!this.game) return;
+        const roomNpcs = (this.roomEntities && Array.isArray(this.roomEntities.npcs)) ? this.roomEntities.npcs : [];
+        const gameNpcs = Array.isArray(this.game.npcs) ? this.game.npcs : [];
+        const floorY = this.getRoomFloorY();
+        const spawnY = this.room?.spawn?.y;
+        const align = (npc) => {
+            if (!npc) return;
+            npc.game = this.game;
+            npc.active = npc.active !== false;
+            const targetFloor = (typeof floorY === 'number') ? floorY : (typeof spawnY === 'number' ? spawnY + (npc.height || 0) : null);
+            if (typeof targetFloor === 'number' && typeof npc.height === 'number') {
+                npc.y = targetFloor - npc.height;
+            } else if (typeof spawnY === 'number') {
+                npc.y = spawnY;
+            }
+        };
+        roomNpcs.forEach(align);
+        gameNpcs.forEach(align);
+    }
+
+    getRoomFloorY() {
+        const platforms = this.roomEntities?.platforms || [];
+        const ground = platforms.find(p => p?.type === 'ground');
+        if (ground) return ground.y;
+        if (this.room?.height) {
+            const floorHeight = 40;
+            return this.room.height - floorHeight;
+        }
+        return null;
     }
 
     captureReturnState(returnPosition = null) {
@@ -347,6 +413,28 @@ class RoomManager {
         }
 
         g.setActiveWorld?.('room', { id: descriptor.id, theme: g.currentTheme, bounds });
+    }
+
+    resolveRoomRegistry(game = null) {
+        if (this.roomRegistry) return this.roomRegistry;
+        const g = game || this.game;
+        const existing = g?.roomRegistry || (typeof window !== 'undefined' ? window.roomRegistry : null);
+        if (existing) {
+            this.roomRegistry = existing;
+            if (g && !g.roomRegistry) g.roomRegistry = existing;
+            return this.roomRegistry;
+        }
+        const ctor = (typeof RoomRegistry !== 'undefined')
+            ? RoomRegistry
+            : (typeof window !== 'undefined' ? window.RoomRegistry : null);
+        if (ctor) {
+            this.roomRegistry = new ctor();
+            if (g) g.roomRegistry = this.roomRegistry;
+            if (typeof window !== 'undefined') {
+                window.roomRegistry = window.roomRegistry || this.roomRegistry;
+            }
+        }
+        return this.roomRegistry;
     }
 
     clonePlain(obj) {

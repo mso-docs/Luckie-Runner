@@ -7,6 +7,8 @@ class SceneManager {
         this.context = context || { game };
         this.current = null;
         this.previous = null;
+        this.currentName = null;
+        this.previousName = null;
         this.scenes = {};
     }
 
@@ -23,7 +25,9 @@ class SceneManager {
             this.current.exit();
         }
         this.previous = this.current;
+        this.previousName = this.currentName;
         this.current = this.scenes[name];
+        this.currentName = name;
         if (this.current && typeof this.current.enter === 'function') {
             this.current.enter();
         }

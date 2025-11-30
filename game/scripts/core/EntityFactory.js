@@ -107,6 +107,15 @@ class EntityFactory {
         this.registerType('health_potion', (def) => this.healthPotion(def.x, def.y, def.healAmount));
         this.registerType('coffee', (def) => this.coffee(def.x, def.y));
         this.registerType('chest', (def) => this.chest(def.x, def.y, def.displayName, def.contents));
+        this.registerType('decor_platform', (def) => {
+            const ctor = (typeof DecorPlatform !== 'undefined')
+                ? DecorPlatform
+                : (typeof window !== 'undefined' ? window.DecorPlatform : null);
+            if (!ctor) return null;
+            const plat = new ctor(def.x ?? 0, def.y ?? 0, def || {});
+            plat.game = this.game;
+            return plat;
+        });
         this.registerType('small_palm', (def) => this.smallPalm(def.x, def.y));
         this.registerType('shopGhost', (def) => this.shopGhost(def.x, def.y));
         this.registerType('princess', (def) => this.princess(def.x, def.y, def.dialogueLines || null));

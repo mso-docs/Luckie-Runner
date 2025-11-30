@@ -5,7 +5,33 @@
 class TownManager {
     constructor(game, config = {}) {
         this.game = game;
-        this.towns = (config && config.towns) ? [...config.towns] : [];
+        this.assetKits = this.buildAssetKitMap(config.assetKits);
+        const configDefaults = this.clonePlain(config.defaults || {});
+        const baseRequirements = {
+            houseCount: { min: 2, max: 3 },
+            lampCount: 1,
+            groundTile: true,
+            backdrop: true,
+            itemPlan: {
+                count: 2,
+                spacing: 320,
+                pool: [
+                    { type: 'coffee' },
+                    { type: 'health_potion', healAmount: 25 }
+                ]
+            }
+        };
+        baseRequirements.houseCount = { ...baseRequirements.houseCount, ...(configDefaults.houseCount || {}) };
+        baseRequirements.itemPlan = { ...baseRequirements.itemPlan, ...(configDefaults.itemPlan || {}) };
+        if (typeof configDefaults.streetLampCount === 'number') {
+            baseRequirements.lampCount = configDefaults.streetLampCount;
+        } else if (typeof configDefaults.lampCount === 'number') {
+            baseRequirements.lampCount = configDefaults.lampCount;
+        }
+        if (configDefaults.groundTile === false) baseRequirements.groundTile = false;
+        if (configDefaults.backdrop === false) baseRequirements.backdrop = false;
+        this.defaultRequirements = baseRequirements;
+        this.towns = this.prepareTowns(config);
         this.preloadDistance = config.preloadDistance ?? null;
         this.currentTownId = null;
         this.lastBannerAt = 0;
@@ -13,9 +39,12 @@ class TownManager {
         this.musicTransition = null;
         this.fadeDuration = 1200;
         this.baseMusicVolume = game.currentLevelMusicVolume ?? 0.8;
-        this.activeContent = { buildings: [], setpieces: [] };
+        this.activeContent = { buildings: [], setpieces: [], items: [] };
         this.doorAutoCloseMs = 2200;
         this.townNpcs = [];
+        this.activeTownItems = [];
+        this.activeTownColliders = [];
+        this.activeRoomMusicId = null;
         this.loadedTownId = null;
         this.preloadedTownId = null;
         this.pendingTownToLoad = null;
@@ -36,6 +65,437 @@ class TownManager {
         this.preloadTownMusic();
         this.warmFirstTownContent();
         this.registerLegacyInteriorsAsRooms();
+    }
+
+    prepareTowns(config = {}) {
+        const source = Array.isArray(config?.towns) ? config.towns : [];
+        return source.map(town => this.normalizeTownDefinition(this.clonePlain(town)));
+    }
+
+    buildAssetKitMap(assetKits = {}) {
+        const defaultKit = {
+            id: 'default',
+            groundTile: {
+                id: 'default_ground',
+                name: 'Town Ground',
+                role: 'groundTile',
+                x: 0,
+                y: 0,
+                width: null,
+                height: 40,
+                frameWidth: 1024,
+                frameHeight: 1024,
+                tileX: true,
+                layer: 'ground',
+                scale: 0.04,
+                autoAlignToGround: true,
+                sprite: 'art/bg/tiles/beach-cobble.png'
+            },
+            backdropSlices: [
+                {
+                    id: 'default_backdrop_start',
+                    name: 'Backdrop Start',
+                    role: 'backdrop',
+                    slot: 'start',
+                    frameWidth: 1022,
+                    frameHeight: 988,
+                    layer: 'midground',
+                    scale: 0.1,
+                    autoAlignToGround: true,
+                    sprite: 'art/bg/town backdrop/frond-start.png'
+                },
+                {
+                    id: 'default_backdrop_mid',
+                    name: 'Backdrop Mid',
+                    role: 'backdrop',
+                    slot: 'mid',
+                    tileX: true,
+                    tileWidth: 128,
+                    frameWidth: 1022,
+                    frameHeight: 988,
+                    layer: 'midground',
+                    scale: 0.1,
+                    autoAlignToGround: true,
+                    sprite: 'art/bg/town backdrop/fronds.png'
+                },
+                {
+                    id: 'default_backdrop_end',
+                    name: 'Backdrop End',
+                    role: 'backdrop',
+                    slot: 'end',
+                    frameWidth: 1022,
+                    frameHeight: 988,
+                    layer: 'midground',
+                    scale: 0.1,
+                    autoAlignToGround: true,
+                    sprite: 'art/bg/town backdrop/frond-end.png'
+                }
+            ],
+            streetLamp: {
+                id: 'default_lamp',
+                name: 'Street Lamp',
+                role: 'streetLamp',
+                width: 64,
+                height: 180,
+                layer: 'foreground',
+                autoAlignToGround: true,
+                sprite: 'art/bg/exterior-decor/street-lamp.png'
+            },
+            house: {
+                id: 'default_house',
+                name: 'House',
+                exterior: {
+                    width: 689,
+                    height: 768,
+                    frames: 2,
+                    frameWidth: 689,
+                    frameHeight: 768,
+                    frameDirection: 'horizontal',
+                    scale: 0.4,
+                    autoAlignToGround: true,
+                    sprite: 'art/bg/buildings/exterior/house.png'
+                },
+                door: {
+                    width: 180,
+                    height: 210,
+                    spriteOffsetX: 118,
+                    spriteOffsetY: 498,
+                    interactRadius: 160
+                },
+                interior: {
+                    id: 'default_house_interior',
+                    spawn: { x: 200, y: 520 },
+                    exit: { x: 200, y: 560, radius: 80 },
+                    room: {
+                        width: 1024,
+                        height: 720,
+                        spawn: { x: 200, y: 520 },
+                        exit: { x: 200, y: 560, radius: 80 },
+                        backgroundImage: {
+                            src: 'art/bg/buildings/interior/house-inside.png',
+                            width: 1024,
+                            height: 720
+                        },
+                        platforms: [
+                            { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
+                            { x: 0, y: 0, width: 32, height: 720, type: 'ground' },
+                            { x: 1024 - 32, y: 0, width: 32, height: 720, type: 'ground' },
+                            { x: 0, y: 0, width: 1024, height: 32, type: 'ground' }
+                        ],
+                        enemies: [],
+                        items: [],
+                        npcs: [],
+                        theme: 'interior'
+                    }
+                }
+            }
+        };
+        return { default: defaultKit, ...(assetKits || {}) };
+    }
+
+    getAssetKit(key = null) {
+        const kitKey = key || 'default';
+        const kit = this.assetKits?.[kitKey] || this.assetKits?.default;
+        return this.clonePlain(kit);
+    }
+
+    mergeAssetOverrides(baseKit = {}, overrides = {}) {
+        if (!overrides || typeof overrides !== 'object') return baseKit;
+        const merged = { ...(baseKit || {}) };
+        if (overrides.groundTile) {
+            merged.groundTile = { ...(baseKit?.groundTile || {}), ...overrides.groundTile };
+        }
+        if (overrides.streetLamp) {
+            merged.streetLamp = { ...(baseKit?.streetLamp || {}), ...overrides.streetLamp };
+        }
+        if (overrides.house) {
+            merged.house = { ...(baseKit?.house || {}), ...overrides.house };
+            if (overrides.house?.interior) {
+                merged.house.interior = { ...(baseKit?.house?.interior || {}), ...overrides.house.interior };
+            }
+        }
+        if (Array.isArray(overrides.backdropSlices)) {
+            merged.backdropSlices = overrides.backdropSlices.map(slice => this.clonePlain(slice));
+        } else if (Array.isArray(overrides.backdrop)) {
+            merged.backdropSlices = overrides.backdrop.map(slice => this.clonePlain(slice));
+        }
+        return merged;
+    }
+
+    normalizeTownDefinition(town = {}) {
+        const normalized = this.clonePlain(town) || {};
+        normalized.buildings = Array.isArray(normalized.buildings) ? normalized.buildings.map(b => this.clonePlain(b)) : [];
+        normalized.setpieces = Array.isArray(normalized.setpieces) ? normalized.setpieces.map(s => this.clonePlain(s)) : [];
+        normalized.npcs = Array.isArray(normalized.npcs) ? normalized.npcs.map(n => this.clonePlain(n)) : [];
+        normalized.items = Array.isArray(normalized.items) ? normalized.items.map(i => this.clonePlain(i)) : [];
+
+        const requirements = this.mergeRequirements(normalized);
+        const kitOverrides = this.clonePlain(normalized.assets || normalized.assetOverrides || {});
+        const kit = this.mergeAssetOverrides(this.getAssetKit(normalized.assetKit), kitOverrides);
+
+        this.ensureGroundTile(normalized, kit, requirements);
+        this.ensureBackdrop(normalized, kit);
+        this.ensureStreetLamps(normalized, kit, requirements);
+        this.ensureHouses(normalized, kit, requirements);
+        this.ensureTownItems(normalized, requirements);
+        this.applySetpieceDefaults(normalized.setpieces);
+
+        return normalized;
+    }
+
+    applySetpieceDefaults(setpieces = []) {
+        setpieces.forEach(sp => {
+            if (!sp) return;
+            // Keep horizontal continuity (ground/backdrop) stable between towns, but let height scale with player
+            if (sp.role === 'groundTile' || sp.role === 'backdrop') {
+                sp.preserveAbsoluteSize = true;
+            }
+        });
+    }
+
+    mergeRequirements(town = {}) {
+        const merged = this.clonePlain(this.defaultRequirements);
+        const overrides = town.requirements || {};
+        if (overrides.houseCount) {
+            merged.houseCount = { ...merged.houseCount, ...overrides.houseCount };
+        }
+        if (town.houseCount) {
+            merged.houseCount = { ...merged.houseCount, ...town.houseCount };
+        }
+        if (typeof overrides.lampCount === 'number') {
+            merged.lampCount = overrides.lampCount;
+        }
+        if (typeof town.streetLampCount === 'number') {
+            merged.lampCount = town.streetLampCount;
+        }
+        if (overrides.groundTile === false || town.groundTile === false) {
+            merged.groundTile = false;
+        }
+        if (overrides.backdrop === false || town.backdrop === false) {
+            merged.backdrop = false;
+        }
+        merged.itemPlan = {
+            ...merged.itemPlan,
+            ...(overrides.itemPlan || {}),
+            ...(town.itemPlan || {})
+        };
+        return merged;
+    }
+
+    getRegionSpan(town = {}) {
+        const start = town?.region?.startX ?? 0;
+        const end = town?.region?.endX ?? (start + 1200);
+        const width = Math.max(0, end - start) || 1200;
+        return { start, end, width };
+    }
+
+    ensureGroundTile(town, kit, requirements) {
+        if (requirements.groundTile === false) return;
+        const setpieces = town.setpieces || [];
+        const hasGround = this.hasSetpieceRole(setpieces, 'groundTile', sp => sp.layer === 'ground' && sp.tileX);
+        if (hasGround) return;
+        const span = this.getRegionSpan(town);
+        const template = this.clonePlain(kit?.groundTile || this.getAssetKit('default')?.groundTile);
+        if (!template) return;
+        const ground = { ...template, role: template.role || 'groundTile' };
+        ground.x = ground.x ?? span.start;
+        ground.width = ground.width ?? span.width;
+        ground.name = ground.name || 'Town Ground';
+        setpieces.push(ground);
+        town.setpieces = setpieces;
+    }
+
+    ensureBackdrop(town, kit) {
+        const setpieces = town.setpieces || [];
+        const hasBackdrop = this.hasSetpieceRole(setpieces, 'backdrop', sp => sp.layer === 'backdrop' || sp.layer === 'midground');
+        if (hasBackdrop) return;
+        const span = this.getRegionSpan(town);
+        const slices = Array.isArray(kit?.backdropSlices) ? kit.backdropSlices.map(slice => this.clonePlain(slice)) : [];
+        if (!slices.length) return;
+
+        const startSlice = slices.find(s => (s.slot || 'mid') === 'start');
+        const endSlice = slices.find(s => (s.slot || 'mid') === 'end');
+        const startWidth = this.getSliceDisplayWidth(startSlice);
+        const endWidth = this.getSliceDisplayWidth(endSlice);
+
+        slices.forEach(slice => {
+            const piece = { ...slice, role: slice.role || 'backdrop' };
+            const slot = slice.slot || 'mid';
+            if (slot === 'start') {
+                piece.x = piece.x ?? span.start;
+                piece.width = piece.width ?? startWidth;
+            } else if (slot === 'end') {
+                const estimatedWidth = this.getSliceDisplayWidth(piece);
+                piece.width = piece.width ?? endWidth;
+                piece.x = piece.x ?? (span.end - (piece.width || estimatedWidth));
+            } else {
+                const available = Math.max(0, span.width - startWidth - endWidth);
+                piece.x = piece.x ?? (span.start + startWidth);
+                const desired = piece.width ?? (available || span.width);
+                // Cover the gap without overshooting the end slice; mark as absolute so we don't re-scale later
+                piece.width = available > 0 ? available : desired;
+                piece.preserveAbsoluteSize = true;
+                piece.tileX = piece.tileX ?? true;
+            }
+            setpieces.push(piece);
+        });
+        town.setpieces = setpieces;
+    }
+
+    getSliceDisplayWidth(slice = null) {
+        if (!slice) return 0;
+        const scale = slice.scale ?? 1;
+        if (typeof slice.width === 'number') {
+            return slice.width * scale;
+        }
+        if (typeof slice.frameWidth === 'number') {
+            return slice.frameWidth * scale;
+        }
+        return 0;
+    }
+
+    ensureStreetLamps(town, kit, requirements) {
+        const setpieces = town.setpieces || [];
+        const existing = setpieces.filter(sp => sp && (sp.role === 'streetLamp'));
+        const target = Math.max(requirements.lampCount || 0, 0);
+        const needed = Math.max(0, target - existing.length);
+        if (needed <= 0) return;
+        const span = this.getRegionSpan(town);
+        const template = this.clonePlain(kit?.streetLamp || this.getAssetKit('default')?.streetLamp);
+        if (!template) return;
+        const slots = this.resolveLampSlots(town, needed, span, template);
+        slots.forEach((slotX, idx) => {
+            const lamp = { ...template, role: template.role || 'streetLamp' };
+            lamp.id = lamp.id || `${town.id || 'town'}_lamp_${existing.length + idx + 1}`;
+            lamp.x = slotX;
+            setpieces.push(lamp);
+        });
+        town.setpieces = setpieces;
+    }
+
+    resolveLampSlots(town, count, span, template) {
+        const configured = Array.isArray(town.lampSlots) ? town.lampSlots.slice(0, count) : [];
+        if (configured.length >= count) return configured;
+        const slots = [...configured];
+        const gap = span.width / (count + 1);
+        for (let i = slots.length; i < count; i++) {
+            slots.push(span.start + gap * (i + 1));
+        }
+        return slots;
+    }
+
+    ensureHouses(town, kit, requirements) {
+        const buildings = Array.isArray(town.buildings) ? town.buildings : [];
+        const existingCount = buildings.length;
+        const min = requirements.houseCount?.min ?? 0;
+        const max = requirements.houseCount?.max ?? null;
+        const target = Math.max(existingCount, min);
+        const allowed = max ? Math.min(target, max) : target;
+        const needed = Math.max(0, allowed - existingCount);
+        if (needed <= 0) return;
+
+        const span = this.getRegionSpan(town);
+        const template = this.clonePlain(kit?.house || this.getAssetKit('default')?.house);
+        if (!template) return;
+        const slots = this.resolveHouseSlots(town, needed, span, template);
+        for (let i = 0; i < needed; i++) {
+            const slotX = slots[i];
+            const building = this.buildHouseFromTemplate(template, slotX, existingCount + i, town);
+            if (building) buildings.push(building);
+        }
+        town.buildings = buildings;
+    }
+
+    resolveHouseSlots(town, needed, span, template) {
+        const slots = [];
+        const existingXs = (town.buildings || [])
+            .map(b => (b?.exterior?.x ?? b?.x))
+            .filter(x => typeof x === 'number');
+        const configured = Array.isArray(town.houseSlots) ? town.houseSlots : [];
+        configured.forEach(x => {
+            if (slots.length < needed && !existingXs.includes(x)) {
+                slots.push(x);
+            }
+        });
+        const remaining = needed - slots.length;
+        if (remaining <= 0) return slots;
+        const gap = span.width / (needed + 1);
+        for (let i = 0; i < remaining; i++) {
+            const candidate = span.start + gap * (i + 1);
+            const adjusted = existingXs.includes(candidate)
+                ? candidate + ((template?.exterior?.width || 120) * (template?.exterior?.scale || 0.4))
+                : candidate;
+            slots.push(adjusted);
+        }
+        return slots;
+    }
+
+    buildHouseFromTemplate(template, slotX, idx, town) {
+        const house = this.clonePlain(template);
+        if (!house.exterior) house.exterior = {};
+        house.exterior.x = house.exterior.x ?? slotX;
+        const templateId = template?.id;
+        const houseId = (house.id && house.id !== templateId) ? house.id : `${town.id || 'house'}_${idx + 1}`;
+        house.id = houseId;
+        house.name = house.name || 'House';
+        const templateInteriorId = template?.interior?.id;
+        const interiorBaseId = house.interior?.id;
+        const interiorId = (interiorBaseId && interiorBaseId !== templateInteriorId)
+            ? interiorBaseId
+            : `${houseId}_interior`;
+        house.interior = this.ensureHouseInterior(house.interior || template.interior || {}, interiorId);
+        return house;
+    }
+
+    ensureHouseInterior(interior = {}, id = null) {
+        const resolved = this.clonePlain(interior) || {};
+        if (id) {
+            resolved.id = resolved.id || id;
+            if (resolved.room) {
+                resolved.room.id = resolved.room.id || id;
+            }
+        }
+        return resolved;
+    }
+
+    ensureTownItems(town, requirements) {
+        town.items = Array.isArray(town.items) ? town.items : [];
+        const plan = { ...requirements.itemPlan, ...(town.itemPlan || {}) };
+        const target = Math.max(plan?.count || 0, 0);
+        if (!target) return;
+        const pool = (Array.isArray(plan.pool) && plan.pool.length) ? plan.pool : this.defaultRequirements.itemPlan.pool;
+        const missing = Math.max(0, target - town.items.length);
+        if (missing <= 0) return;
+        const span = this.getRegionSpan(town);
+        const slots = this.resolveItemSlots(town, missing, plan, span);
+        for (let i = 0; i < missing; i++) {
+            const template = this.clonePlain(pool[i % pool.length]);
+            if (!template) continue;
+            const itemDef = { ...template, type: template.type || 'coffee' };
+            itemDef.x = itemDef.x ?? slots[i] ?? (span.start + (plan.spacing || 280) * (i + 1));
+            itemDef.y = itemDef.y ?? null;
+            town.items.push(itemDef);
+        }
+    }
+
+    resolveItemSlots(town, count, plan, span) {
+        const configured = Array.isArray(town.itemSlots) ? town.itemSlots.slice(0, count) : [];
+        if (configured.length >= count) return configured;
+        const slots = [...configured];
+        const spacing = plan?.spacing || 280;
+        for (let i = slots.length; i < count; i++) {
+            slots.push(span.start + spacing * (i + 1));
+        }
+        return slots;
+    }
+
+    hasSetpieceRole(setpieces = [], role = '', fallbackPredicate = null) {
+        return setpieces.some(sp => {
+            if (!sp) return false;
+            if (sp.role === role) return true;
+            if (typeof fallbackPredicate === 'function') return fallbackPredicate(sp);
+            return false;
+        });
     }
 
     /**
@@ -81,7 +541,8 @@ class TownManager {
         const buildings = blueprint.buildings.map(b => this.clonePlain(b));
         const setpieces = blueprint.setpieces.map(s => this.clonePlain(s));
         const npcs = blueprint.npcDefs.map(def => this.createNpc(def));
-        this.activeContent = { buildings, setpieces };
+        const items = blueprint.items.map(i => this.clonePlain(i));
+        this.activeContent = { buildings, setpieces, items };
         this.townNpcs = npcs;
 
         // Build renderable sprites so SceneRenderer can draw town content
@@ -114,6 +575,8 @@ class TownManager {
         decor.sort((a, b) => (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3));
 
         this.game.townDecor = decor;
+        this.spawnTownItems(items, town);
+        this.spawnTownColliders([...buildings, ...setpieces]);
         this.spawnTownNpcs();
     }
 
@@ -138,7 +601,9 @@ class TownManager {
     }
 
     resetTownContent() {
-        this.activeContent = { buildings: [], setpieces: [] };
+        this.removeTownItems();
+        this.removeTownColliders();
+        this.activeContent = { buildings: [], setpieces: [], items: [] };
         this.game.townDecor = [];
         this.removeTownNpcs();
         this.loadedTownId = null;
@@ -155,6 +620,7 @@ class TownManager {
         const buildings = Array.isArray(town?.buildings) ? town.buildings.map(def => this.createBuilding(def)) : [];
         const setpieces = Array.isArray(town?.setpieces) ? town.setpieces.map(def => this.createSetpiece(def)) : [];
         const npcDefs = Array.isArray(town?.npcs) ? town.npcs.map(def => this.clonePlain(def)) : [];
+        const items = Array.isArray(town?.items) ? town.items.map(def => this.clonePlain(def)) : [];
         // Prime renderables offscreen to reduce pop-in
         const renderables = [...buildings.map(b => this.buildDecorRenderable({
             x: b.exterior?.x ?? 0,
@@ -171,7 +637,7 @@ class TownManager {
             doorRef: b
         })), ...setpieces.map(sp => this.buildDecorRenderable(sp))].filter(Boolean);
         renderables.forEach(r => this.primeRenderable(r));
-        return { buildings, setpieces, npcDefs };
+        return { buildings, setpieces, npcDefs, items };
     }
 
     createBuilding(def = {}) {
@@ -245,7 +711,8 @@ class TownManager {
             interior: def.interior ? this.clonePlain(def.interior) : null,
             npcs: Array.isArray(def.npcs) ? [...def.npcs] : [],
             doorTimer: 0,
-            doorOpen: false
+            doorOpen: false,
+            collider: def.collider ? { ...def.collider } : null
         };
     }
 
@@ -255,10 +722,16 @@ class TownManager {
         const frameDirection = def.frameDirection || 'vertical';
         const frameHeight = def.frameHeight || null;
         const frameWidth = def.frameWidth || null;
-        const baseWidth = def.width ?? frameWidth;
-        const baseHeight = def.height ?? frameHeight;
-        const displayWidth = (baseWidth || frameWidth || 0) * scale || (def.width ?? 64);
-        const displayHeight = (baseHeight || frameHeight || 0) * scale || (def.height ?? 64);
+        const preserveAbsoluteSize = def.preserveAbsoluteSize === true;
+        const hasExplicitWidth = def.width !== undefined && def.width !== null;
+        const hasExplicitHeight = def.height !== undefined && def.height !== null;
+        const baseWidth = hasExplicitWidth ? def.width : (frameWidth || def.width);
+        const baseHeight = hasExplicitHeight ? def.height : (frameHeight || def.height);
+        const scaledWidth = (baseWidth || frameWidth || 0) * scale || (def.width ?? 64);
+        const scaledHeight = (baseHeight || frameHeight || 0) * scale || (def.height ?? 64);
+        // When preserving absolute size, keep width fixed but still scale height to stay proportional to the player
+        const displayWidth = preserveAbsoluteSize ? (baseWidth || scaledWidth) : scaledWidth;
+        const displayHeight = preserveAbsoluteSize ? scaledHeight : scaledHeight;
         const autoAlignToGround = def.autoAlignToGround ?? true;
         let y = def.y ?? 0;
         if (autoAlignToGround && displayHeight) {
@@ -289,7 +762,8 @@ class TownManager {
             frameTimeMs: def.frameTimeMs ?? 120,
             scale,
             tileX: def.tileX || false,
-            tileWidth: def.tileWidth || null
+            tileWidth: def.tileWidth || null,
+            collider: def.collider ? { ...def.collider } : null
         };
     }
 
@@ -359,15 +833,29 @@ class TownManager {
 
     resolveInteriorRoom(interiorId = null, interiorConfig = {}) {
         if (!interiorId) return null;
+        const registry = this.roomManager?.resolveRoomRegistry?.() || (typeof window !== 'undefined' ? window.roomRegistry : null);
         const explicitRoom = interiorConfig.room || interiorConfig.descriptor;
-        if (explicitRoom) return this.clonePlain(explicitRoom);
+        if (explicitRoom) {
+            if (registry?.normalize) return registry.normalize(explicitRoom, { id: interiorId });
+            return this.clonePlain(explicitRoom);
+        }
+
+        if (registry?.get?.(interiorId)) {
+            const built = registry.build(interiorId, interiorConfig.overrides || {});
+            if (built) return built;
+        }
 
         const globalRoom = this.getGlobalRoomDescriptor(interiorId);
-        if (globalRoom) return globalRoom;
+        if (globalRoom) {
+            if (registry?.register) registry.register(interiorId, globalRoom);
+            return globalRoom;
+        }
 
         const levelDef = interiorConfig.level || interiorConfig.definition || (typeof window !== 'undefined' ? window.LevelDefinitions?.[interiorId] : null);
         if (levelDef) {
-            return this.convertLevelDefinitionToRoom(interiorId, levelDef);
+            const converted = this.convertLevelDefinitionToRoom(interiorId, levelDef);
+            if (converted && registry?.register) registry.register(interiorId, converted);
+            return converted;
         }
         return null;
     }
@@ -470,6 +958,7 @@ class TownManager {
     handleTownExit() {
         if (!this.currentTownId) return;
         this.handleTownMusic(null);
+        this.resetTownContent();
         this.currentTownId = null;
         this.preloadedTownId = null;
     }
@@ -834,7 +1323,7 @@ class TownManager {
     handleRoomMusic(roomDesc = null, stopOnly = false, options = {}) {
         const audio = this.getAudioManager();
         if (!audio) return;
-        const roomMusicId = 'room_theme';
+        const roomMusicId = roomDesc?.music?.id || this.activeRoomMusicId || 'room_theme';
         const roomMusicSrc = roomDesc?.music?.src || 'music/beach-house.mp3';
         const roomVolume = roomDesc?.music?.volume ?? 0.8;
         const baseId = this.getBaseMusicId();
@@ -842,7 +1331,12 @@ class TownManager {
         const resumeBase = options.resumeBase !== false;
 
         if (stopOnly || !roomDesc) {
-            audio.music?.[roomMusicId]?.pause?.();
+            const stopId = this.activeRoomMusicId || roomMusicId;
+            if (stopId && audio.music?.[stopId]) {
+                audio.music[stopId].pause();
+                audio.setTrackVolume?.(stopId, 0);
+            }
+            this.activeRoomMusicId = null;
             if (activeTownId && audio.music?.[activeTownId]) {
                 audio.music[activeTownId].pause();
                 audio.setTrackVolume?.(activeTownId, this.getTownMusicVolume({}));
@@ -867,6 +1361,7 @@ class TownManager {
         if (audio.music?.[roomMusicId]) {
             audio.playMusic?.(roomMusicId, roomVolume, { allowParallel: true, restartIfPlaying: true });
             audio.setTrackVolume?.(roomMusicId, roomVolume);
+            this.activeRoomMusicId = roomMusicId;
         }
     }
 
@@ -915,6 +1410,91 @@ class TownManager {
                 g.npcs.push(npc);
             }
         });
+    }
+
+    spawnTownItems(items = [], town = null) {
+        const g = this.game;
+        if (!g || !Array.isArray(items)) return;
+        this.removeTownItems();
+        const groundY = this.getGroundY();
+        const spawned = [];
+        items.forEach((def, idx) => {
+            if (!def) return;
+            const itemDef = { ...def };
+            if (itemDef.y === undefined || itemDef.y === null) {
+                const offset = itemDef.height ?? 50;
+                itemDef.y = (groundY !== null && groundY !== undefined) ? groundY - offset : 0;
+            }
+            itemDef.x = itemDef.x ?? (town?.region?.startX ?? 0) + ((idx + 1) * 120);
+            const item = this.createTownItem(itemDef);
+            if (item) {
+                item.game = g;
+                g.items.push(item);
+                spawned.push(item);
+            }
+        });
+        this.activeTownItems = spawned;
+    }
+
+    spawnTownColliders(items = []) {
+        const g = this.game;
+        const factory = g?.entityFactory;
+        if (!g || !factory || !Array.isArray(items)) return;
+        this.removeTownColliders();
+
+        items.forEach(item => {
+            if (!item?.collider) return;
+            const baseX = item.exterior?.x ?? item.x ?? 0;
+            const baseY = item.exterior?.y ?? item.y ?? 0;
+            const col = item.collider;
+            const colX = baseX + (col.offsetX ?? 0);
+            const colY = baseY + (col.offsetY ?? 0);
+            const colWidth = col.width ?? item.displayWidth ?? item.width ?? 64;
+            const colHeight = col.height ?? 16;
+            const colliderDef = {
+                type: 'decor_platform',
+                x: colX,
+                y: colY,
+                width: colWidth,
+                height: colHeight,
+                hitboxWidth: col.hitboxWidth,
+                hitboxHeight: col.hitboxHeight,
+                hitboxOffsetX: col.hitboxOffsetX,
+                hitboxOffsetY: col.hitboxOffsetY,
+                sprite: null
+            };
+            const collider = factory.create(colliderDef);
+            if (collider) {
+                collider.game = g;
+                collider.type = 'decor_platform';
+                collider.invisible = true;
+                collider.hidden = true;
+                collider.render = false;
+                g.platforms.push(collider);
+                this.activeTownColliders.push(collider);
+            }
+        });
+    }
+
+    removeTownColliders() {
+        if (!this.game || !Array.isArray(this.activeTownColliders) || !Array.isArray(this.game.platforms)) return;
+        this.game.platforms = this.game.platforms.filter(p => !this.activeTownColliders.includes(p));
+        this.activeTownColliders = [];
+    }
+
+    removeTownItems() {
+        if (!this.game || !Array.isArray(this.activeTownItems) || !Array.isArray(this.game.items)) return;
+        this.game.items = this.game.items.filter(item => !this.activeTownItems.includes(item));
+        this.activeTownItems = [];
+    }
+
+    createTownItem(def = {}) {
+        const factory = this.game?.entityFactory;
+        if (!factory) return null;
+        if (typeof factory.create === 'function') {
+            return factory.create(def);
+        }
+        return null;
     }
 
     buildDecorRenderable(def = {}) {

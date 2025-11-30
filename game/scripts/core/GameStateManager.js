@@ -13,6 +13,8 @@ class GameStateManager {
             MENU: 'menu',
             PLAYING: 'playing', 
             PAUSED: 'paused',
+            BATTLE: 'battle',
+            CUTSCENE: 'cutscene',
             GAME_OVER: 'gameOver',
             VICTORY: 'victory'
         };
@@ -69,12 +71,27 @@ class GameStateManager {
     isPlaying() {
         return this.currentState === this.states.PLAYING;
     }
+
+    isBattle() {
+        return this.currentState === this.states.BATTLE;
+    }
+
+    isCutscene() {
+        return this.currentState === this.states.CUTSCENE;
+    }
     
     /**
      * Check if game is paused
      */
     isPaused() {
         return this.currentState === this.states.PAUSED;
+    }
+
+    /**
+     * Returns true when simulation should tick (play/battle/cutscene).
+     */
+    allowsSimulation() {
+        return this.isPlaying() || this.isBattle() || this.isCutscene();
     }
     
     /**
