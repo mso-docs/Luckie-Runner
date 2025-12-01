@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Gallery - Club Cidic Preview</title>
+    
+    <!-- Import the custom font -->
+    <style>
+        @font-face {
+            font-family: 'Hey Gorgeous';
+            src: url('../styles/font/heygorgeous.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --font-main: 'Hey Gorgeous', 'Trebuchet MS', 'Fredoka One', 'Segoe UI', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, #1a4d2e 0%, #081c15 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Demo controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+        }
+
+        .demo-btn {
+            padding: 10px 20px;
+            background: #52b788;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: var(--font-main);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .demo-btn:hover {
+            background: #40916c;
+        }
+    </style>
+    
+    <!-- Import Sound Gallery styles -->
+    <link rel="stylesheet" href="../styles/sound-gallery.css">
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h3 style="margin-bottom: 10px; font-family: var(--font-main);">Demo Controls</h3>
+        <button class="demo-btn" onclick="toggleGallery()">Toggle Gallery</button>
+        <button class="demo-btn" onclick="toggleSpin()">Toggle Spin</button>
+        <button class="demo-btn" onclick="togglePlayPause()">Play/Pause</button>
+    </div>
+
+    <!-- Sound Gallery UI (imported from sound-gallery.html) -->
+    <div id="soundGalleryOverlay" class="sound-gallery-overlay" aria-hidden="false">
+        <div class="sound-gallery-window" role="dialog" aria-labelledby="soundGalleryTitle">
+            <!-- Main Container -->
+            <div class="sound-gallery-container">
+                <!-- Header -->
+                <div class="sound-gallery-header">
+                    <h2 id="soundGalleryTitle" class="gallery-title">Sound Gallery</h2>
+                    <button class="slime-toggle" id="soundGalleryClose" aria-label="Close Sound Gallery">
+                        <span class="toggle-icon">⚙️</span>
+                    </button>
+                </div>
+
+                <!-- Content Area -->
+                <div class="sound-gallery-content">
+                    <!-- Left Panel: Record Player -->
+                    <div class="record-player-panel">
+                        <div class="record-player-container">
+                            <!-- Current Track Display -->
+                            <div class="current-track-display">
+                                <div class="track-name" id="currentTrackName">Rogueport</div>
+                            </div>
+
+                            <!-- Vinyl Record -->
+                            <div class="vinyl-record" id="vinylRecord">
+                                <div class="record-label">
+                                    <div class="label-center"></div>
+                                </div>
+                            </div>
+
+                            <!-- Player Controls -->
+                            <div class="player-controls">
+                                <button class="control-btn prev-btn" id="prevTrack" aria-label="Previous Track">
+                                    <span class="control-icon">⏮</span>
+                                </button>
+                                <button class="control-btn play-pause-btn" id="playPauseBtn" aria-label="Play/Pause">
+                                    <span class="control-icon play-icon" id="playPauseIcon">▶</span>
+                                </button>
+                                <button class="control-btn next-btn" id="nextTrack" aria-label="Next Track">
+                                    <span class="control-icon">⏭</span>
+                                </button>
+                            </div>
+
+                            <!-- Additional Controls -->
+                            <div class="additional-controls">
+                                <button class="control-btn small-btn" id="shuffleBtn" aria-label="Shuffle">
+                                    <span class="control-icon">🔀</span>
+                                </button>
+                                <button class="control-btn small-btn" id="repeatBtn" aria-label="Repeat">
+                                    <span class="control-icon">🔁</span>
+                                </button>
+                                <button class="control-btn small-btn" id="loopBtn" aria-label="Loop">
+                                    <span class="control-icon">🔂</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Track List -->
+                    <div class="track-list-panel">
+                        <div class="track-search-container">
+                            <input 
+                                type="text" 
+                                class="track-search" 
+                                id="trackSearch" 
+                                placeholder="Rogueport"
+                                aria-label="Search tracks"
+                            >
+                        </div>
+
+                        <div class="track-list-scroll" id="trackListScroll">
+                            <div class="track-list" id="trackList">
+                                <!-- Sample tracks based on actual game music -->
+                                <button class="track-item active" data-track="time-to-slime">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Time to Slime (Club Theme)</span>
+                                </button>
+                                <button class="track-item" data-track="beachside">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Beachside</span>
+                                </button>
+                                <button class="track-item" data-track="beachside-boba">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Beachside Boba</span>
+                                </button>
+                                <button class="track-item" data-track="beach-house">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Beach House</span>
+                                </button>
+                                <button class="track-item" data-track="overworld">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Overworld</span>
+                                </button>
+                                <button class="track-item" data-track="level1">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Level 1</span>
+                                </button>
+                                <button class="track-item" data-track="level2">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Level 2</span>
+                                </button>
+                                <button class="track-item" data-track="level3">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Level 3</span>
+                                </button>
+                                <button class="track-item" data-track="tutorial-battle">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Tutorial Battle</span>
+                                </button>
+                                <button class="track-item" data-track="titlescreen">
+                                    <span class="track-icon">🎵</span>
+                                    <span class="track-text">Title Screen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer with hints -->
+                <div class="sound-gallery-footer">
+                    <div class="footer-hint">
+                        <span class="hint-key">🅱</span>
+                        <span class="hint-text">Select</span>
+                    </div>
+                    <div class="footer-hint">
+                        <span class="hint-key">🅱</span>
+                        <span class="hint-text">Back</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo functionality
+        let isPlaying = false;
+        let currentTrack = 'time-to-slime';
+
+        function toggleGallery() {
+            const overlay = document.getElementById('soundGalleryOverlay');
+            overlay.classList.toggle('hidden');
+            overlay.setAttribute('aria-hidden', overlay.classList.contains('hidden'));
+        }
+
+        function toggleSpin() {
+            const vinyl = document.getElementById('vinylRecord');
+            vinyl.classList.toggle('spinning');
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            const icon = document.getElementById('playPauseIcon');
+            const vinyl = document.getElementById('vinylRecord');
+            
+            if (isPlaying) {
+                icon.textContent = '⏸';
+                vinyl.classList.add('spinning');
+            } else {
+                icon.textContent = '▶';
+                vinyl.classList.remove('spinning');
+            }
+        }
+
+        // Interactive track selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const trackItems = document.querySelectorAll('.track-item');
+            const trackName = document.getElementById('currentTrackName');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playPauseIcon = document.getElementById('playPauseIcon');
+            const vinyl = document.getElementById('vinylRecord');
+            const closeBtn = document.getElementById('soundGalleryClose');
+
+            trackItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // Remove active class from all items
+                    trackItems.forEach(i => i.classList.remove('active'));
+                    
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Update current track name
+                    currentTrack = this.dataset.track;
+                    trackName.textContent = this.querySelector('.track-text').textContent;
+                    
+                    // Auto-play when track is selected
+                    isPlaying = true;
+                    playPauseIcon.textContent = '⏸';
+                    vinyl.classList.add('spinning');
+                });
+            });
+
+            // Play/Pause button
+            playPauseBtn.addEventListener('click', togglePlayPause);
+
+            // Close button
+            closeBtn.addEventListener('click', function() {
+                toggleGallery();
+                isPlaying = false;
+                playPauseIcon.textContent = '▶';
+                vinyl.classList.remove('spinning');
+            });
+
+            // Previous track
+            document.getElementById('prevTrack').addEventListener('click', function() {
+                const currentIndex = Array.from(trackItems).findIndex(item => item.classList.contains('active'));
+                const prevIndex = currentIndex > 0 ? currentIndex - 1 : trackItems.length - 1;
+                trackItems[prevIndex].click();
+            });
+
+            // Next track
+            document.getElementById('nextTrack').addEventListener('click', function() {
+                const currentIndex = Array.from(trackItems).findIndex(item => item.classList.contains('active'));
+                const nextIndex = currentIndex < trackItems.length - 1 ? currentIndex + 1 : 0;
+                trackItems[nextIndex].click();
+            });
+
+            // Search functionality
+            const searchInput = document.getElementById('trackSearch');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                trackItems.forEach(item => {
+                    const trackText = item.querySelector('.track-text').textContent.toLowerCase();
+                    if (trackText.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
