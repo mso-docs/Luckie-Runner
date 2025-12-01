@@ -1274,6 +1274,13 @@ class TownManager {
 
     exitInterior() {
         if (!this.activeInterior || !this.interiorReturn) return;
+        
+        // Check if leaving Club Cidic - stop Sound Gallery music
+        const wasClubCidic = this.activeInterior?.id === 'club_cidic_interior';
+        if (wasClubCidic && this.game?.audioManager) {
+            this.game.audioManager.stopAllMusic();
+        }
+        
         const targetLevel = this.interiorReturn.levelId || 'testRoom';
         const spawn = this.interiorReturn.position || null;
         const prevTestMode = this.interiorReturn.prevTestMode;

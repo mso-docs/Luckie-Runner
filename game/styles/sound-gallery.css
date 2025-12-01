@@ -146,7 +146,7 @@
     background: linear-gradient(135deg, #081c15, #1b4332);
     border: 6px solid #2d6a4f;
     border-radius: 24px;
-    padding: 15px 20px 25px 20px;
+    padding: 18px 20px 24px 20px;
     box-shadow: 
         0 10px 0 #052d16,
         0 14px 24px rgba(0, 0, 0, 0.5),
@@ -165,7 +165,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 24px;
 }
 
 /* Current Track Display */
@@ -183,24 +183,27 @@
 }
 
 .track-name {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 900;
     color: #081c15;
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
     font-family: var(--font-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Vinyl Record */
 .vinyl-record {
-    width: 160px;
-    height: 160px;
+    width: 280px;
+    height: 280px;
     background: radial-gradient(circle, #0d1b2a 0%, #1b263b 40%, #0d1b2a 100%);
-    border: 6px solid #1b263b;
+    border: 8px solid #1b263b;
     border-radius: 50%;
     position: relative;
     box-shadow: 
-        0 8px 0 #000000,
-        0 12px 20px rgba(0, 0, 0, 0.6),
+        0 10px 0 #000000,
+        0 14px 24px rgba(0, 0, 0, 0.6),
         inset 0 0 40px rgba(0, 0, 0, 0.8),
         inset 0 2px 0 rgba(255, 255, 255, 0.1);
     transition: transform 0.3s ease;
@@ -237,8 +240,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     background: linear-gradient(135deg, #52b788, #40916c, #2d6a4f);
     border: 4px solid #1b4332;
     border-radius: 50%;
@@ -251,8 +254,8 @@
 }
 
 .label-center {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     background: #081c15;
     border-radius: 50%;
     box-shadow: 
@@ -267,7 +270,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 .control-btn {
@@ -310,36 +313,18 @@
 .play-pause-btn {
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #95d5b2, #74c69d);
-    border-color: #52b788;
 }
 
 .control-icon {
-    font-size: 24px;
+    font-size: 28px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.play-pause-btn .control-icon {
-    font-size: 32px;
+.play-icon {
+    font-size: 36px;
 }
 
-/* Additional Controls */
-.additional-controls {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    width: 100%;
-    margin-top: 8px;
-}
 
-.small-btn {
-    width: 48px;
-    height: 48px;
-}
-
-.small-btn .control-icon {
-    font-size: 20px;
-}
 
 /* Track List Panel */
 .track-list-panel {
