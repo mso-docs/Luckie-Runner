@@ -536,12 +536,24 @@
     text-align: center;
 }
 
-.hint-action {
+.hint-action,
+.hint-text {
     font-size: 18px;
     font-weight: 800;
     color: #ffffff !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     font-family: var(--font-main);
+}
+
+.footer-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-hint .hint-action,
+.footer-hint .hint-text {
+    color: #ffffff !important;
 }
 
 /* Responsive Design */
