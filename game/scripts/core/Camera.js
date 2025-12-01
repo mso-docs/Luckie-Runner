@@ -41,7 +41,7 @@ class Camera {
     /**
      * Follow the player with optional test-mode behavior.
      */
-    followPlayer(player, { testMode = false } = {}) {
+ followPlayer(player, { testMode = false } = {}) {
         if (!player) return;
 
         this.target.x = player.x - this.viewportWidth / 2 + player.width / 2 + (this.lead?.x || 0);
