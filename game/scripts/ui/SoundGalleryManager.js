@@ -190,7 +190,7 @@ class SoundGalleryManager {
                 break;
             case 'Enter':
                 e.preventDefault();
-                this.playSelectedTrack();
+                this.togglePlayPause();
                 break;
             case ' ':
                 e.preventDefault();
