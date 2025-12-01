@@ -292,7 +292,7 @@ const TownsConfig = {
                                     pauseMs: 60,
                                     solid: true,
                                     patrol: [
-                                        { x: 200 },
+                                        { x: 300 },
                                         { x: 800 }
                                     ]
                                 },
