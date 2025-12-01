@@ -325,12 +325,46 @@ class SoundGalleryManager {
             });
         }
         
+        // Handle track end event for repeat/shuffle
+        const audioElement = this.audio.music?.[track.id];
+        if (audioElement) {
+            // Remove previous listener if it exists
+            if (this.currentTrackEndHandler) {
+                const prevTrack = this.tracks[this.currentTrackIndex];
+                const prevElement = this.audio.music?.[prevTrack?.id];
+                if (prevElement) {
+                    prevElement.removeEventListener('ended', this.currentTrackEndHandler);
+                }
+            }
+            
+            // Add new listener
+            this.currentTrackEndHandler = () => this.handleTrackEnd();
+            audioElement.addEventListener('ended', this.currentTrackEndHandler);
+        }
+        
         this.isPlaying = true;
         this.updatePlayPauseUI();
         this.startVinylSpin();
     }
+    
+    handleTrackEnd() {
+        if (this.repeat) {
+            // Replay the same track
+            this.playCurrentTrack();
+        } else if (this.shuffle || !this.loop) {
+            // Move to next track (shuffled or sequential)
+            this.nextTrack();
+        }
+        // If loop is off and not repeating, stop playing
+        else {
+            this.isPlaying = false;
+            this.updatePlayPauseUI();
+            this.stopVinylSpin();
+        }
+    }
 
     togglePlayPause() {
+        console.log('Toggle play/pause - currently:', this.isPlaying ? 'playing' : 'paused');
         if (this.isPlaying) {
             this.pause();
         } else {
@@ -341,11 +375,19 @@ class SoundGalleryManager {
     play() {
         if (!this.audio) return;
         
-        // Resume or play current track
-        if (this.audio.resumeMusic) {
-            this.audio.resumeMusic();
-        } else {
-            this.playCurrentTrack();
+        // Mark that user has interacted with music
+        this.hasUserInteracted = true;
+        
+        // Get current track
+        const track = this.tracks[this.currentTrackIndex];
+        if (!track) return;
+        
+        // Resume the paused track or play from start
+        if (this.audio.music && this.audio.music[track.id]) {
+            const audioElement = this.audio.music[track.id];
+            audioElement.play().catch(err => {
+                console.warn('Music play failed:', err);
+            });
         }
         
         this.isPlaying = true;
@@ -371,11 +413,13 @@ class SoundGalleryManager {
     }
 
     previousTrack() {
+        console.log('Previous track clicked');
         const newIndex = (this.currentTrackIndex - 1 + this.tracks.length) % this.tracks.length;
         this.selectTrack(newIndex);
     }
 
     nextTrack() {
+        console.log('Next track clicked');
         let newIndex;
         if (this.shuffle) {
             newIndex = Math.floor(Math.random() * this.tracks.length);
@@ -389,30 +433,51 @@ class SoundGalleryManager {
         this.shuffle = !this.shuffle;
         const btn = document.getElementById('shuffleBtn');
         if (btn) {
-            btn.style.background = this.shuffle 
-                ? 'linear-gradient(135deg, #95d5b2, #74c69d)' 
-                : 'linear-gradient(135deg, #52b788, #40916c)';
+            if (this.shuffle) {
+                btn.style.background = 'linear-gradient(135deg, #95d5b2, #74c69d)';
+                btn.style.borderColor = '#74c69d';
+                btn.style.boxShadow = '0 6px 0 #52b788, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(149, 213, 178, 0.5)';
+            } else {
+                btn.style.background = 'linear-gradient(135deg, #52b788, #40916c)';
+                btn.style.borderColor = '#2d6a4f';
+                btn.style.boxShadow = '0 6px 0 #1b4332, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(149, 213, 178, 0.3)';
+            }
         }
+        console.log('Shuffle:', this.shuffle ? 'ON' : 'OFF');
     }
 
     toggleRepeat() {
         this.repeat = !this.repeat;
         const btn = document.getElementById('repeatBtn');
         if (btn) {
-            btn.style.background = this.repeat 
-                ? 'linear-gradient(135deg, #95d5b2, #74c69d)' 
-                : 'linear-gradient(135deg, #52b788, #40916c)';
+            if (this.repeat) {
+                btn.style.background = 'linear-gradient(135deg, #95d5b2, #74c69d)';
+                btn.style.borderColor = '#74c69d';
+                btn.style.boxShadow = '0 6px 0 #52b788, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(149, 213, 178, 0.5)';
+            } else {
+                btn.style.background = 'linear-gradient(135deg, #52b788, #40916c)';
+                btn.style.borderColor = '#2d6a4f';
+                btn.style.boxShadow = '0 6px 0 #1b4332, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(149, 213, 178, 0.3)';
+            }
         }
+        console.log('Repeat:', this.repeat ? 'ON' : 'OFF');
     }
 
     toggleLoop() {
         this.loop = !this.loop;
         const btn = document.getElementById('loopBtn');
         if (btn) {
-            btn.style.background = this.loop 
-                ? 'linear-gradient(135deg, #95d5b2, #74c69d)' 
-                : 'linear-gradient(135deg, #52b788, #40916c)';
+            if (this.loop) {
+                btn.style.background = 'linear-gradient(135deg, #95d5b2, #74c69d)';
+                btn.style.borderColor = '#74c69d';
+                btn.style.boxShadow = '0 6px 0 #52b788, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(149, 213, 178, 0.5)';
+            } else {
+                btn.style.background = 'linear-gradient(135deg, #52b788, #40916c)';
+                btn.style.borderColor = '#2d6a4f';
+                btn.style.boxShadow = '0 6px 0 #1b4332, 0 8px 12px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(149, 213, 178, 0.3)';
+            }
         }
+        console.log('Loop:', this.loop ? 'ON' : 'OFF');
     }
 
     updatePlayPauseUI() {
