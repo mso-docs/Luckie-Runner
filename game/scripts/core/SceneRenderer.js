@@ -16,12 +16,23 @@ class SceneRenderer {
 
         const isRoom = g.activeWorld?.kind === 'room';
 
-        // Room backplate: fill black to avoid any leak-through from previous layers
+        // Room letterboxing: draw black background and center room content
+        let roomOffsetX = 0;
+        let roomOffsetY = 0;
         if (isRoom) {
-            ctx.save();
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.restore();
+            
+            // Calculate letterbox offsets to center the room
+            const roomBounds = g.activeWorld?.bounds || { width: canvas.width, height: canvas.height };
+            roomOffsetX = Math.max(0, (canvas.width - roomBounds.width) / 2);
+            roomOffsetY = Math.max(0, (canvas.height - roomBounds.height) / 2);
+            
+            // Translate context to center the room content
+            if (roomOffsetX > 0 || roomOffsetY > 0) {
+                ctx.save();
+                ctx.translate(roomOffsetX, roomOffsetY);
+            }
         }
 
         if (g.testMode && !isRoom) {
@@ -86,5 +97,10 @@ class SceneRenderer {
 
         // Flag
         g.flag?.render?.(ctx, g.camera);
+        
+        // Restore context if we applied letterbox translation
+        if (isRoom && (roomOffsetX > 0 || roomOffsetY > 0)) {
+            ctx.restore();
+        }
     }
 }

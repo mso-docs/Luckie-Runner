@@ -417,6 +417,15 @@ class RoomManager {
         }
 
         g.setActiveWorld?.('room', { id: descriptor.id, theme: g.currentTheme, bounds });
+        
+        // Set camera bounds and reset to follow player from spawn position
+        if (g.camera) {
+            g.camera.setBounds(bounds.width, bounds.height);
+            // Center camera on player's spawn position
+            const camX = spawn.x - g.camera.viewportWidth / 2 + (g.player?.width || 0) / 2;
+            const camY = spawn.y - g.camera.viewportHeight / 2 + (g.player?.height || 0) / 2;
+            g.camera.reset({ x: camX, y: camY });
+        }
     }
 
     resolveRoomRegistry(game = null) {

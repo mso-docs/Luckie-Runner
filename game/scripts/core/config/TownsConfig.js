@@ -278,7 +278,7 @@ const TownsConfig = {
                                     type: 'townNpc',
                                     name: 'DJ Cidic',
                                     sprite: 'art/sprites/dj-cidic.png',
-                                    width: 167,
+                                    width: 165,
                                     height: 133,
                                     frames: 9,
                                     idleFrame: 0,
