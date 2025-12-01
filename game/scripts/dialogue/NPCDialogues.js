@@ -24,7 +24,7 @@ window.NPCDialogues = {
     'npc.dj_cidic': [
         'Yo! Welcome to the one and only #Club# #Cidic#, also known as the hottest spot in town.',
         'Feel free to hit the dance floor and show off your %moves%!',
-        'If you need anything, just lo d ok for me—I\'m usually by the DJ booth.',
+        'If you need anything, just look for me—I\'m usually by the DJ booth.',
         'Also, you can press ~Z~ near me to change the tune!'
     ],
     'npc.shop_ghost': [

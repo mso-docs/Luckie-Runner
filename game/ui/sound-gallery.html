@@ -18,7 +18,9 @@
                     <div class="record-player-container">
                         <!-- Current Track Display -->
                         <div class="current-track-display">
-                            <div class="track-name" id="currentTrackName">Rogueport</div>
+                            <div class="track-name-wrapper">
+                                <div class="track-name" id="currentTrackName">Rogueport</div>
+                            </div>
                         </div>
 
                         <!-- Vinyl Record -->
@@ -89,13 +91,19 @@
 
             <!-- Footer with hints -->
             <div class="sound-gallery-footer">
-                <div class="footer-hint">
-                    <span class="hint-key">🅱</span>
-                    <span class="hint-text">Select</span>
-                </div>
-                <div class="footer-hint">
-                    <span class="hint-key">🅱</span>
-                    <span class="hint-text">Back</span>
+                <div class="footer-controls">
+                    <div class="control-hint">
+                        <span class="hint-key">Z</span>
+                        <span class="hint-action">Close</span>
+                    </div>
+                    <div class="control-hint">
+                        <span class="hint-key">↑↓</span>
+                        <span class="hint-action">Select</span>
+                    </div>
+                    <div class="control-hint">
+                        <span class="hint-key">Enter</span>
+                        <span class="hint-action">Play/Pause</span>
+                    </div>
                 </div>
             </div>
         </div>

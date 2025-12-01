@@ -182,6 +182,11 @@
         0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
+.track-name-wrapper {
+    overflow: hidden;
+    width: 100%;
+}
+
 .track-name {
     font-size: 24px;
     font-weight: 900;
@@ -189,8 +194,21 @@
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
     font-family: var(--font-main);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: inline-block;
+}
+
+.track-name.scrolling {
+    animation: marquee 10s linear infinite;
+    padding-right: 50px;
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
 }
 
 /* Vinyl Record */
@@ -490,7 +508,7 @@
 .sound-gallery-footer {
     display: flex;
     justify-content: center;
-    gap: 40px;
+    align-items: center;
     padding: 16px 20px;
     background: linear-gradient(135deg, #1b4332, #081c15);
     border: 4px solid #2d6a4f;
@@ -502,14 +520,20 @@
     margin-top: 20px;
 }
 
-.footer-hint {
+.footer-controls {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+
+.control-hint {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .hint-key {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 900;
     padding: 6px 12px;
     background: linear-gradient(135deg, #52b788, #40916c);
@@ -519,9 +543,11 @@
     box-shadow: 
         0 4px 0 #1b4332,
         inset 0 1px 0 rgba(149, 213, 178, 0.3);
+    min-width: 50px;
+    text-align: center;
 }
 
-.hint-text {
+.hint-action {
     font-size: 18px;
     font-weight: 800;
     color: #95d5b2;
