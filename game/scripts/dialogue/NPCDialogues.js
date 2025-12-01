@@ -26,5 +26,10 @@ window.NPCDialogues = {
         'Feel free to hit the dance floor and show off your %moves%.',
         'If you need anything, just look for me—I\'m usually by the DJ booth.',
         'Also, you can press ~Z~ near me to change the tune!'
-    ],   
+    ],
+    'npc.shop_ghost': [
+        '^Boo!^ Welcome to my shop, mortal.',
+        'Feel free to browse my %spooky% wares. I promise they\'re to _die_ for!',
+        'If you need any help, just ask—I\'m here to !haunt!... I mean, ~help~ you.'
+    ]   
 };

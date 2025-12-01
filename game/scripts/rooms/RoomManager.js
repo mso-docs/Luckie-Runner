@@ -27,7 +27,13 @@ class RoomWorldBuilder {
                 const factory = this.factory || this.game?.entityFactory || this.game?.worldBuilder?.factory || null;
                 if (factory?.create) {
                     const entity = factory.create(def);
-                    if (entity) return entity;
+                    if (entity) {
+                        // Ensure entity has game reference and is active
+                        if (!entity.game) entity.game = this.game;
+                        if (entity.active === undefined) entity.active = true;
+                        if (entity.solid === undefined) entity.solid = true;
+                        return entity;
+                    }
                 }
                 return this.clonePlain(def);
             }).filter(Boolean)
@@ -222,24 +228,19 @@ class RoomManager {
      * Enter a room built from a plain descriptor.
      */
     enterRoom(room = {}, returnPosition = null) {
-        console.log('[RoomManager.enterRoom] CALLED with room:', room);
         if (!this.game || !room) return false;
         const descriptor = room.__normalizedRoom ? room : this.resolveRoomDescriptor(room);
         if (!descriptor) return false;
-        console.log('[RoomManager.enterRoom] descriptor:', descriptor);
         this.captureReturnState(returnPosition);
         const roomState = this.builder.build(descriptor);
-        console.log('[RoomManager.enterRoom] roomState:', roomState);
         
         // Set room data BEFORE applying to game world
         this.room = roomState.descriptor;
         this.roomEntities = roomState.entities;
         this.active = true;
-        console.log('[RoomManager.enterRoom] SET: this.active =', this.active, 'this.room =', this.room);
         
         // Now apply to game (which calls setActiveWorld)
         this.applyRoomWorld(roomState);
-        console.log('[RoomManager.enterRoom] AFTER applyRoomWorld: this.active =', this.active, 'this.room =', this.room);
         this.alignRoomNpcsToFloor();
         
         // Reset door state when entering a room
@@ -247,7 +248,6 @@ class RoomManager {
             this.game.doorRenderer.reset();
         }
         
-        console.log('[RoomManager.enterRoom] COMPLETE: this.active =', this.active, 'this.room =', this.room);
         return true;
     }
 
@@ -256,6 +256,12 @@ class RoomManager {
      */
     tryExitRoom(player) {
         if (!this.active || !this.room || !player) return false;
+        
+        // Check if door animation needs to complete first
+        if (this.game.doorRenderer && !this.game.doorRenderer.canExit()) {
+            return false; // Wait for door to finish opening
+        }
+        
         const exit = this.room.exit || {};
         const px = player.x + (player.width ? player.width / 2 : 0);
         const py = player.y + (player.height || 0);

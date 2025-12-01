@@ -92,16 +92,16 @@ class SceneRenderer {
         // Projectiles
         g.projectiles.forEach(projectile => projectile?.render?.(ctx, g.camera));
 
+        // Door (exit indicator for rooms) - rendered before player so player appears in front
+        if (isRoom && g.doorRenderer) {
+            g.doorRenderer.render(ctx, g.camera);
+        }
+
         // Player
         g.player?.render?.(ctx, g.camera);
 
         // Flag
         g.flag?.render?.(ctx, g.camera);
-
-        // Door (exit indicator for rooms) - rendered after player so it appears in front
-        if (isRoom && g.doorRenderer) {
-            g.doorRenderer.render(ctx, g.camera);
-        }
         
         // Restore context if we applied letterbox translation
         if (isRoom && (roomOffsetX > 0 || roomOffsetY > 0)) {

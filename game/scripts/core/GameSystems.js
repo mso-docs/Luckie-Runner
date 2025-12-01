@@ -87,9 +87,7 @@ class GameSystems {
         g.projectiles = (entities.projectiles || []).filter(projectile => {
             if (!projectile || !projectile.active) return false;
             projectile.update(deltaTime);
-            if (!isRoom) {
-                g.collisionSystem?.updateProjectilePhysics(projectile);
-            }
+            g.collisionSystem?.updateProjectilePhysics(projectile);
             return true;
         });
         entities.projectiles = g.projectiles;

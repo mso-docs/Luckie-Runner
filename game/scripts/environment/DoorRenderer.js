@@ -12,6 +12,7 @@ class DoorRenderer {
         this.isOpen = false;
         this.openTimer = 0;
         this.openDuration = 500; // ms to show open frame
+        this.animationComplete = false; // Tracks if door animation finished
         this.loadDoorSprite();
     }
 
@@ -28,22 +29,45 @@ class DoorRenderer {
      * Update the door state based on player position and input.
      */
     update(deltaTime) {
-        if (!this.game || !this.game.roomManager?.isActive()) {
+        if (!this.game) {
             this.isOpen = false;
             this.currentFrame = 0;
             return;
         }
 
-        const room = this.game.roomManager.room;
+        const isRoom = this.game.activeWorld?.kind === 'room';
+        if (!isRoom) {
+            this.isOpen = false;
+            this.currentFrame = 0;
+            return;
+        }
+
         const player = this.game.player;
-        
-        if (!room || !player) {
+        if (!player) {
             this.isOpen = false;
             this.currentFrame = 0;
             return;
         }
 
-        const exit = room.exit || {};
+        // Get exit data from multiple possible sources
+        let exit = null;
+        if (this.game.roomManager?.room?.exit) {
+            exit = this.game.roomManager.room.exit;
+        } else if (typeof window !== 'undefined' && window.RoomDescriptors) {
+            const roomId = this.game.activeWorld.id || this.game.currentRoomId;
+            const roomDesc = window.RoomDescriptors[roomId];
+            if (roomDesc?.exit) {
+                exit = roomDesc.exit;
+            }
+        } else if (this.game.level?.exit) {
+            exit = this.game.level.exit;
+        }
+
+        if (!exit) {
+            this.isOpen = false;
+            this.currentFrame = 0;
+            return;
+        }
         const isNearExit = this.isPlayerNearExit(player, exit);
 
         // Check if player pressed Enter/E while near exit
@@ -57,18 +81,19 @@ class DoorRenderer {
             keys.has('keye')
         );
 
-        if (isNearExit && pressedInteract) {
+        if (isNearExit && pressedInteract && !this.isOpen) {
             this.isOpen = true;
             this.openTimer = this.openDuration;
             this.currentFrame = 1;
+            this.animationComplete = false;
         }
 
-        // Auto-close door after duration
+        // Count down the door animation timer
         if (this.isOpen && this.openTimer > 0) {
             this.openTimer -= deltaTime;
             if (this.openTimer <= 0) {
-                this.isOpen = false;
-                this.currentFrame = 0;
+                this.animationComplete = true; // Signal that animation is done
+                // Keep door open (don't auto-close)
             }
         }
     }
@@ -96,60 +121,61 @@ class DoorRenderer {
      * Render the door sprite at the exit position.
      */
     render(ctx, camera) {
-        // DEBUG: Log everything
-        console.log('[DoorRenderer.render] Called');
-        console.log('  game:', !!this.game);
-        console.log('  activeWorld:', this.game?.activeWorld);
-        console.log('  roomManager:', !!this.game?.roomManager);
-        console.log('  roomManager.active:', this.game?.roomManager?.active);
-        console.log('  roomManager.room:', this.game?.roomManager?.room);
-        console.log('  doorSprite:', !!this.doorSprite, 'complete:', this.doorSprite?.complete);
-        
-        // Quick early exits without logging spam
         if (!this.game) return;
         
-        // Check if we're in a room (matches SceneRenderer logic)
+        // Check if we're in a room
         const isRoom = this.game.activeWorld?.kind === 'room';
-        if (!isRoom) {
-            console.log('  [DoorRenderer] Not in room, activeWorld.kind =', this.game.activeWorld?.kind);
-            return;
+        if (!isRoom) return;
+
+        if (!this.doorSprite || !this.doorSprite.complete) return;
+        
+        // Get exit data from multiple possible sources
+        let exit = null;
+        
+        // Try roomManager first (if using RoomManager)
+        if (this.game.roomManager?.room?.exit) {
+            exit = this.game.roomManager.room.exit;
+        }
+        // Try global RoomDescriptors (legacy)
+        else if (typeof window !== 'undefined' && window.RoomDescriptors) {
+            const roomId = this.game.activeWorld.id || this.game.currentRoomId;
+            const roomDesc = window.RoomDescriptors[roomId];
+            if (roomDesc?.exit) {
+                exit = roomDesc.exit;
+            }
+        }
+        // Try level object (some rooms store exit here)
+        else if (this.game.level?.exit) {
+            exit = this.game.level.exit;
         }
         
-        // Get room from roomManager
-        if (!this.game.roomManager) return;
-        const room = this.game.roomManager.room;
-        if (!room || !room.exit) {
-            console.log('  [DoorRenderer] No room or exit:', { room: !!room, exit: room?.exit });
-            return;
-        }
+        if (!exit) return;
 
-        if (!this.doorSprite || !this.doorSprite.complete) {
-            // Sprite still loading
-            console.log('  [DoorRenderer] Sprite not ready');
-            return;
-        }
-        
-        console.log('  [DoorRenderer] RENDERING DOOR at exit:', room.exit);
-
-        const exit = room.exit;
         const camX = camera?.x || 0;
         const camY = camera?.y || 0;
 
-        // Calculate door position (centered on exit point)
+        // Calculate door position (centered horizontally on exit point, bottom at exit y)
         const doorX = exit.x - this.frameWidth / 2;
-        const doorY = exit.y - this.frameHeight; // Position above exit point
+        const doorY = exit.y - this.frameHeight; // Bottom of door at exit y
 
         // Calculate source rectangle for sprite frame
         const srcX = this.currentFrame * this.frameWidth;
         const srcY = 0;
 
-
+        // Scale up the door
+        const scale = 2; // Make door 2x larger
+        const scaledWidth = this.frameWidth * scale;
+        const scaledHeight = this.frameHeight * scale;
+        
+        // Adjust position to keep door centered and bottom-aligned
+        const scaledDoorX = exit.x - scaledWidth / 2;
+        const scaledDoorY = exit.y - scaledHeight;
 
         // Draw the door
         ctx.drawImage(
             this.doorSprite,
             srcX, srcY, this.frameWidth, this.frameHeight,
-            doorX - camX, doorY - camY, this.frameWidth, this.frameHeight
+            scaledDoorX - camX, scaledDoorY - camY, scaledWidth, scaledHeight
         );
 
         // Debug: Draw exit radius and door position
@@ -185,6 +211,14 @@ class DoorRenderer {
         this.isOpen = false;
         this.currentFrame = 0;
         this.openTimer = 0;
+        this.animationComplete = false;
+    }
+    
+    /**
+     * Check if the door animation has completed (door is fully open)
+     */
+    canExit() {
+        return this.animationComplete;
     }
 }
 

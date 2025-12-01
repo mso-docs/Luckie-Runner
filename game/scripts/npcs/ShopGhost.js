@@ -2,13 +2,13 @@
  * ShopGhost - simple NPC with two-frame sprite and proximity-based interactions
  */
 class ShopGhost extends BaseNPC {
-    constructor(x, y, dialogueId = 'shop.ghost') {
+    constructor(x, y, dialogueId = 'npc.shop_ghost') {
         super(x, y, 47, 64, {
             id: 'shop_ghost',
             name: 'Shop Ghost',
             dialogueId: dialogueId,
             interactRadius: 120,
-            canTalk: false // Shop ghost uses Z key, not Enter
+            canTalk: true // Shop ghost uses Z key and Enter
         });
 
         this.loadTileSheet('art/sprites/shop-ghost.png', 47, 64, [0], 999999); // disable auto-anim

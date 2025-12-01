@@ -216,7 +216,8 @@ const TownsConfig = {
                                 x: 750,
                                 y: 626,
                                 speed: 0,
-                                pauseMs: 60
+                                pauseMs: 60,
+                                solid: true
                             }
                         ],
                         theme: 'interior'
@@ -289,6 +290,7 @@ const TownsConfig = {
                                     y: 557,
                                     speed: 15,
                                     pauseMs: 60,
+                                    solid: true,
                                     patrol: [
                                         { x: 200 },
                                         { x: 800 }
