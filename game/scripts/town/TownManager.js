@@ -1355,6 +1355,21 @@ class TownManager {
             return;
         }
 
+        // Special case: Club Cidic uses Sound Gallery music state
+        const isClubCidic = roomDesc?.id === 'club_cidic_interior' || this.activeInterior?.id === 'club_cidic_interior';
+        if (isClubCidic && this.game?.soundGallery) {
+            // Apply the player's music selection from Sound Gallery
+            if (baseId && audio.music?.[baseId]) {
+                audio.setTrackVolume?.(baseId, 0);
+            }
+            if (activeTownId && audio.music?.[activeTownId]) {
+                audio.setTrackVolume?.(activeTownId, 0);
+                audio.music[activeTownId].pause();
+            }
+            this.game.soundGallery.applyClubCidicMusic();
+            return;
+        }
+
         if (!audio.music?.[roomMusicId] && roomMusicSrc) {
             audio.loadMusic?.(roomMusicId, roomMusicSrc);
         }

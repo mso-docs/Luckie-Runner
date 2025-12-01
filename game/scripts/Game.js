@@ -158,6 +158,7 @@ class Game {
         this.dialogueManager = new DialogueManager(this, dialogues, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this, this.services);
+        this.soundGallery = new SoundGalleryManager(this);
         this.entityFactory = new EntityFactory(this, this.config);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
         this.systems = new GameSystems(this);

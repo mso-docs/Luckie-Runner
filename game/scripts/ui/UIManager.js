@@ -1140,6 +1140,13 @@ class UIManager {
      */
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk) return;
+        
+        // Special case: DJ Cidic opens Sound Gallery instead of dialogue
+        if (npc.id === 'dj_cidic' && this.game.soundGallery) {
+            this.game.soundGallery.open();
+            return;
+        }
+        
         const id = npc.dialogueId || null;
         
         // Make NPC face the player
