@@ -185,6 +185,7 @@
 .track-name-wrapper {
     overflow: hidden;
     width: 100%;
+    position: relative;
 }
 
 .track-name {
@@ -194,21 +195,9 @@
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
     font-family: var(--font-main);
     white-space: nowrap;
-    display: inline-block;
-}
-
-.track-name.scrolling {
-    animation: marquee 10s linear infinite;
-    padding-right: 50px;
-}
-
-@keyframes marquee {
-    0% {
-        transform: translateX(0%);
-    }
-    100% {
-        transform: translateX(-100%);
-    }
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
 /* Vinyl Record */
@@ -550,8 +539,8 @@
 .hint-action {
     font-size: 18px;
     font-weight: 800;
-    color: #95d5b2;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     font-family: var(--font-main);
 }
 

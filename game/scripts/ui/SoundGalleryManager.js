@@ -303,22 +303,6 @@ class SoundGalleryManager {
         const track = this.tracks[this.currentTrackIndex];
         if (this.trackName && track) {
             this.trackName.textContent = track.name;
-            
-            // Check if text is overflowing and enable scrolling
-            const wrapper = this.trackName.parentElement;
-            if (wrapper) {
-                // Remove scrolling class first to measure
-                this.trackName.classList.remove('scrolling');
-                
-                // Check if content is wider than container
-                setTimeout(() => {
-                    if (this.trackName.scrollWidth > wrapper.clientWidth) {
-                        this.trackName.classList.add('scrolling');
-                    } else {
-                        this.trackName.classList.remove('scrolling');
-                    }
-                }, 50);
-            }
         }
     }
 
