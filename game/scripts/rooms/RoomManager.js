@@ -23,8 +23,10 @@ class RoomWorldBuilder {
 
         const buildEntityList = (defs) => Array.isArray(defs)
             ? defs.map(def => {
-                if (this.factory?.create) {
-                    const entity = this.factory.create(def);
+                // Get fresh factory reference in case it wasn't available at construction time
+                const factory = this.factory || this.game?.entityFactory || this.game?.worldBuilder?.factory || null;
+                if (factory?.create) {
+                    const entity = factory.create(def);
                     if (entity) return entity;
                 }
                 return this.clonePlain(def);
@@ -33,11 +35,13 @@ class RoomWorldBuilder {
 
         const buildChestList = (defs) => Array.isArray(defs)
             ? defs.map(def => {
-                if (this.factory?.chest && typeof def?.x === 'number' && typeof def?.y === 'number') {
-                    return this.factory.chest(def.x, def.y, def.displayName, def.contents);
+                // Get fresh factory reference in case it wasn't available at construction time
+                const factory = this.factory || this.game?.entityFactory || this.game?.worldBuilder?.factory || null;
+                if (factory?.chest && typeof def?.x === 'number' && typeof def?.y === 'number') {
+                    return factory.chest(def.x, def.y, def.displayName, def.contents);
                 }
-                if (this.factory?.create) {
-                    const entity = this.factory.create({ type: 'chest', ...def });
+                if (factory?.create) {
+                    const entity = factory.create({ type: 'chest', ...def });
                     if (entity) return entity;
                 }
                 return this.clonePlain(def);
