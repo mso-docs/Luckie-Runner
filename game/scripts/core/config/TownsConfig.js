@@ -53,6 +53,8 @@ const TownsConfig = {
                     room: {
                         width: 1024,
                         height: 720,
+                        autoFloor: true,
+                        autoWalls: true,
                         spawn: { x: 200, y: 520 },
                         exit: { x: 200, y: 560, radius: 80 },
                         backgroundImage: {
@@ -60,12 +62,7 @@ const TownsConfig = {
                             width: 1024,
                             height: 720
                         },
-                        platforms: [
-                            { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
-                            { x: 0, y: 0, width: 32, height: 720, type: 'ground' },
-                            { x: 1024 - 32, y: 0, width: 32, height: 720, type: 'ground' },
-                            { x: 0, y: 0, width: 1024, height: 32, type: 'ground' }
-                        ],
+                       
                         enemies: [],
                         items: [],
                         npcs: [],
@@ -130,6 +127,8 @@ const TownsConfig = {
                         room: {
                             width: 1024,
                             height: 720,
+                            autoFloor: false,
+                            autoWalls: false,
                             spawn: { x: 200, y: 520 },
                             exit: { x: 200, y: 560, radius: 80 },
                         backgroundImage: {
@@ -183,6 +182,8 @@ const TownsConfig = {
                         room: {
                             width: 1024,
                             height: 720,
+                            autoFloor: false,
+                            autoWalls: false,
                             spawn: { x: 240, y: 540 },
                             exit: { x: 240, y: 560, radius: 80 },
                         backgroundImage: {
@@ -254,6 +255,8 @@ const TownsConfig = {
                         room: {
                             width: 1024,
                             height: 720,
+                            autoFloor: false,
+                            autoWalls: false,
                             spawn: { x: 260, y: 540 },
                             exit: { x: 260, y: 560, radius: 90 },
                             backgroundImage: {
@@ -279,14 +282,14 @@ const TownsConfig = {
                                     height: 133,
                                     frames: 9,
                                     idleFrame: 0,
-                                    walkFrames: [0, 1],
+                                    walkFrames: [0, 6],
                                     talkFrames: [7, 8],
                                     dialogueId: 'npc.dj_cidic',
                                     x: 520,
-                                    y: 507, // align to floor (640 - height 133)
-                                    speed: 0,
+                                    y: 574, // align to floor (640 - height 133)
+                                    speed: 10,
                                     pauseMs: 60
-                                }
+                                },
                             ],
                             music: { id: 'club_cidic_theme', src: 'music/time-to-slime.mp3', volume: 0.9 },
                             theme: 'interior'
