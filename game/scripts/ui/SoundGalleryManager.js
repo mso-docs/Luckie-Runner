@@ -11,19 +11,11 @@ class SoundGalleryManager {
         this.currentTrackIndex = 0;
         this.selectedTrackIndex = 0;
         
-        // Track library with actual game music files
-        this.tracks = [
-            { id: 'club_cidic_theme', name: 'Time to Slime', src: 'music/time-to-slime.mp3' },
-            { id: 'beachside', name: 'Beachside', src: 'music/beachside.mp3' },
-            { id: 'beachside_boba_theme', name: 'Beachside Boba', src: 'music/beachside-boba.mp3' },
-            { id: 'beach_house', name: 'Beach House', src: 'music/beach-house.mp3' },
-            { id: 'overworld', name: 'Overworld', src: 'music/overworld.mp3' },
-            { id: 'level1', name: 'Level 1', src: 'music/level1.mp3' },
-            { id: 'level2', name: 'Level 2', src: 'music/level2.mp3' },
-            { id: 'level3', name: 'Level 3', src: 'music/level3.mp3' },
-            { id: 'tutorial_battle', name: 'Tutorial Battle', src: 'music/tutorial-battle.mp3' },
-            { id: 'title', name: 'Title Screen', src: 'music/titlescreen.mp3' }
-        ];
+        // Track library - auto-populated from AudioManager's loaded music
+        this.tracks = [];
+        
+        // Discover and populate tracks from AudioManager
+        this.discoverTracks();
         
         // Pre-load all tracks
         this.loadAllTracks();
@@ -45,14 +37,34 @@ class SoundGalleryManager {
         this.attachEventListeners();
     }
 
-    loadAllTracks() {
-        if (!this.audio || !this.audio.loadMusic) return;
+    discoverTracks() {
+        // Use a predefined list of all game tracks with proper IDs matching AudioManager
+        this.tracks = [
+            { id: 'club_cidic_theme', name: 'Time to Slime', src: 'music/time-to-slime.mp3' },
+            { id: 'beachside', name: 'Beachside', src: 'music/beachside.mp3' },
+            { id: 'beachside_boba_theme', name: 'Beachside Boba', src: 'music/beachside-boba.mp3' },
+            { id: 'beach_house', name: 'Beach House', src: 'music/beach-house.mp3' },
+            { id: 'overworld', name: 'Overworld', src: 'music/overworld.mp3' },
+            { id: 'level1', name: 'Level 1', src: 'music/level1.mp3' },
+            { id: 'level2', name: 'Level 2', src: 'music/level2.mp3' },
+            { id: 'level3', name: 'Level 3', src: 'music/level3.mp3' },
+            { id: 'tutorial_battle', name: 'Tutorial Battle', src: 'music/tutorial-battle.mp3' },
+            { id: 'title', name: 'Title Screen', src: 'music/titlescreen.mp3' }
+        ];
         
-        this.tracks.forEach(track => {
-            if (!this.audio.music[track.id]) {
-                this.audio.loadMusic(track.id, track.src);
-            }
-        });
+        // Load any tracks that aren't already loaded
+        if (this.audio && this.audio.loadMusic) {
+            this.tracks.forEach(track => {
+                if (!this.audio.music[track.id]) {
+                    this.audio.loadMusic(track.id, track.src);
+                }
+            });
+        }
+    }
+
+    loadAllTracks() {
+        // Tracks are already loaded by AudioManager
+        // This method can be used for future expansion
     }
 
     initializeUI() {

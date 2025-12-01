@@ -25,7 +25,8 @@
 .sound-gallery-window {
     width: 90%;
     max-width: 1000px;
-    max-height: 90vh;
+    height: 85vh;
+    max-height: 700px;
     background: linear-gradient(135deg, #1a4d2e 0%, #2d6a4f 30%, #52b788 60%, #95d5b2 100%);
     border: 8px solid #40916c;
     border-radius: 28px;
@@ -36,6 +37,8 @@
         0 0 40px rgba(82, 183, 136, 0.3);
     overflow: hidden;
     animation: slideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -135,7 +138,7 @@
     gap: 24px;
     flex: 1;
     min-height: 0;
-    margin-bottom: 20px;
+    overflow: hidden;
 }
 
 /* Record Player Panel */
@@ -152,6 +155,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 0;
+    overflow: visible;
 }
 
 .record-player-container {
@@ -346,6 +351,8 @@
         inset 0 2px 0 rgba(82, 183, 136, 0.2);
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* Track Search */
@@ -385,10 +392,11 @@
 /* Track List Scroll */
 .track-list-scroll {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: hidden;
     padding-right: 8px;
     margin-right: -8px;
+    min-height: 0;
 }
 
 .track-list-scroll::-webkit-scrollbar {
@@ -503,6 +511,8 @@
     box-shadow: 
         inset 0 2px 8px rgba(0, 0, 0, 0.4),
         0 4px 0 #052d16;
+    flex-shrink: 0;
+    margin-top: 20px;
 }
 
 .footer-hint {
