@@ -937,7 +937,18 @@ class UIManager {
     }
 
     getNearbyTalkableNpc() {
-        if (!this.game.player || !Array.isArray(this.game.npcs)) return null;
+        if (!this.game.player) return null;
+        
+        // Check shop ghost first (stored separately from npcs array)
+        if (this.game.shopGhost && 
+            this.game.shopGhost.canTalk && 
+            typeof this.game.shopGhost.isPlayerNearby === 'function' &&
+            this.game.shopGhost.isPlayerNearby(this.game.player, this.game.shopGhost.interactRadius || 120)) {
+            return this.game.shopGhost;
+        }
+        
+        // Check npcs array
+        if (!Array.isArray(this.game.npcs)) return null;
         
         return this.game.npcs.find(npc =>
             npc &&

@@ -58,13 +58,13 @@ class EntityFactory {
             frames: 2,
             animationFrames: [0],
             animationSpeed: 999999,
-            dialogueId: dialogueId || 'shop.ghost',
-            canTalk: false,
+            dialogueId: dialogueId || 'npc.shop_ghost',
+            canTalk: true,
             bobbing: true,
             bobbingAmount: 6,
             bobbingSpeed: 0.0025,
             canToggleFrame: true,
-            spriteDefaultFacesLeft: true
+            spriteDefaultFacesLeft: false
         });
         ghost.game = this.game;
         return ghost;

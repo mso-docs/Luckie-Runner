@@ -281,7 +281,7 @@ class WorldBuilder {
         g.balloonFan = null;
         (blueprint.npcs || []).forEach(def => {
             if (def.type === 'shopGhost') {
-                const ghost = this.factory.shopGhost(def.x, def.y, def.dialogueId || 'shop.ghost');
+                const ghost = this.factory.shopGhost(def.x, def.y, def.dialogueId || 'npc.shop_ghost');
                 g.shopGhost = ghost;
                 g.npcs.push(ghost);
             } else if (def.type === 'princess') {
@@ -539,7 +539,7 @@ class WorldBuilder {
 
         const ghostX = 680;
         const ghostY = groundY - 64;
-        g.shopGhost = this.factory.shopGhost(ghostX, ghostY, 'shop.ghost');
+        g.shopGhost = this.factory.shopGhost(ghostX, ghostY, 'npc.shop_ghost');
         g.npcs.push(g.shopGhost);
 
         const mountainTop = mountainSteps[6];
