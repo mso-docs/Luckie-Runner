@@ -1358,7 +1358,7 @@ class TownManager {
         // Special case: Club Cidic uses Sound Gallery music state
         const isClubCidic = roomDesc?.id === 'club_cidic_interior' || this.activeInterior?.id === 'club_cidic_interior';
         if (isClubCidic && this.game?.soundGallery) {
-            // Apply the player's music selection from Sound Gallery
+            // Stop base and town music
             if (baseId && audio.music?.[baseId]) {
                 audio.setTrackVolume?.(baseId, 0);
             }
@@ -1366,8 +1366,13 @@ class TownManager {
                 audio.setTrackVolume?.(activeTownId, 0);
                 audio.music[activeTownId].pause();
             }
-            this.game.soundGallery.applyClubCidicMusic();
-            return;
+            
+            // Apply user's music selection if they've interacted, otherwise play default
+            if (this.game.soundGallery.hasUserInteracted) {
+                this.game.soundGallery.applyClubCidicMusic();
+                return;
+            }
+            // Fall through to play default room music
         }
 
         if (!audio.music?.[roomMusicId] && roomMusicSrc) {

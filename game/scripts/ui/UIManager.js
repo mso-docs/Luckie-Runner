@@ -823,7 +823,28 @@ class UIManager {
         this.inputController?.update?.();
         this.handleSpeechBubbleInput();
         this.handleChestInput();
+        this.handleSoundGalleryInput();
         this.handleInteractionInput();
+    }
+
+    /**
+     * Handle Z key for DJ Cidic Sound Gallery
+     */
+    handleSoundGalleryInput() {
+        if (!this.game.soundGallery || this.game.soundGallery.isOpen) return;
+        
+        const input = this.game.input;
+        if (!input) return;
+        
+        // Check if near DJ Cidic
+        const talker = this.getNearbyTalkableNpc();
+        if (!talker || talker.id !== 'dj_cidic') return;
+        
+        // Check if Z key is pressed and consume it
+        const zPressed = input.consumeActionPress?.();
+        if (zPressed) {
+            this.game.soundGallery.open();
+        }
     }
 
     /**
@@ -874,7 +895,12 @@ class UIManager {
 
             const talker = this.getNearbyTalkableNpc();
             if (talker) {
-                this.startNpcDialogue(talker);
+                // DJ Cidic: E opens dialogue, Z opens Sound Gallery
+                if (talker.id === 'dj_cidic' && this.game.soundGallery) {
+                    this.startNpcDialogue(talker);
+                } else {
+                    this.startNpcDialogue(talker);
+                }
                 return;
             }
 
@@ -1140,12 +1166,6 @@ class UIManager {
      */
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk) return;
-        
-        // Special case: DJ Cidic opens Sound Gallery instead of dialogue
-        if (npc.id === 'dj_cidic' && this.game.soundGallery) {
-            this.game.soundGallery.open();
-            return;
-        }
         
         const id = npc.dialogueId || null;
         

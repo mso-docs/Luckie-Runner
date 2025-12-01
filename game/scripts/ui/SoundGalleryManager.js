@@ -5,7 +5,7 @@
 class SoundGalleryManager {
     constructor(game) {
         this.game = game;
-        this.audio = game.services?.audio || game.audioManager;
+        this.audio = game.audioManager; // Use AudioManager directly
         this.isOpen = false;
         this.isPlaying = false;
         this.currentTrackIndex = 0;
@@ -13,17 +13,20 @@ class SoundGalleryManager {
         
         // Track library with actual game music files
         this.tracks = [
-            { id: 'time-to-slime', name: 'Time to Slime', src: 'music/time-to-slime.mp3' },
+            { id: 'club_cidic_theme', name: 'Time to Slime', src: 'music/time-to-slime.mp3' },
             { id: 'beachside', name: 'Beachside', src: 'music/beachside.mp3' },
-            { id: 'beachside-boba', name: 'Beachside Boba', src: 'music/beachside-boba.mp3' },
-            { id: 'beach-house', name: 'Beach House', src: 'music/beach-house.mp3' },
+            { id: 'beachside_boba_theme', name: 'Beachside Boba', src: 'music/beachside-boba.mp3' },
+            { id: 'beach_house', name: 'Beach House', src: 'music/beach-house.mp3' },
             { id: 'overworld', name: 'Overworld', src: 'music/overworld.mp3' },
             { id: 'level1', name: 'Level 1', src: 'music/level1.mp3' },
             { id: 'level2', name: 'Level 2', src: 'music/level2.mp3' },
             { id: 'level3', name: 'Level 3', src: 'music/level3.mp3' },
-            { id: 'tutorial-battle', name: 'Tutorial Battle', src: 'music/tutorial-battle.mp3' },
-            { id: 'titlescreen', name: 'Title Screen', src: 'music/titlescreen.mp3' }
+            { id: 'tutorial_battle', name: 'Tutorial Battle', src: 'music/tutorial-battle.mp3' },
+            { id: 'title', name: 'Title Screen', src: 'music/titlescreen.mp3' }
         ];
+        
+        // Pre-load all tracks
+        this.loadAllTracks();
         
         // Player state
         this.shuffle = false;
@@ -32,13 +35,24 @@ class SoundGalleryManager {
         
         // Keep track of Club Cidic music state for persistence
         this.clubCidicMusicState = {
-            isPlaying: false,
-            trackId: 'time-to-slime',
+            isPlaying: true, // Default to playing
+            trackId: 'club_cidic_theme',
             trackIndex: 0
         };
+        this.hasUserInteracted = false; // Track if user has manually changed music
         
         this.initializeUI();
         this.attachEventListeners();
+    }
+
+    loadAllTracks() {
+        if (!this.audio || !this.audio.loadMusic) return;
+        
+        this.tracks.forEach(track => {
+            if (!this.audio.music[track.id]) {
+                this.audio.loadMusic(track.id, track.src);
+            }
+        });
     }
 
     initializeUI() {
@@ -272,8 +286,20 @@ class SoundGalleryManager {
         const track = this.tracks[this.currentTrackIndex];
         if (!track || !this.audio) return;
         
-        // Play music through audio service
-        this.audio.playMusic?.(track.id, 0.9);
+        // Mark that user has interacted with music
+        this.hasUserInteracted = true;
+        
+        // Stop all other music first
+        if (this.audio.stopAllMusic) {
+            this.audio.stopAllMusic();
+        }
+        
+        // Play music through AudioManager
+        if (this.audio.playMusic) {
+            this.audio.playMusic(track.id, 0.9).catch(err => {
+                console.warn('Music play failed:', err);
+            });
+        }
         
         this.isPlaying = true;
         this.updatePlayPauseUI();
@@ -306,7 +332,14 @@ class SoundGalleryManager {
     pause() {
         if (!this.audio) return;
         
-        this.audio.pauseMusic?.();
+        // Mark that user has interacted with music
+        this.hasUserInteracted = true;
+        
+        // Pause current track
+        const track = this.tracks[this.currentTrackIndex];
+        if (track && this.audio.music && this.audio.music[track.id]) {
+            this.audio.music[track.id].pause();
+        }
         
         this.isPlaying = false;
         this.updatePlayPauseUI();
@@ -421,17 +454,31 @@ class SoundGalleryManager {
 
     // Called when entering Club Cidic room
     applyClubCidicMusic() {
+        // If user hasn't interacted, use default behavior (let room music play)
+        if (!this.hasUserInteracted) {
+            return; // Let TownManager handle default music
+        }
+        
         const state = this.clubCidicMusicState;
         
         if (state.isPlaying) {
             // Continue playing the selected track
             const track = this.tracks[state.trackIndex];
             if (track && this.audio) {
-                this.audio.playMusic?.(track.id, 0.9);
+                if (this.audio.stopAllMusic) {
+                    this.audio.stopAllMusic();
+                }
+                if (this.audio.playMusic) {
+                    this.audio.playMusic(track.id, 0.9).catch(err => {
+                        console.warn('Music play failed:', err);
+                    });
+                }
             }
         } else {
             // Stop music if player paused it
-            this.audio?.stopMusic?.();
+            if (this.audio && this.audio.stopAllMusic) {
+                this.audio.stopAllMusic();
+            }
         }
     }
 }
