@@ -143,7 +143,7 @@ class SoundGalleryManager {
             this.searchInput.addEventListener('input', (e) => this.filterTracks(e.target.value));
         }
 
-        // Keyboard controls
+        // Keyboard controls (Z key handled by UIManager)
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
     }
 
@@ -151,8 +151,7 @@ class SoundGalleryManager {
         if (!this.isOpen) return;
 
         switch(e.key) {
-            case 'z':
-            case 'Z':
+            case 'Escape':
                 e.preventDefault();
                 this.close();
                 break;

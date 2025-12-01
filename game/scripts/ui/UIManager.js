@@ -831,18 +831,22 @@ class UIManager {
      * Handle Z key for DJ Cidic Sound Gallery
      */
     handleSoundGalleryInput() {
-        if (!this.game.soundGallery || this.game.soundGallery.isOpen) return;
-        
         const input = this.game.input;
-        if (!input) return;
+        if (!input || !this.game.soundGallery) return;
         
-        // Check if near DJ Cidic
-        const talker = this.getNearbyTalkableNpc();
-        if (!talker || talker.id !== 'dj_cidic') return;
-        
-        // Check if Z key is pressed and consume it
+        // Consume Z key press once
         const zPressed = input.consumeActionPress?.();
-        if (zPressed) {
+        if (!zPressed) return;
+        
+        // If Sound Gallery is open, close it
+        if (this.game.soundGallery.isOpen) {
+            this.game.soundGallery.close();
+            return;
+        }
+        
+        // Check if near DJ Cidic to open it
+        const talker = this.getNearbyTalkableNpc();
+        if (talker && talker.id === 'dj_cidic') {
             this.game.soundGallery.open();
         }
     }
