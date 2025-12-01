@@ -114,6 +114,10 @@ class Game {
             ? RoomManager
             : (typeof window !== 'undefined' ? window.RoomManager : null);
         this.roomManager = RoomManagerCtor ? new RoomManagerCtor(this) : null;
+        const DoorRendererCtor = (typeof DoorRenderer !== 'undefined')
+            ? DoorRenderer
+            : (typeof window !== 'undefined' ? window.DoorRenderer : null);
+        this.doorRenderer = DoorRendererCtor ? new DoorRendererCtor(this) : null;
         this.battleManager = new BattleManager(this);
         this.cutscenePlayer = new CutscenePlayer(this);
 

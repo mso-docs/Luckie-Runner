@@ -1,14 +1,17 @@
 /**
  * PrincessNPC - Climbable-peak NPC with simple two-frame animation
  */
-class PrincessNPC extends Entity {
+class PrincessNPC extends BaseNPC {
     constructor(x, y, dialogueId = 'princess.default') {
-        super(x, y, 49, 64);
+        super(x, y, 49, 64, {
+            id: 'princess',
+            name: 'Princess',
+            dialogueId: dialogueId,
+            interactRadius: 110,
+            canTalk: true
+        });
 
         this.loadTileSheet('art/sprites/princess-sprite.png', 49, 64, [0], 999999);
-        this.interactRadius = 110;
-        this.canTalk = true;
-        this.dialogueId = dialogueId;
     }
 
     /**
@@ -35,16 +38,6 @@ class PrincessNPC extends Entity {
      */
     onDialogueClosed() {
         this.setTalking(false);
-    }
-
-    /**
-     * Simple proximity check
-     */
-    isPlayerNearby(player, radius) {
-        const checkRadius = radius || this.interactRadius;
-        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
-        const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
-        return Math.hypot(dx, dy) <= checkRadius;
     }
 }
 

@@ -121,27 +121,27 @@ const TownsConfig = {
                     collider: { width: 280, height: 18, offsetX: 6, offsetY: 60 },
                     interior: {
                         id: 'shorehouseinterior',
-                        spawn: { x: 200, y: 574 },
-                        exit: { x: 200, y: 610, radius: 80 },
+                        spawn: { x: 0, y: 994 },
+                        exit: { x: 20, y: 994, radius: 80 },
                         // Inline level definition matching house-inside.png bounds
                         room: {
-                            width: 1024,
-                            height: 720,
+                            width: 1536,
+                            height: 1024,
                             autoFloor: false,
                             autoWalls: false,
-                            spawn: { x: 200, y: 574 },
-                            exit: { x: 200, y: 610, radius: 80 },
+                            spawn: { x: 200, y: 994 },
+                            exit: { x: 200, y: 994, radius: 80 },
                         backgroundImage: {
                             src: 'art/bg/buildings/interior/house-inside.png',
-                            width: 1024,
-                            height: 720
+                            width: 1536,
+                            height: 1024
                         },
                         music: { id: 'shore_house_theme', src: 'music/beach-house.mp3', volume: 0.85 },
                         platforms: [
-                            { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
-                            { x: 0, y: 0, width: 32, height: 720, type: 'wall' },
-                            { x: 992, y: 0, width: 32, height: 720, type: 'wall' },
-                            { x: 0, y: 0, width: 1024, height: 32, type: 'wall' }
+                            { x: 0, y: 1024, width: 1536, height: 30, type: 'ground' },
+                            { x: 0, y: 0, width: 32, height: 1024, type: 'wall' },
+                            { x: 1536, y: 0, width: 32, height: 1024, type: 'wall' },
+                            { x: 0, y: 0, width: 1536, height: 32, type: 'wall' }
                         ],
                         enemies: [],
                         items: [],
@@ -177,15 +177,15 @@ const TownsConfig = {
                     collider: { width: 200, height: 18, offsetX: 10, offsetY: 50 },
                     interior: {
                         id: 'beachside_boba_interior',
-                        spawn: { x: 240, y: 574 },
-                        exit: { x: 240, y: 610, radius: 80 },
+                        spawn: { x: 240, y: 656 },
+                        exit: { x: 240, y: 690, radius: 80 },
                         room: {
                             width: 1024,
                             height: 720,
                             autoFloor: false,
                             autoWalls: false,
-                            spawn: { x: 240, y: 574 },
-                            exit: { x: 240, y: 610, radius: 80 },
+                            spawn: { x: 240, y: 656 },
+                            exit: { x: 240, y: 690, radius: 80 },
                         backgroundImage: {
                             src: 'art/bg/buildings/interior/beachside-boba-inside.png',
                             width: 1024,
@@ -193,7 +193,7 @@ const TownsConfig = {
                         },
                         music: { id: 'beachside_boba_theme', src: 'music/beachside-boba.mp3', volume: 0.9 },
                         platforms: [
-                            { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
+                            { x: 0, y: 690, width: 1024, height: 30, type: 'ground' },
                             { x: 0, y: 0, width: 32, height: 720, type: 'wall' },
                             { x: 992, y: 0, width: 32, height: 720, type: 'wall' },
                             { x: 0, y: 0, width: 1024, height: 32, type: 'wall' }
@@ -214,7 +214,7 @@ const TownsConfig = {
                                 talkFrames: [0, 1],
                                 dialogueId: 'npc.alicia',
                                 x: 750,
-                                y: 576, // floor: 640 - 64
+                                y: 626,
                                 speed: 0,
                                 pauseMs: 60
                             }
@@ -250,25 +250,25 @@ const TownsConfig = {
                     collider: { width: 230, height: 18, offsetX: 12, offsetY: 55 },
                     interior: {
                         id: 'club_cidic_interior',
-                        spawn: { x: 200, y: 574 },
-                        exit: { x: 200, y: 610, radius: 90 },
+                        spawn: { x: 200, y: 960 },
+                        exit: { x: 200, y: 994, radius: 90 },
                         room: {
-                            width: 1024,
-                            height: 720,
+                            width: 1536,
+                            height: 1024,
                             autoFloor: false,
                             autoWalls: false,
-                            spawn: { x: 200, y: 574 },
-                            exit: { x: 200, y: 610, radius: 90 },
+                            spawn: { x: 200, y: 960 },
+                            exit: { x: 200, y: 994, radius: 90 },
                             backgroundImage: {
                                 src: 'art/bg/buildings/interior/club-cidic-inside.png',
-                                width: 1024,
-                                height: 720
+                                width: 1536,
+                                height: 1024
                             },
                             platforms: [
-                                { x: 0, y: 640, width: 1024, height: 80, type: 'ground' },
-                                { x: 0, y: 0, width: 32, height: 720, type: 'wall' },
-                                { x: 992, y: 0, width: 32, height: 720, type: 'wall' },
-                                { x: 0, y: 0, width: 1024, height: 32, type: 'wall' }
+                                { x: 0, y: 994, width: 1536, height: 30, type: 'ground' }, // BOTTOM floor (1024-30)
+                                { x: 0, y: 0, width: 32, height: 1024, type: 'wall' }, // LEFT wall
+                                { x: 1504, y: 0, width: 32, height: 1024, type: 'wall' }, // RIGHT wall (1536-32)
+                                { x: 0, y: 0, width: 1536, height: 32, type: 'wall' } // TOP ceiling
                             ],
                             enemies: [],
                             items: [],
@@ -286,10 +286,14 @@ const TownsConfig = {
                                     talkFrames: [7, 8],
                                     dialogueId: 'npc.dj_cidic',
                                     x: 750,
-                                    y: 507,
-                                    speed: 0,
-                                    pauseMs: 60
-                                }
+                                    y: 557,
+                                    speed: 15,
+                                    pauseMs: 60,
+                                    patrol: [
+                                        { x: 200 },
+                                        { x: 800 }
+                                    ]
+                                },
                             ],
                             music: { id: 'club_cidic_theme', src: 'music/time-to-slime.mp3', volume: 0.9 },
                             theme: 'interior'

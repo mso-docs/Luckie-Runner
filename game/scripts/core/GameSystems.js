@@ -109,6 +109,11 @@ class GameSystems {
             g.collisionSystem?.checkFlagCollision(g.flag);
         }
 
+        // Door renderer (for room exits)
+        if (g.doorRenderer) {
+            g.doorRenderer.update(deltaTime);
+        }
+
         // Stats + HUD
         this.updateGameStats(deltaTime);
         g.updateInventoryOverlay();

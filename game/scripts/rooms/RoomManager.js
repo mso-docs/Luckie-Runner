@@ -222,16 +222,32 @@ class RoomManager {
      * Enter a room built from a plain descriptor.
      */
     enterRoom(room = {}, returnPosition = null) {
+        console.log('[RoomManager.enterRoom] CALLED with room:', room);
         if (!this.game || !room) return false;
         const descriptor = room.__normalizedRoom ? room : this.resolveRoomDescriptor(room);
         if (!descriptor) return false;
+        console.log('[RoomManager.enterRoom] descriptor:', descriptor);
         this.captureReturnState(returnPosition);
         const roomState = this.builder.build(descriptor);
-        this.applyRoomWorld(roomState);
+        console.log('[RoomManager.enterRoom] roomState:', roomState);
+        
+        // Set room data BEFORE applying to game world
         this.room = roomState.descriptor;
         this.roomEntities = roomState.entities;
-        this.alignRoomNpcsToFloor();
         this.active = true;
+        console.log('[RoomManager.enterRoom] SET: this.active =', this.active, 'this.room =', this.room);
+        
+        // Now apply to game (which calls setActiveWorld)
+        this.applyRoomWorld(roomState);
+        console.log('[RoomManager.enterRoom] AFTER applyRoomWorld: this.active =', this.active, 'this.room =', this.room);
+        this.alignRoomNpcsToFloor();
+        
+        // Reset door state when entering a room
+        if (this.game.doorRenderer) {
+            this.game.doorRenderer.reset();
+        }
+        
+        console.log('[RoomManager.enterRoom] COMPLETE: this.active =', this.active, 'this.room =', this.room);
         return true;
     }
 
@@ -418,12 +434,13 @@ class RoomManager {
 
         g.setActiveWorld?.('room', { id: descriptor.id, theme: g.currentTheme, bounds });
         
-        // Set camera bounds and reset to follow player from spawn position
+        // Set camera bounds and position to show bottom of room
         if (g.camera) {
             g.camera.setBounds(bounds.width, bounds.height);
-            // Center camera on player's spawn position
-            const camX = spawn.x - g.camera.viewportWidth / 2 + (g.player?.width || 0) / 2;
-            const camY = spawn.y - g.camera.viewportHeight / 2 + (g.player?.height || 0) / 2;
+            // Position camera to show the floor/bottom area where player spawns
+            // Instead of centering on player, align camera so bottom of viewport shows bottom of room
+            const camX = Math.max(0, spawn.x - g.camera.viewportWidth / 2 + (g.player?.width || 0) / 2);
+            const camY = Math.max(0, bounds.height - g.camera.viewportHeight);
             g.camera.reset({ x: camX, y: camY });
         }
     }

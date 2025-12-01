@@ -20,5 +20,11 @@ window.NPCDialogues = {
         'Welcome to Beachside! It\'s a %lovely% place to relax by the sea.',
         'If you need any help or directions, #just# let me know!',
         `Also, don\'t miss the %fountain% in the town square—it\'s a popular spot for visitors.`
-    ]   
+    ],
+    'npc.dj_cidic': [
+        'Yo! Welcome to #Club Cidic#, the hottest spot in town!',
+        'Feel free to hit the dance floor and show off your %moves%.',
+        'If you need anything, just look for me—I\'m usually by the DJ booth.',
+        'Also, you can press ~Z~ near me to change the tune!'
+    ],   
 };

@@ -938,6 +938,7 @@ class UIManager {
 
     getNearbyTalkableNpc() {
         if (!this.game.player || !Array.isArray(this.game.npcs)) return null;
+        
         return this.game.npcs.find(npc =>
             npc &&
             npc.canTalk &&
@@ -1129,6 +1130,12 @@ class UIManager {
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk) return;
         const id = npc.dialogueId || null;
+        
+        // Make NPC face the player
+        if (typeof npc.faceToward === 'function' && this.game.player) {
+            npc.faceToward(this.game.player);
+        }
+        
         const start = id
             ? this.game.dialogueManager.startById(id, npc, () => {
                 npc.onDialogueClosed?.();

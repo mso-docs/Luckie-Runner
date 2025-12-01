@@ -1,17 +1,21 @@
 /**
  * BalloonNPC - Cheerful balloon fan perched atop optional parkour
  */
-class BalloonNPC extends Entity {
+class BalloonNPC extends BaseNPC {
     constructor(x, y, dialogueId = 'balloon.default') {
-        super(x, y, 55, 63);
+        super(x, y, 55, 63, {
+            id: 'balloon_fan',
+            name: 'Balloon Fan',
+            dialogueId: dialogueId,
+            interactRadius: 120,
+            canTalk: true,
+            spriteDefaultFacesLeft: true  // Balloon sprite faces left by default
+        });
 
         this.loadSprite('art/sprites/balloon.png');
-        this.interactRadius = 120;
-        this.canTalk = true;
         this.baseY = y;
         this.bobTime = 0;
         this.bobAmount = 7;
-        this.dialogueId = dialogueId;
     }
 
     /**
@@ -28,16 +32,6 @@ class BalloonNPC extends Entity {
      */
     onDialogueClosed() {
         this.y = this.baseY;
-    }
-
-    /**
-     * Simple proximity check for dialogue
-     */
-    isPlayerNearby(player, radius) {
-        const range = radius || this.interactRadius;
-        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
-        const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
-        return Math.hypot(dx, dy) <= range;
     }
 
     /**

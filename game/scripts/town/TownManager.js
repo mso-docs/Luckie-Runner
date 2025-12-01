@@ -809,8 +809,14 @@ class TownManager {
     }
 
     ensureRoomManager() {
-        if (this.roomManager && typeof this.roomManager.enterRoom === 'function') return this.roomManager;
+        if (this.roomManager && typeof this.roomManager.enterRoom === 'function') {
+            console.log('[TownManager.ensureRoomManager] Using existing roomManager:', this.roomManager);
+            console.log('  Same as game.roomManager?', this.roomManager === this.game?.roomManager);
+            return this.roomManager;
+        }
         this.roomManager = this.resolveRoomManager(this.game);
+        console.log('[TownManager.ensureRoomManager] Created/resolved roomManager:', this.roomManager);
+        console.log('  Same as game.roomManager?', this.roomManager === this.game?.roomManager);
         return this.roomManager;
     }
 
@@ -1070,10 +1076,10 @@ class TownManager {
         if (this.activeInterior && this.isInsideInteriorRoom()) {
             if (this.isPlayerAtInteriorExit(p)) {
                 this.exitInterior();
-            } else if (pressed) {
-                g.uiManager?.showSpeechBubble?.('Move closer to the exit to leave.');
+                return true;
             }
-            return true;
+            // Don't consume the interaction - let NPCs handle it
+            return false;
         }
 
         const building = this.getNearbyBuildingDoor(p);
@@ -1129,14 +1135,17 @@ class TownManager {
     }
 
     enterBuilding(building) {
+        console.log('[TownManager.enterBuilding] CALLED with building:', building);
         const label = building?.name || 'Building';
         const interiorId = building?.interiorId || building?.interior?.id || null;
+        console.log('[TownManager.enterBuilding] interiorId:', interiorId);
         if (!interiorId) {
             this.game?.uiManager?.showSpeechBubble?.(`${label} is locked.`);
             return;
         }
 
         const interiorConfig = this.getInteriorConfig(interiorId, building) || {};
+        console.log('[TownManager.enterBuilding] interiorConfig:', interiorConfig);
         const roomDesc = this.resolveInteriorRoom(interiorId, interiorConfig);
         if (!roomDesc) {
             this.game?.uiManager?.showSpeechBubble?.(`Add Room "${interiorId}" to enter ${label}.`);
@@ -1169,11 +1178,16 @@ class TownManager {
 
         this.openBuildingDoor(building);
         const mgr = this.ensureRoomManager();
+        console.log('[TownManager.loadBuildingInterior] mgr:', mgr, 'roomDesc:', roomDesc);
+        console.log('[TownManager.loadBuildingInterior] mgr === game.roomManager?', mgr === this.game?.roomManager);
         if (roomDesc && mgr) {
             const room = mgr.buildRoomDescriptor(interiorId, roomDesc, spawnOverride, exitZone);
+            console.log('[TownManager.loadBuildingInterior] About to call enterRoom with room:', room);
             mgr.enterRoom(room, returnPosition);
+            console.log('[TownManager.loadBuildingInterior] After enterRoom, mgr.active =', mgr.active, 'mgr.room =', mgr.room);
             this.handleRoomMusic(roomDesc);
         } else {
+            console.log('[TownManager.loadBuildingInterior] FAILED: roomDesc or mgr missing');
             this.game?.uiManager?.showSpeechBubble?.('Room system is unavailable.');
         }
     }
