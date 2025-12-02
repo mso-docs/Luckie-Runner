@@ -24,9 +24,9 @@
 /* Main Window */
 .sound-gallery-window {
     width: 90%;
-    max-width: 1000px;
-    height: 85vh;
-    max-height: 700px;
+    max-width: 800px;
+    height: 80vh;
+    max-height: 500px;
     background: linear-gradient(135deg, #1a4d2e 0%, #2d6a4f 30%, #52b788 60%, #95d5b2 100%);
     border: 8px solid #40916c;
     border-radius: 28px;
@@ -57,7 +57,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 20px;
+    padding: 14px;
     background: linear-gradient(180deg, 
         rgba(26, 77, 46, 0.6) 0%, 
         rgba(45, 106, 79, 0.8) 50%, 
@@ -70,8 +70,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 16px 20px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
     background: linear-gradient(135deg, #74c69d, #52b788);
     border: 4px solid #40916c;
     border-radius: 20px;
@@ -82,7 +82,7 @@
 }
 
 .gallery-title {
-    font-size: 42px;
+    font-size: 28px;
     font-weight: 900;
     color: #081c15;
     text-shadow: 
@@ -95,8 +95,8 @@
 }
 
 .slime-toggle {
-    width: 50px;
-    height: 50px;
+    width: 36px;
+    height: 36px;
     background: linear-gradient(135deg, #b7e4c7, #95d5b2);
     border: 3px solid #52b788;
     border-radius: 50%;
@@ -128,14 +128,14 @@
 }
 
 .toggle-icon {
-    font-size: 24px;
+    font-size: 18px;
 }
 
 /* Content Area */
 .sound-gallery-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: 16px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
@@ -144,9 +144,9 @@
 /* Record Player Panel */
 .record-player-panel {
     background: linear-gradient(135deg, #081c15, #1b4332);
-    border: 6px solid #2d6a4f;
-    border-radius: 24px;
-    padding: 18px 20px 24px 20px;
+    border: 4px solid #2d6a4f;
+    border-radius: 16px;
+    padding: 12px 14px 16px 14px;
     box-shadow: 
         0 10px 0 #052d16,
         0 14px 24px rgba(0, 0, 0, 0.5),
@@ -161,11 +161,11 @@
 
 .record-player-container {
     width: 100%;
-    max-width: 380px;
+    max-width: 260px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
 }
 
 /* Current Track Display */
@@ -189,7 +189,7 @@
 }
 
 .track-name {
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 900;
     color: #081c15;
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
@@ -202,8 +202,8 @@
 
 /* Vinyl Record */
 .vinyl-record {
-    width: 280px;
-    height: 280px;
+    width: 180px;
+    height: 180px;
     background: radial-gradient(circle, #0d1b2a 0%, #1b263b 40%, #0d1b2a 100%);
     border: 8px solid #1b263b;
     border-radius: 50%;
@@ -247,8 +247,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 120px;
-    height: 120px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, #52b788, #40916c, #2d6a4f);
     border: 4px solid #1b4332;
     border-radius: 50%;
@@ -261,8 +261,8 @@
 }
 
 .label-center {
-    width: 40px;
-    height: 40px;
+    width: 26px;
+    height: 26px;
     background: #081c15;
     border-radius: 50%;
     box-shadow: 
@@ -273,11 +273,11 @@
 /* Player Controls */
 .player-controls {
     display: flex;
-    gap: 16px;
+    gap: 10px;
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .control-btn {
@@ -313,22 +313,22 @@
 }
 
 .prev-btn, .next-btn {
-    width: 60px;
-    height: 60px;
+    width: 42px;
+    height: 42px;
 }
 
 .play-pause-btn {
-    width: 80px;
-    height: 80px;
+    width: 54px;
+    height: 54px;
 }
 
 .control-icon {
-    font-size: 28px;
+    font-size: 18px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .play-icon {
-    font-size: 36px;
+    font-size: 24px;
 }
 
 
@@ -336,9 +336,9 @@
 /* Track List Panel */
 .track-list-panel {
     background: linear-gradient(135deg, #081c15, #1b4332);
-    border: 6px solid #2d6a4f;
-    border-radius: 24px;
-    padding: 20px;
+    border: 4px solid #2d6a4f;
+    border-radius: 16px;
+    padding: 14px;
     box-shadow: 
         0 10px 0 #052d16,
         0 14px 24px rgba(0, 0, 0, 0.5),
@@ -351,16 +351,16 @@
 
 /* Track Search */
 .track-search-container {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .track-search {
     width: 100%;
-    padding: 14px 18px;
+    padding: 8px 12px;
     background: linear-gradient(135deg, #d8f3dc, #b7e4c7);
-    border: 4px solid #52b788;
-    border-radius: 14px;
-    font-size: 18px;
+    border: 3px solid #52b788;
+    border-radius: 10px;
+    font-size: 14px;
     font-weight: 700;
     color: #081c15;
     font-family: var(--font-main);
@@ -424,15 +424,15 @@
 .track-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 /* Track Item */
 .track-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
+    gap: 8px;
+    padding: 10px 12px;
     background: linear-gradient(135deg, #2d6a4f, #1b4332);
     border: 3px solid #40916c;
     border-radius: 14px;
@@ -481,12 +481,12 @@
 }
 
 .track-icon {
-    font-size: 20px;
+    font-size: 14px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .track-text {
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 800;
     color: #d8f3dc;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
@@ -498,47 +498,47 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 16px 20px;
+    padding: 10px 14px;
     background: linear-gradient(135deg, #1b4332, #081c15);
-    border: 4px solid #2d6a4f;
-    border-radius: 16px;
+    border: 3px solid #2d6a4f;
+    border-radius: 12px;
     box-shadow: 
         inset 0 2px 8px rgba(0, 0, 0, 0.4),
         0 4px 0 #052d16;
     flex-shrink: 0;
-    margin-top: 20px;
+    margin-top: 12px;
 }
 
 .footer-controls {
     display: flex;
-    gap: 32px;
+    gap: 20px;
     align-items: center;
 }
 
 .control-hint {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .hint-key {
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 900;
-    padding: 6px 12px;
+    padding: 4px 8px;
     background: linear-gradient(135deg, #52b788, #40916c);
-    border: 3px solid #2d6a4f;
-    border-radius: 8px;
+    border: 2px solid #2d6a4f;
+    border-radius: 6px;
     color: #d8f3dc;
     box-shadow: 
-        0 4px 0 #1b4332,
+        0 3px 0 #1b4332,
         inset 0 1px 0 rgba(149, 213, 178, 0.3);
-    min-width: 50px;
+    min-width: 36px;
     text-align: center;
 }
 
 .hint-action,
 .hint-text {
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 800;
     color: #ffffff !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -548,7 +548,7 @@
 .footer-hint {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .footer-hint .hint-action,
@@ -563,6 +563,6 @@
     }
 
     .gallery-title {
-        font-size: 32px;
+        font-size: 22px;
     }
 }
