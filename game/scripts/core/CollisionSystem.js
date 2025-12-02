@@ -262,7 +262,8 @@ class CollisionSystem {
                 if (!projectile.canHit(npc)) return;
 
                 this.handleNpcProjectileHit(npc, projectile);
-                projectile.hitTarget(npc);
+                // Mark NPC as hit by this projectile to prevent multiple hits
+                projectile.hitTargets.add(npc);
             });
         }
     }
