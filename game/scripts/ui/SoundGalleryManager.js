@@ -175,26 +175,43 @@ class SoundGalleryManager {
     handleKeyPress(e) {
         if (!this.isOpen) return;
 
+        // Don't handle keys if search input is focused (let user type normally)
+        const isSearchFocused = document.activeElement === this.searchInput;
+
         switch(e.key) {
             case 'Escape':
                 e.preventDefault();
-                this.close();
+                if (isSearchFocused && this.searchInput.value) {
+                    // Clear search first
+                    this.searchInput.value = '';
+                    this.filterTracks('');
+                } else {
+                    this.close();
+                }
                 break;
             case 'ArrowUp':
-                e.preventDefault();
-                this.selectPreviousTrack();
+                if (!isSearchFocused) {
+                    e.preventDefault();
+                    this.selectPreviousTrack();
+                }
                 break;
             case 'ArrowDown':
-                e.preventDefault();
-                this.selectNextTrack();
+                if (!isSearchFocused) {
+                    e.preventDefault();
+                    this.selectNextTrack();
+                }
                 break;
             case 'Enter':
-                e.preventDefault();
-                this.togglePlayPause();
+                if (!isSearchFocused) {
+                    e.preventDefault();
+                    this.togglePlayPause();
+                }
                 break;
             case ' ':
-                e.preventDefault();
-                this.togglePlayPause();
+                if (!isSearchFocused) {
+                    e.preventDefault();
+                    this.togglePlayPause();
+                }
                 break;
         }
     }
