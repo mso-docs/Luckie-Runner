@@ -44,6 +44,8 @@ body, button, input, select, textarea,
     border-radius: 8px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     background: #000;
+    transform: scale(1.5);
+    transform-origin: center center;
 }
 
 #gameCanvas {
@@ -562,13 +564,13 @@ body, button, input, select, textarea,
 /* Responsive Design */
 @media (max-width: 1400px) {
     #gameContainer {
-        transform: scale(0.8);
+        transform: scale(1.2);
     }
 }
 
 @media (max-width: 1200px) {
     #gameContainer {
-        transform: scale(0.7);
+        transform: scale(1.05);
     }
     
     .menu h1 {
@@ -582,7 +584,7 @@ body, button, input, select, textarea,
 
 @media (max-width: 1000px) {
     #gameContainer {
-        transform: scale(0.6);
+        transform: scale(0.9);
     }
     
     body {
@@ -592,7 +594,7 @@ body, button, input, select, textarea,
 
 @media (max-height: 700px) {
     #gameContainer {
-        transform: scale(0.7);
+        transform: scale(1.05);
     }
 }
 
