@@ -48,7 +48,33 @@ class Player extends Entity {
         this.healthPotions = 0;
         this.coffeeDrinks = 0;
         this.level = 1;
+        this.rank = 'Barista Pup';
         this.combatModifiers = { slimeAttack: 0, slimeDefense: 0 };
+        
+        // Abilities system
+        this.abilities = [
+            {
+                id: 'rock_toss',
+                name: 'Rock Toss',
+                description: 'Ability to throw rocks at enemies',
+                unlocked: true,
+                icon: 'art/items/rock-item.png'
+            },
+            {
+                id: 'slime_slayer',
+                name: 'Slime Slayer',
+                description: 'Ability to slay slimes',
+                unlocked: true,
+                icon: 'art/sprites/slime.png'
+            },
+            {
+                id: 'espressionist',
+                name: 'Espressionist',
+                description: 'Run faster with coffee',
+                unlocked: true,
+                icon: 'art/items/coffee.png'
+            }
+        ];
         
         // Rock throwing
         this.maxRocks = 10;
@@ -887,12 +913,67 @@ class Player extends Entity {
     }
 
     /**
+     * Set player level
+     * @param {number} level
+     */
+    setLevel(level) {
+        this.level = Math.max(1, Math.floor(level));
+    }
+    
+    /**
+     * Set player rank/title
+     * @param {string} rank
+     */
+    setRank(rank) {
+        this.rank = rank || 'Barista Pup';
+    }
+    
+    /**
+     * Unlock a new ability
+     * @param {string} abilityId
+     */
+    unlockAbility(abilityId) {
+        const ability = this.abilities.find(a => a.id === abilityId);
+        if (ability) {
+            ability.unlocked = true;
+        }
+    }
+    
+    /**
+     * Check if player has an ability unlocked
+     * @param {string} abilityId
+     * @returns {boolean}
+     */
+    hasAbility(abilityId) {
+        const ability = this.abilities.find(a => a.id === abilityId);
+        return ability ? ability.unlocked : false;
+    }
+    
+    /**
+     * Get current speed as a stamina value (for UI display)
+     * @returns {number}
+     */
+    getStamina() {
+        return Math.round(Math.abs(this.velocity.x));
+    }
+    
+    /**
+     * Get max stamina based on move speed
+     * @returns {number}
+     */
+    getMaxStamina() {
+        return Math.round(this.moveSpeed);
+    }
+
+    /**
      * Reset player to starting state
      */
     reset() {
         this.health = this.maxHealth;
         this.coins = 0;
         this.score = 0;
+        this.level = 1;
+        this.rank = 'Barista Pup';
         if (this.throwables) {
             this.throwables.reset();
             this.throwables.setActive('rock');

@@ -1303,6 +1303,16 @@ body, button, input, select, textarea,
     box-shadow: 0 6px 0 #9b4a33;
     font-weight: 800;
     color: #562012;
+    min-width: 0;
+}
+
+.action-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
 }
 
 .action-icon {

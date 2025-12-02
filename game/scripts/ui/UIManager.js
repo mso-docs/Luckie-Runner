@@ -341,6 +341,66 @@ class UIManager {
         if (this.game.journalUI) {
             this.game.journalUI.renderInventory();
         }
+        
+        // Update profile UI with current player stats
+        this.updateProfileUI();
+    }
+
+    /**
+     * Update player profile UI with current stats (call periodically during gameplay)
+     */
+    updateProfileUI() {
+        const player = this.game?.player;
+        if (!player) return;
+
+        // Update level
+        const levelEl = document.getElementById('profileLevel');
+        if (levelEl) {
+            levelEl.textContent = `Lvl. ${player.level || 1}`;
+        }
+
+        // Update rank
+        const rankEl = document.getElementById('profileRank');
+        if (rankEl) {
+            rankEl.textContent = player.rank || 'Barista Pup';
+        }
+
+        // Update abilities
+        const abilitiesEl = document.getElementById('profileAbilities');
+        if (abilitiesEl && player.abilities) {
+            abilitiesEl.innerHTML = '';
+            player.abilities.filter(a => a.unlocked).slice(0, 3).forEach(ability => {
+                const abilityDiv = document.createElement('div');
+                abilityDiv.className = 'profile-action';
+                abilityDiv.title = ability.description;
+                abilityDiv.innerHTML = `
+                    <span class="action-icon" aria-hidden="true"></span>
+                    <span class="action-label">${ability.name}</span>
+                `;
+                abilitiesEl.appendChild(abilityDiv);
+            });
+        }
+
+        // Update HP
+        const hpEl = document.getElementById('profileHP');
+        if (hpEl) {
+            hpEl.textContent = `${Math.round(player.health)}/${Math.round(player.maxHealth)}`;
+        }
+
+        // Update Stamina (current velocity / max speed)
+        const staminaEl = document.getElementById('profileStamina');
+        if (staminaEl) {
+            const currentStamina = player.getStamina?.() || Math.round(Math.abs(player.velocity.x));
+            const maxStamina = player.getMaxStamina?.() || Math.round(player.moveSpeed);
+            staminaEl.textContent = `${currentStamina}/${maxStamina}`;
+        }
+
+        // Update Total Badges
+        const badgesEl = document.getElementById('profileBadges');
+        if (badgesEl) {
+            const badgeCount = this.game.badgeUI?.getEarnedBadges?.()?.length || 0;
+            badgesEl.textContent = badgeCount.toString();
+        }
     }
 
     /**
@@ -509,9 +569,13 @@ class UIManager {
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         this.inventoryUI.isOpen = true;
-            if (this.game.playMenuEnterSound) {
-                this.game.playMenuEnterSound();
-            }
+        
+        // Update profile UI with current stats
+        this.updateProfileUI();
+        
+        if (this.game.playMenuEnterSound) {
+            this.game.playMenuEnterSound();
+        }
     }
 
     /**
@@ -1025,6 +1089,11 @@ class UIManager {
      * Keep dialogue bubble anchored to the speaking entity.
      */
     updateDialoguePosition() {
+        // Update profile stats if inventory is open (for real-time stamina updates)
+        if (this.inventoryUI?.isOpen) {
+            this.updateProfileUI();
+        }
+        
         if (this.game.dialogueManager?.isActive()) {
             this.game.dialogueManager.updatePosition();
         }
