@@ -47,24 +47,67 @@ class EntityFactory {
     }
 
     shopGhost(x, y, dialogueId = null) {
-        const ghost = new ShopGhost(x, y);
+        const ghost = new GenericNPC({
+            id: 'shop_ghost',
+            name: 'Shop Ghost',
+            x, y,
+            width: 47,
+            height: 64,
+            sprite: 'art/sprites/shop-ghost.png',
+            useTileSheet: true,
+            frames: 2,
+            animationFrames: [0],
+            animationSpeed: 999999,
+            dialogueId: dialogueId || 'npc.shop_ghost',
+            canTalk: true,
+            bobbing: true,
+            bobbingAmount: 6,
+            bobbingSpeed: 0.0025,
+            canToggleFrame: true,
+            spriteDefaultFacesLeft: false
+        });
         ghost.game = this.game;
-        if (dialogueId) ghost.dialogueId = dialogueId;
         return ghost;
     }
 
     princess(x, y, dialogueId = null) {
-        const princess = new PrincessNPC(x, y);
+        const princess = new GenericNPC({
+            id: 'princess',
+            name: 'Princess',
+            x, y,
+            width: 49,
+            height: 64,
+            sprite: 'art/sprites/princess-sprite.png',
+            useTileSheet: true,
+            frames: 2,
+            animationFrames: [0],
+            animationSpeed: 999999,
+            dialogueId: dialogueId || 'princess.default',
+            talkFrames: [0, 1],
+            idleFrames: [0],
+            spriteDefaultFacesLeft: false
+        });
         princess.game = this.game;
-        if (dialogueId) princess.dialogueId = dialogueId;
         return princess;
     }
 
     balloonFan(x, y, dialogueId = null) {
-        const fan = new BalloonNPC(x, y);
+        const fan = new GenericNPC({
+            id: 'balloon_fan',
+            name: 'Balloon Fan',
+            x, y,
+            width: 55,
+            height: 63,
+            sprite: 'art/sprites/balloon.png',
+            useTileSheet: false,
+            dialogueId: dialogueId || 'balloon.default',
+            bobbing: true,
+            bobbingAmount: 7,
+            bobbingSpeed: 0.0025,
+            shadowScale: { x: 0.55, y: 0.4 },
+            spriteDefaultFacesLeft: true
+        });
         fan.game = this.game;
-        fan.baseY = y;
-        if (dialogueId) fan.dialogueId = dialogueId;
         return fan;
     }
 

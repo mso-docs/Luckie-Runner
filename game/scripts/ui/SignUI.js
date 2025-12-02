@@ -149,14 +149,62 @@ class SignUI {
     updateSignDialoguePosition() {
         const dlg = this.signDialogue;
         if (!dlg.container || !dlg.target) return;
-        const camera = this.game.camera || { x: 0, y: 0 };
+        
+        // Check if player has walked too far from the sign
+        const player = this.game.player;
         const sign = dlg.target;
-        const targetX = sign.x - camera.x + sign.width / 2;
-        const bottomFromCanvas = this.game.canvas.height - (sign.y - camera.y) + sign.height + 10;
-        dlg.container.style.left = `${targetX}px`;
-        dlg.container.style.bottom = `${bottomFromCanvas}px`;
+        if (player && sign) {
+            const playerCenterX = player.x + (player.width || 0) / 2;
+            const playerCenterY = player.y + (player.height || 0) / 2;
+            const signCenterX = sign.x + (sign.width || 0) / 2;
+            const signCenterY = sign.y + (sign.height || 0) / 2;
+            const dx = playerCenterX - signCenterX;
+            const dy = playerCenterY - signCenterY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > 100) { // 100px max distance
+                this.hideSignDialogue();
+                return;
+            }
+        }
+        
+        const camera = this.game.camera || { x: 0, y: 0 };
+        const canvas = this.game.canvas;
+        if (!canvas) return;
+        
+        let targetX = sign.x - camera.x + sign.width / 2;
+        let bottomFromCanvas = canvas.height - (sign.y - camera.y) + sign.height + 10;
+        
+        // Temporarily disable transitions for instant positioning
+        const originalTransition = dlg.container.style.transition;
+        dlg.container.style.transition = 'none';
+        
+        // Get actual rendered dimensions
+        const bubbleWidth = dlg.container.offsetWidth > 0 ? dlg.container.offsetWidth : Math.min(460, canvas.width * 0.78);
+        const bubbleHeight = dlg.container.offsetHeight > 0 ? dlg.container.offsetHeight : 120;
+        
+        // Clamp horizontal position (bubble uses left as center via transform: translate(-50%, 0))
+        const padding = 60;
+        const halfWidth = bubbleWidth / 2;
+        const minX = halfWidth + padding;
+        const maxX = canvas.width - halfWidth - padding;
+        const clampedX = Math.max(minX, Math.min(maxX, targetX));
+        
+        // Clamp vertical position
+        const minBottom = padding + 20;
+        const maxBottom = canvas.height - bubbleHeight - padding;
+        const clampedBottom = Math.max(minBottom, Math.min(maxBottom, bottomFromCanvas));
+        
+        dlg.container.style.left = `${clampedX}px`;
+        dlg.container.style.bottom = `${clampedBottom}px`;
         dlg.container.setAttribute('aria-hidden', 'false');
         dlg.container.classList.remove('hidden');
+        
+        // Restore transitions after a frame
+        requestAnimationFrame(() => {
+            if (dlg.container) {
+                dlg.container.style.transition = originalTransition;
+            }
+        });
     }
 
     showSignCallout() {

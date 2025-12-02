@@ -43,6 +43,28 @@ class MyEnemy extends Entity {
 ```
 
 ---
+## One-Way Platforms (Top-Only Collision)
+- Platforms marked with `oneWay` or `topOnly` flags allow the player to pass through from below and sides, but land on top when falling from above.
+- Uses `Game.topOnlyLanding()` method with a tolerance window (`game.softLandingTolerance`, default 20px).
+- **Default behavior**: Invisible platforms (`invisible: true`) automatically use one-way collision. Override with `oneWay: false` for full collision.
+- Examples: SmallPalm, invisible DecorPlatforms, town colliders.
+- Implementation: `CollisionSystem.checkPlayerCollisions()` checks for `platform.oneWay` or `platform.topOnly` and routes to `topOnlyLanding()` instead of full AABB resolution.
+
+### Landing Requirements
+For a player to land on a one-way platform:
+1. **Descending**: Player velocity.y must be > 0 (actively falling)
+2. **From above**: Player's top edge must be above the platform's top
+3. **Within tolerance**: Player's bottom edge within 20px of platform's top
+4. **Horizontal overlap**: Player and platform must overlap horizontally
+
+### Entity Behavior with One-Way Platforms
+- **Player**: Can land from above, pass through from below/sides
+- **Enemies**: Completely ignore one-way platforms (pass through entirely)
+- **NPCs**: Use same top-only landing as player
+- **Projectiles**: Collide normally with all platforms (including one-way)
+- **Items**: Collide normally with all platforms (including one-way)
+
+---
 ## Projectile Collisions
 - Projectiles call `CollisionSystem.checkProjectileCollisions` inside `GameSystems`.
 - On hit:

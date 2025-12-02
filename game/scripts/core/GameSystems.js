@@ -87,9 +87,7 @@ class GameSystems {
         g.projectiles = (entities.projectiles || []).filter(projectile => {
             if (!projectile || !projectile.active) return false;
             projectile.update(deltaTime);
-            if (!isRoom) {
-                g.collisionSystem?.updateProjectilePhysics(projectile);
-            }
+            g.collisionSystem?.updateProjectilePhysics(projectile);
             return true;
         });
         entities.projectiles = g.projectiles;
@@ -107,6 +105,11 @@ class GameSystems {
         if (g.flag) {
             g.flag.update(deltaTime);
             g.collisionSystem?.checkFlagCollision(g.flag);
+        }
+
+        // Door renderer (for room exits)
+        if (g.doorRenderer) {
+            g.doorRenderer.update(deltaTime);
         }
 
         // Stats + HUD

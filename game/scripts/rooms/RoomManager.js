@@ -23,9 +23,17 @@ class RoomWorldBuilder {
 
         const buildEntityList = (defs) => Array.isArray(defs)
             ? defs.map(def => {
-                if (this.factory?.create) {
-                    const entity = this.factory.create(def);
-                    if (entity) return entity;
+                // Get fresh factory reference in case it wasn't available at construction time
+                const factory = this.factory || this.game?.entityFactory || this.game?.worldBuilder?.factory || null;
+                if (factory?.create) {
+                    const entity = factory.create(def);
+                    if (entity) {
+                        // Ensure entity has game reference and is active
+                        if (!entity.game) entity.game = this.game;
+                        if (entity.active === undefined) entity.active = true;
+                        if (entity.solid === undefined) entity.solid = true;
+                        return entity;
+                    }
                 }
                 return this.clonePlain(def);
             }).filter(Boolean)
@@ -33,11 +41,13 @@ class RoomWorldBuilder {
 
         const buildChestList = (defs) => Array.isArray(defs)
             ? defs.map(def => {
-                if (this.factory?.chest && typeof def?.x === 'number' && typeof def?.y === 'number') {
-                    return this.factory.chest(def.x, def.y, def.displayName, def.contents);
+                // Get fresh factory reference in case it wasn't available at construction time
+                const factory = this.factory || this.game?.entityFactory || this.game?.worldBuilder?.factory || null;
+                if (factory?.chest && typeof def?.x === 'number' && typeof def?.y === 'number') {
+                    return factory.chest(def.x, def.y, def.displayName, def.contents);
                 }
-                if (this.factory?.create) {
-                    const entity = this.factory.create({ type: 'chest', ...def });
+                if (factory?.create) {
+                    const entity = factory.create({ type: 'chest', ...def });
                     if (entity) return entity;
                 }
                 return this.clonePlain(def);
@@ -223,11 +233,21 @@ class RoomManager {
         if (!descriptor) return false;
         this.captureReturnState(returnPosition);
         const roomState = this.builder.build(descriptor);
-        this.applyRoomWorld(roomState);
+        
+        // Set room data BEFORE applying to game world
         this.room = roomState.descriptor;
         this.roomEntities = roomState.entities;
-        this.alignRoomNpcsToFloor();
         this.active = true;
+        
+        // Now apply to game (which calls setActiveWorld)
+        this.applyRoomWorld(roomState);
+        this.alignRoomNpcsToFloor();
+        
+        // Reset door state when entering a room
+        if (this.game.doorRenderer) {
+            this.game.doorRenderer.reset();
+        }
+        
         return true;
     }
 
@@ -236,6 +256,12 @@ class RoomManager {
      */
     tryExitRoom(player) {
         if (!this.active || !this.room || !player) return false;
+        
+        // Check if door animation needs to complete first
+        if (this.game.doorRenderer && !this.game.doorRenderer.canExit()) {
+            return false; // Wait for door to finish opening
+        }
+        
         const exit = this.room.exit || {};
         const px = player.x + (player.width ? player.width / 2 : 0);
         const py = player.y + (player.height || 0);
@@ -254,6 +280,15 @@ class RoomManager {
 
     exitRoom() {
         if (!this.active || !this.returnInfo) return;
+        
+        // Close any open dialogue/speech bubbles
+        if (this.game?.dialogueManager?.isActive()) {
+            this.game.dialogueManager.close();
+        }
+        if (this.game?.hideSpeechBubble) {
+            this.game.hideSpeechBubble(true);
+        }
+        
         this.restoreReturnState();
         this.active = false;
         this.room = null;
@@ -299,7 +334,29 @@ class RoomManager {
             levelId: g.currentLevelId || 'testRoom',
             level: this.clonePlain(g.level),
             theme: g.currentTheme,
-            platforms: (g.platforms || []).map(p => ({ x: p.x, y: p.y, width: p.width, height: p.height, type: p.type })),
+            platforms: (g.platforms || []).map(p => {
+                const base = { x: p.x, y: p.y, width: p.width, height: p.height, type: p.type };
+                // For DecorPlatforms, capture full config to preserve invisible/oneWay properties
+                if (p.type === 'decor_platform') {
+                    base.config = {
+                        width: p.width,
+                        height: p.height,
+                        invisible: p.invisible,
+                        oneWay: p.oneWay,
+                        sprite: p.spritePath,
+                        frameWidth: p.frameWidth,
+                        frameHeight: p.frameHeight,
+                        frames: p.frames,
+                        frameDirection: p.frameDirection,
+                        fallbackColor: p.fallbackColor,
+                        hitboxWidth: p.hitbox?.width,
+                        hitboxHeight: p.hitbox?.height,
+                        hitboxOffsetX: p.hitbox?.offsetX,
+                        hitboxOffsetY: p.hitbox?.offsetY
+                    };
+                }
+                return base;
+            }),
             enemies: (g.enemies || []).slice(),
             items: (g.items || []).slice(),
             hazards: (g.hazards || []).slice(),
@@ -327,7 +384,13 @@ class RoomManager {
         g.currentRoomId = null;
         g.currentLevelId = snap.levelId;
         g.level = this.clonePlain(snap.level);
-        g.platforms = (snap.platforms || []).map(p => (g.entityFactory?.platform ? g.entityFactory.platform(p.x, p.y, p.width, p.height, p.type) : { ...p, type: p.type || 'platform' }));
+        g.platforms = (snap.platforms || []).map(p => {
+            if (p.type === 'decor_platform' && g.entityFactory?.decor_platform) {
+                // Restore DecorPlatform with all its config properties
+                return g.entityFactory.decor_platform(p.x, p.y, p.config || {});
+            }
+            return g.entityFactory?.platform ? g.entityFactory.platform(p.x, p.y, p.width, p.height, p.type) : { ...p, type: p.type || 'platform' };
+        });
         g.enemies = snap.enemies || [];
         g.items = snap.items || [];
         g.hazards = snap.hazards || [];
@@ -413,6 +476,16 @@ class RoomManager {
         }
 
         g.setActiveWorld?.('room', { id: descriptor.id, theme: g.currentTheme, bounds });
+        
+        // Set camera bounds and position to show bottom of room
+        if (g.camera) {
+            g.camera.setBounds(bounds.width, bounds.height);
+            // Position camera to show the floor/bottom area where player spawns
+            // Instead of centering on player, align camera so bottom of viewport shows bottom of room
+            const camX = Math.max(0, spawn.x - g.camera.viewportWidth / 2 + (g.player?.width || 0) / 2);
+            const camY = Math.max(0, bounds.height - g.camera.viewportHeight);
+            g.camera.reset({ x: camX, y: camY });
+        }
     }
 
     resolveRoomRegistry(game = null) {

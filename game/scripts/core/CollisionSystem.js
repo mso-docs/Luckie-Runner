@@ -18,7 +18,12 @@ class CollisionSystem {
         }
 
         g.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
+            // If platform is marked as one-way/top-only, use soft landing logic only
+            if (platform.oneWay || platform.topOnly) {
+                const platformBounds = CollisionDetection.getCollisionBounds(platform);
+                const landed = g.topOnlyLanding(platformBounds);
+                // Don't need to do anything with the result - topOnlyLanding sets player state
+            } else if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(player),
                 platform
             )) {
@@ -156,6 +161,9 @@ class CollisionSystem {
         const g = this.game;
         enemy.onGround = false;
         g.platforms.forEach(platform => {
+            // Skip one-way platforms - only players can use them
+            if (platform.oneWay || platform.topOnly) return;
+            
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(enemy),
                 platform
@@ -254,7 +262,8 @@ class CollisionSystem {
                 if (!projectile.canHit(npc)) return;
 
                 this.handleNpcProjectileHit(npc, projectile);
-                projectile.hitTarget(npc);
+                // Mark NPC as hit by this projectile to prevent multiple hits
+                projectile.hitTargets.add(npc);
             });
         }
     }
@@ -262,6 +271,20 @@ class CollisionSystem {
     handleNpcProjectileHit(npc, projectile) {
         const audio = this.game?.services?.audio?.managerRef || this.game?.audioManager;
         audio?.playSound?.('ow', 0.95);
+
+        // Track NPC hit for badge progress (Bully Badge)
+        if (this.game?.badgeUI?.handleNpcHit) {
+            this.game.badgeUI.handleNpcHit(npc);
+        }
+
+        // Check for Bully Badge coin drops (25% chance for 1-5 coins)
+        const player = this.game?.player;
+        if (player && player.combatModifiers?.bullyBadge) {
+            if (Math.random() < 0.25) { // 25% chance
+                const coinAmount = Math.floor(Math.random() * 5) + 1; // 1-5 coins
+                player.collectCoin(coinAmount);
+            }
+        }
 
         if (typeof npc.onProjectileHit === 'function') {
             npc.onProjectileHit(projectile);

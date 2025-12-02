@@ -809,7 +809,14 @@ class TownManager {
     }
 
     ensureRoomManager() {
-        if (this.roomManager && typeof this.roomManager.enterRoom === 'function') return this.roomManager;
+        // ALWAYS use game.roomManager if it exists to avoid having multiple instances
+        if (this.game?.roomManager) {
+            this.roomManager = this.game.roomManager;
+            return this.roomManager;
+        }
+        if (this.roomManager && typeof this.roomManager.enterRoom === 'function') {
+            return this.roomManager;
+        }
         this.roomManager = this.resolveRoomManager(this.game);
         return this.roomManager;
     }
@@ -907,8 +914,9 @@ class TownManager {
             const startX = town.region?.startX ?? Infinity;
             const endX = town.region?.endX ?? -Infinity;
             if (cameraRight > endX) return false; // already passed this town
-            if (startX > cameraRight + lookahead) return false; // still too far away
-            if (this.preloadedTownId === town.id) return false; // already loaded
+            // Load town when its start is approaching (within lookahead distance from current camera position)
+            if (startX > (camera.x || 0) + lookahead) return false; // still too far away
+            if (this.loadedTownId === town.id && this.game.townDecor?.length) return false; // already loaded with content
             if (this.currentTownId && this.currentTownId !== town.id) return false; // don't replace an active town
             return true;
         });
@@ -924,8 +932,8 @@ class TownManager {
     }
 
     getTownPreloadDistance(viewportWidth = 0) {
-        const base = viewportWidth ? viewportWidth * 1.1 : 1200;
-        const minimum = 900;
+        const base = viewportWidth ? viewportWidth * 2.5 : 2400;
+        const minimum = 3000;
         return Math.max(minimum, this.preloadDistance || base);
     }
 
@@ -951,7 +959,10 @@ class TownManager {
             this.pendingTownToLoad = town;
             return;
         }
-        this.loadTownContent(town);
+        // Only load if not already preloaded (avoid clearing preloaded content)
+        if (this.loadedTownId !== town.id || !this.game.townDecor?.length) {
+            this.loadTownContent(town);
+        }
         this.handleTownMusic(town);
     }
 
@@ -1070,10 +1081,10 @@ class TownManager {
         if (this.activeInterior && this.isInsideInteriorRoom()) {
             if (this.isPlayerAtInteriorExit(p)) {
                 this.exitInterior();
-            } else if (pressed) {
-                g.uiManager?.showSpeechBubble?.('Move closer to the exit to leave.');
+                return true;
             }
-            return true;
+            // Don't consume the interaction - let NPCs handle it
+            return false;
         }
 
         const building = this.getNearbyBuildingDoor(p);
@@ -1267,6 +1278,13 @@ class TownManager {
 
     exitInterior() {
         if (!this.activeInterior || !this.interiorReturn) return;
+        
+        // Check if leaving Club Cidic - stop Sound Gallery music
+        const wasClubCidic = this.activeInterior?.id === 'club_cidic_interior';
+        if (wasClubCidic && this.game?.audioManager) {
+            this.game.audioManager.stopAllMusic();
+        }
+        
         const targetLevel = this.interiorReturn.levelId || 'testRoom';
         const spawn = this.interiorReturn.position || null;
         const prevTestMode = this.interiorReturn.prevTestMode;
@@ -1346,6 +1364,26 @@ class TownManager {
                 audio.playMusic?.(baseId, this.getBaseMusicVolume(), { allowParallel: true, restartIfPlaying: false });
             }
             return;
+        }
+
+        // Special case: Club Cidic uses Sound Gallery music state
+        const isClubCidic = roomDesc?.id === 'club_cidic_interior' || this.activeInterior?.id === 'club_cidic_interior';
+        if (isClubCidic && this.game?.soundGallery) {
+            // Stop base and town music
+            if (baseId && audio.music?.[baseId]) {
+                audio.setTrackVolume?.(baseId, 0);
+            }
+            if (activeTownId && audio.music?.[activeTownId]) {
+                audio.setTrackVolume?.(activeTownId, 0);
+                audio.music[activeTownId].pause();
+            }
+            
+            // Apply user's music selection if they've interacted, otherwise play default
+            if (this.game.soundGallery.hasUserInteracted) {
+                this.game.soundGallery.applyClubCidicMusic();
+                return;
+            }
+            // Fall through to play default room music
         }
 
         if (!audio.music?.[roomMusicId] && roomMusicSrc) {
@@ -1461,13 +1499,14 @@ class TownManager {
                 hitboxHeight: col.hitboxHeight,
                 hitboxOffsetX: col.hitboxOffsetX,
                 hitboxOffsetY: col.hitboxOffsetY,
-                sprite: null
+                sprite: null,
+                invisible: true,  // Must be set in config for DecorPlatform constructor
+                oneWay: true      // Explicitly set one-way collision
             };
             const collider = factory.create(colliderDef);
             if (collider) {
                 collider.game = g;
                 collider.type = 'decor_platform';
-                collider.invisible = true;
                 collider.hidden = true;
                 collider.render = false;
                 g.platforms.push(collider);
@@ -1521,11 +1560,22 @@ class TownManager {
             sprite: spritePath,
             render: (ctx, camera) => {
                 if (!ctx || !img.complete) return;
+                
+                // Viewport culling with large buffer to render ahead of player
+                const renderBuffer = 2000; // Render 2000px beyond viewport edges
+                const destX = (def.x || 0) - (camera?.x || 0);
+                const destY = (def.y || 0) - (camera?.y || 0);
+                
+                if (destX + width < -renderBuffer ||
+                    destX > ctx.canvas.width + renderBuffer ||
+                    destY + height < -renderBuffer ||
+                    destY > ctx.canvas.height + renderBuffer) {
+                    return; // Skip rendering if too far off-screen
+                }
+                
                 const frameIdx = ref?.frameIndex ?? def.frameIndex ?? 0;
                 const sx = frameDirection === 'horizontal' ? frameIdx * frameWidth : 0;
                 const sy = frameDirection === 'vertical' ? frameIdx * frameHeight : 0;
-                const destX = (def.x || 0) - (camera?.x || 0);
-                const destY = (def.y || 0) - (camera?.y || 0);
                 const srcW = frameDirection === 'horizontal' ? frameWidth : img.width;
                 const srcH = frameDirection === 'vertical' ? frameHeight : img.height;
 

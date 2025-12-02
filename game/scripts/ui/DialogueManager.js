@@ -14,6 +14,7 @@ class DialogueManager {
             anchor: null,
             onClose: null
         };
+        this.maxDistance = 100; // Max distance before auto-closing dialogue
     }
 
     getLines(id) {
@@ -78,6 +79,26 @@ class DialogueManager {
     }
 
     updatePosition() {
+        if (!this.state.active) return;
+        
+        // Check if player has walked too far from the anchor
+        const anchor = this.state.anchor;
+        const player = this.game.player;
+        if (anchor && player && anchor !== player) {
+            // Use center points for more accurate distance
+            const anchorCenterX = anchor.x + (anchor.width || 0) / 2;
+            const anchorCenterY = anchor.y + (anchor.height || 0) / 2;
+            const playerCenterX = player.x + (player.width || 0) / 2;
+            const playerCenterY = player.y + (player.height || 0) / 2;
+            const dx = playerCenterX - anchorCenterX;
+            const dy = playerCenterY - anchorCenterY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > this.maxDistance) {
+                this.close();
+                return;
+            }
+        }
+        
         const render = this.game?.services?.render;
         const canvas = render?.canvas || this.game?.canvas;
         if (this.bubble) {
@@ -87,7 +108,6 @@ class DialogueManager {
 
         const bubble = this.game.speechBubble?.container;
         if (!bubble || !canvas) return;
-        const anchor = this.state.anchor || this.game.player;
         const camera = this.game.camera || { x: 0, y: 0 };
         let targetX = canvas.width / 2;
         let headY = canvas.height / 2;
@@ -100,10 +120,38 @@ class DialogueManager {
             anchorWidth = anchor.width || 0;
             facingDir = anchor.facing || 1;
         }
-        bubble.style.left = `${targetX}px`;
+        
+        // Temporarily disable transitions for instant positioning
+        const originalTransition = bubble.style.transition;
+        bubble.style.transition = 'none';
+        
+        // Get actual rendered dimensions
+        const bubbleWidth = bubble.offsetWidth > 0 ? bubble.offsetWidth : Math.min(460, canvas.width * 0.78);
+        const bubbleHeight = bubble.offsetHeight > 0 ? bubble.offsetHeight : 120;
+        
+        // Clamp horizontal position (bubble uses left as center via transform: translate(-50%, 0))
+        const padding = 60;
+        const halfWidth = bubbleWidth / 2;
+        const minX = halfWidth + padding;
+        const maxX = canvas.width - halfWidth - padding;
+        const clampedX = Math.max(minX, Math.min(maxX, targetX));
+        
+        bubble.style.left = `${clampedX}px`;
+        
         const aboveHeadOffset = 20;
-        const bottomFromCanvas = canvas.height - headY + aboveHeadOffset;
-        bubble.style.bottom = `${bottomFromCanvas}px`;
+        let bottomFromCanvas = canvas.height - headY + aboveHeadOffset;
+        
+        // Clamp vertical position to keep bubble within viewport
+        const minBottom = padding + 20;
+        const maxBottom = canvas.height - bubbleHeight - padding;
+        const clampedBottom = Math.max(minBottom, Math.min(maxBottom, bottomFromCanvas));
+        
+        bubble.style.bottom = `${clampedBottom}px`;
+        
+        // Restore transitions after a frame
+        requestAnimationFrame(() => {
+            bubble.style.transition = originalTransition;
+        });
         const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + 40 : 50;
         bubble.style.setProperty('--tail-offset', `${mouthOffset}px`);
     }

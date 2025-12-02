@@ -41,6 +41,15 @@ class WorldBuilder {
 
         const defaultSpawn = (levelDef && levelDef.spawn) || this.config.level?.spawn || { x: 100, y: g.canvas.height - 150 };
         const getTestSpawn = () => {
+            // First priority: use spawn from level definition if provided
+            if (levelDef && levelDef.spawn) {
+                return { x: levelDef.spawn.x, y: levelDef.spawn.y };
+            }
+            // Second priority: use TestRoom's spawn position if available
+            if (g.testRoom && typeof g.testRoom.getPlayerSpawnPosition === 'function') {
+                return g.testRoom.getPlayerSpawnPosition();
+            }
+            // Fallback to default test spawn logic
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.canvas.height - 50);
             const playerWidth = 45;
             const playerHeight = 66;
@@ -281,7 +290,7 @@ class WorldBuilder {
         g.balloonFan = null;
         (blueprint.npcs || []).forEach(def => {
             if (def.type === 'shopGhost') {
-                const ghost = this.factory.shopGhost(def.x, def.y, def.dialogueId || 'shop.ghost');
+                const ghost = this.factory.shopGhost(def.x, def.y, def.dialogueId || 'npc.shop_ghost');
                 g.shopGhost = ghost;
                 g.npcs.push(ghost);
             } else if (def.type === 'princess') {
@@ -539,7 +548,7 @@ class WorldBuilder {
 
         const ghostX = 680;
         const ghostY = groundY - 64;
-        g.shopGhost = this.factory.shopGhost(ghostX, ghostY, 'shop.ghost');
+        g.shopGhost = this.factory.shopGhost(ghostX, ghostY, 'npc.shop_ghost');
         g.npcs.push(g.shopGhost);
 
         const mountainTop = mountainSteps[6];

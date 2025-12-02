@@ -6,6 +6,7 @@
     <title>Luckie Runner!</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/sound-gallery.css">
 </head>
 <body>
     <div id="gameContainer">
@@ -100,23 +101,23 @@
                                 <div class="profile-nameplate">
                                     <div class="profile-name">
                                         <span id="inventoryTitle">Luckie</span>
-                                        <span class="profile-level">Lvl. 07</span>
+                                        <span class="profile-level" id="profileLevel">Lvl. 1</span>
                                     </div>
-                                    <span class="profile-rank">B-list Pup</span>
+                                    <span class="profile-rank" id="profileRank">Barista Pup</span>
                                 </div>
                                 <div class="profile-bust" aria-hidden="true"></div>
-                                <div class="profile-actions">
+                                <div class="profile-actions" id="profileAbilities">
                                     <div class="profile-action action-hammer">
                                         <span class="action-icon" aria-hidden="true"></span>
-                                        <span class="action-label">Paw Smash</span>
+                                        <span class="action-label">Rock Toss</span>
                                     </div>
                                     <div class="profile-action action-coin">
                                         <span class="action-icon" aria-hidden="true"></span>
-                                        <span class="action-label">Coin Toss</span>
+                                        <span class="action-label">Slime Slayer</span>
                                     </div>
                                     <div class="profile-action action-spin">
                                         <span class="action-icon" aria-hidden="true"></span>
-                                        <span class="action-label">Shell Spin</span>
+                                        <span class="action-label">Espressionist</span>
                                     </div>
                                 </div>
                             </header>
@@ -124,15 +125,15 @@
                             <div class="stat-cards">
                                 <div class="stat-card stat-heart">
                                     <span class="stat-label">HP</span>
-                                    <span class="stat-value">34/35</span>
+                                    <span class="stat-value" id="profileHP">100/100</span>
                                 </div>
                                 <div class="stat-card stat-flower">
                                     <span class="stat-label">Stamina</span>
-                                    <span class="stat-value">25/25</span>
+                                    <span class="stat-value" id="profileStamina">0/600</span>
                                 </div>
                                 <div class="stat-card stat-badge">
-                                    <span class="stat-label">Badge Pts</span>
-                                    <span class="stat-value">15</span>
+                                    <span class="stat-label">Badges</span>
+                                    <span class="stat-value" id="profileBadges">0</span>
                                 </div>
                             </div>
                         </section>
@@ -222,9 +223,27 @@
                                 </div>
 
                                 <div class="inventory-panel" data-tab-panel="journal">
-                                    <div class="inventory-placeholder">
-                                        <h3>Journal</h3>
-                                        <p>Quest notes, collectibles, and lore snippets will appear here.</p>
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Journal Entries</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="journal-list" id="inventoryJournals"></div>
+                                        <div class="journal-empty-state hidden" id="journalEmptyState">
+                                            <p>📖</p>
+                                            <p>No journal entries yet.</p>
+                                            <p class="journal-empty-hint">Collect journals from NPCs and events to learn more about the world.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -307,10 +326,74 @@
             </div>
         </div>
 
+        <!-- Sound Gallery Overlay (Club Cidic Music Player) -->
+        <div id="soundGalleryOverlay" class="sound-gallery-overlay hidden" aria-hidden="true">
+            <div class="sound-gallery-window" role="dialog" aria-labelledby="soundGalleryTitle">
+                <div class="sound-gallery-container">
+                    <div class="sound-gallery-header">
+                        <h2 id="soundGalleryTitle" class="gallery-title">Sound Gallery</h2>
+                        <button class="slime-toggle" id="soundGalleryClose" aria-label="Close Sound Gallery">
+                            <span class="toggle-icon">⚙️</span>
+                        </button>
+                    </div>
+
+                    <div class="sound-gallery-content">
+                        <div class="record-player-panel">
+                            <div class="record-player-container">
+                                <div class="current-track-display">
+                                    <div class="track-name" id="currentTrackName">Time to Slime</div>
+                                </div>
+
+                                <div class="vinyl-record" id="vinylRecord">
+                                    <div class="record-label">
+                                        <div class="label-center"></div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="track-list-panel">
+                            <div class="track-search-container">
+                                <input 
+                                    type="text" 
+                                    class="track-search" 
+                                    id="trackSearch" 
+                                    placeholder="Search tracks..."
+                                    aria-label="Search tracks"
+                                >
+                            </div>
+
+                            <div class="track-list-scroll" id="trackListScroll">
+                                <div class="track-list" id="trackList">
+                                    <!-- Tracks populated by SoundGalleryManager -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sound-gallery-footer">
+                        <div class="footer-hint">
+                            <span class="hint-key">Z</span>
+                            <span class="hint-text">Close</span>
+                        </div>
+                        <div class="footer-hint">
+                            <span class="hint-key">↑↓</span>
+                            <span class="hint-text">Select</span>
+                        </div>
+                        <div class="footer-hint">
+                            <span class="hint-key">Enter</span>
+                            <span class="hint-text">Play/Pause</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Start Menu -->
         <div id="startMenu" class="menu">
             <h1>Luckie Runner!</h1>
-            <p>Help Luckie Puppy get to Beachside Boba Cafe on time!</p>
+            <p>Help Luckie Puppie get to Beachside Boba Cafe on time!</p>
             <button id="startButton">Start Game</button>
             <button id="loadButton">Load Game</button>
             <button id="instructionsButton">Instructions</button>
@@ -395,6 +478,7 @@
     <script src="scripts/rooms/RoomRegistry.js"></script>
     <script src="scripts/rooms/RoomManager.js"></script>
     <script src="scripts/rooms/ShoreHouseInterior.js"></script>
+    <script src="scripts/environment/DoorRenderer.js"></script>
     <script src="scripts/core/CollisionBox.js"></script>
     <script src="scripts/core/GameConfig.js"></script>
     <script src="scripts/town/TownManager.js"></script>
@@ -425,11 +509,13 @@
     <!-- Manager Classes -->
     <script src="scripts/core/GameStateManager.js"></script>
     <script src="scripts/ui/BadgeUI.js"></script>
+    <script src="scripts/ui/JournalUI.js"></script>
     <script src="scripts/ui/DialogueManager.js"></script>
     <script src="scripts/ui/SignUI.js"></script>
     <script src="scripts/ui/UIConfig.js"></script>
     <script src="scripts/ui/UIInputController.js"></script>
     <script src="scripts/ui/UIManager.js"></script>
+    <script src="scripts/ui/SoundGalleryManager.js"></script>
     <script src="scripts/core/scene/MenuScene.js"></script>
     <script src="scripts/core/scene/PlayScene.js"></script>
     <script src="scripts/core/scene/PauseScene.js"></script>
@@ -466,10 +552,13 @@
     <script src="scripts/items/Flag.js"></script>
 
     <!-- NPCs -->
+    <script src="scripts/npcs/BaseNPC.js"></script>
+    <script src="scripts/npcs/GenericNPC.js"></script>
+    <script src="scripts/npcs/TownPatrolNPC.js"></script>
+    <!-- Legacy NPC classes (kept for backward compatibility) -->
     <script src="scripts/npcs/ShopGhost.js"></script>
     <script src="scripts/npcs/PrincessNPC.js"></script>
     <script src="scripts/npcs/BalloonNPC.js"></script>
-    <script src="scripts/npcs/TownPatrolNPC.js"></script>
 
     <!-- Level definitions -->
     <script src="scripts/levels/TestRoomLevel.js"></script>

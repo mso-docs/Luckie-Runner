@@ -1,15 +1,19 @@
 /**
  * ShopGhost - simple NPC with two-frame sprite and proximity-based interactions
  */
-class ShopGhost extends Entity {
-    constructor(x, y, dialogueId = 'shop.ghost') {
-        super(x, y, 47, 64);
+class ShopGhost extends BaseNPC {
+    constructor(x, y, dialogueId = 'npc.shop_ghost') {
+        super(x, y, 47, 64, {
+            id: 'shop_ghost',
+            name: 'Shop Ghost',
+            dialogueId: dialogueId,
+            interactRadius: 120,
+            canTalk: true // Shop ghost uses Z key and Enter
+        });
 
         this.loadTileSheet('art/sprites/shop-ghost.png', 47, 64, [0], 999999); // disable auto-anim
-        this.interactRadius = 120;
         this.bobOffset = 0;
         this.bobTime = 0;
-        this.dialogueId = dialogueId;
     }
 
     onUpdate(deltaTime) {
@@ -28,12 +32,5 @@ class ShopGhost extends Entity {
 
     toggleFrame() {
         this.tileIndex = this.tileIndex === 0 ? 1 : 0;
-    }
-
-    isPlayerNearby(player, customRadius) {
-        const radius = customRadius || this.interactRadius;
-        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
-        const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
-        return Math.sqrt(dx * dx + dy * dy) <= radius;
     }
 }

@@ -24,6 +24,7 @@ class Game {
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
+        this.journalUI = null;
         this.smallPalms = [];
         this.testRoomMaxX = 0;
         this.softLandingTolerance = 20; // px window to allow top-only landings
@@ -114,6 +115,10 @@ class Game {
             ? RoomManager
             : (typeof window !== 'undefined' ? window.RoomManager : null);
         this.roomManager = RoomManagerCtor ? new RoomManagerCtor(this) : null;
+        const DoorRendererCtor = (typeof DoorRenderer !== 'undefined')
+            ? DoorRenderer
+            : (typeof window !== 'undefined' ? window.DoorRenderer : null);
+        this.doorRenderer = DoorRendererCtor ? new DoorRendererCtor(this) : null;
         this.battleManager = new BattleManager(this);
         this.cutscenePlayer = new CutscenePlayer(this);
 
@@ -154,6 +159,7 @@ class Game {
         this.dialogueManager = new DialogueManager(this, dialogues, this.speechBubbleUI);
         this.dialogueState = this.dialogueManager.state; // legacy alias
         this.uiManager = new UIManager(this, this.services);
+        this.soundGallery = new SoundGalleryManager(this);
         this.entityFactory = new EntityFactory(this, this.config);
         this.worldBuilder = new WorldBuilder(this, this.entityFactory, this.services);
         this.systems = new GameSystems(this);
@@ -218,12 +224,13 @@ class Game {
         const overlapX = playerBounds.x < targetRect.x + targetRect.width &&
             playerBounds.x + playerBounds.width > targetRect.x;
 
-        // Must be coming from above within tolerance
-        const descending = this.player.velocity?.y >= 0;
+        // Must be coming from above within tolerance (falling down, not jumping up)
+        const descending = this.player.velocity?.y > 0; // Changed >= to > so standing still doesn't count
+        const comingFromAbove = playerBounds.y < targetTop; // Player's top must be above platform top
         const withinTolerance = playerBottom >= targetTop &&
             playerBottom <= targetTop + (this.softLandingTolerance || 20);
 
-        if (overlapX && descending && withinTolerance) {
+        if (overlapX && descending && comingFromAbove && withinTolerance) {
             // Land on top
             this.player.y = targetTop - playerBounds.height;
             this.player.velocity.y = Math.min(0, this.player.velocity.y);
@@ -278,6 +285,7 @@ class Game {
         this.signUI.setupSignDialogueUI();
         this.setupInventoryUI();
         this.badgeUI = new BadgeUI(this);
+        this.journalUI = new JournalUI(this);
         this.setupChestUI();
         this.setupShopUI();
         this.audioController.applyConfigDefaults();
@@ -1319,6 +1327,9 @@ class Game {
         this.signBoards = [];
         if (this.badgeUI?.reset) {
             this.badgeUI.reset(true);
+        }
+        if (this.journalUI?.reset) {
+            this.journalUI.reset(true);
         }
         
         this.npcs = [];

@@ -20,6 +20,7 @@ File: `game/scripts/environment/DecorPlatform.js`
 - Static (no physics movement): updatePhysics is empty; it just sits where you place it.
 - Optional art: If you provide `sprite`, it draws the sprite; otherwise a simple filled rectangle.
 - Custom hitbox: You can set `hitboxWidth/Height` and offsets to decouple collision from the sprite size.
+- **One-way collision (default for invisible)**: Invisible platforms automatically use "top-only" collision, allowing the player to pass through from below and sides but land on top when falling from above. Set `oneWay: false` to disable this behavior and use full collision.
 
 ## Fields You Can Set (per instance)
 In your level/room data:
@@ -33,11 +34,18 @@ In your level/room data:
 - `hitboxWidth`, `hitboxHeight` (optional): Collision size; defaults to `width/height`.
 - `hitboxOffsetX`, `hitboxOffsetY` (optional): Collision offset from top-left; defaults to `0`.
 - `fallbackColor` (optional): Color for the rectangle if no sprite is given; default gray.
+- `invisible` (optional): If true, platform won't render. Defaults to `false`.
+- `oneWay` (optional): If true, player can only land from above (passes through from below/sides). Defaults to `true` for invisible platforms, `false` otherwise. Set explicitly to override.
 
 ## Code Samples (Place in Level or Room Data)
-Minimal invisible platform:
+Minimal invisible platform (one-way by default):
 ```js
-{ type: 'decor_platform', x: 1200, y: 780, width: 140, height: 32 }
+{ type: 'decor_platform', x: 1200, y: 780, width: 140, height: 32, invisible: true }
+```
+
+Invisible platform with full collision (disable one-way):
+```js
+{ type: 'decor_platform', x: 1200, y: 780, width: 140, height: 32, invisible: true, oneWay: false }
 ```
 
 With art and custom hitbox:

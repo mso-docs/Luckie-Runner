@@ -1,0 +1,111 @@
+<!-- Sound Gallery Modal for Club Cidic DJ -->
+<div id="soundGalleryOverlay" class="sound-gallery-overlay hidden" aria-hidden="true">
+    <div class="sound-gallery-window" role="dialog" aria-labelledby="soundGalleryTitle">
+        <!-- Main Container -->
+        <div class="sound-gallery-container">
+            <!-- Header -->
+            <div class="sound-gallery-header">
+                <h2 id="soundGalleryTitle" class="gallery-title">Sound Gallery</h2>
+                <button class="slime-toggle" id="soundGalleryClose" aria-label="Close Sound Gallery">
+                    <span class="toggle-icon">⚙️</span>
+                </button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="sound-gallery-content">
+                <!-- Left Panel: Record Player -->
+                <div class="record-player-panel">
+                    <div class="record-player-container">
+                        <!-- Current Track Display -->
+                        <div class="current-track-display">
+                            <div class="track-name-wrapper">
+                                <div class="track-name" id="currentTrackName">Rogueport</div>
+                            </div>
+                        </div>
+
+                        <!-- Vinyl Record -->
+                        <div class="vinyl-record" id="vinylRecord">
+                            <div class="record-label">
+                                <div class="label-center"></div>
+                            </div>
+                        </div>
+
+                        <!-- Player Controls -->
+                        <div class="player-controls">
+                            <button class="control-btn prev-btn" id="prevTrack" aria-label="Previous Track">
+                                <span class="control-icon">⏮</span>
+                            </button>
+                            <button class="control-btn play-pause-btn" id="playPauseBtn" aria-label="Play/Pause">
+                                <span class="control-icon play-icon" id="playPauseIcon">▶</span>
+                            </button>
+                            <button class="control-btn next-btn" id="nextTrack" aria-label="Next Track">
+                                <span class="control-icon">⏭</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Track List -->
+                <div class="track-list-panel">
+                    <div class="track-search-container">
+                        <input 
+                            type="text" 
+                            class="track-search" 
+                            id="trackSearch" 
+                            placeholder="Rogueport"
+                            aria-label="Search tracks"
+                        >
+                    </div>
+
+                    <div class="track-list-scroll" id="trackListScroll">
+                        <div class="track-list" id="trackList">
+                            <!-- Tracks will be populated here -->
+                            <button class="track-item active" data-track="rogueport">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport</span>
+                            </button>
+                            <button class="track-item" data-track="rogueport-podley">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport - Podley's Place</span>
+                            </button>
+                            <button class="track-item" data-track="rogueport-shops">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport Shops</span>
+                            </button>
+                            <button class="track-item" data-track="rogueport-harbor">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport Harbor</span>
+                            </button>
+                            <button class="track-item" data-track="rogueport-sublevel-one">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport - Sublevel One</span>
+                            </button>
+                            <button class="track-item" data-track="rogueport-sublevel-two">
+                                <span class="track-icon">🎵</span>
+                                <span class="track-text">Rogueport - Sublevel Two</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer with hints -->
+            <div class="sound-gallery-footer">
+                <div class="footer-controls">
+                    <div class="footer-hint">
+                        <span class="hint-key">Z</span>
+                        <span class="hint-action">Close</span>
+                    </div>
+                    <div class="footer-hint">
+                        <span class="hint-key">↑↓</span>
+                        <span class="hint-action">Select</span>
+                    </div>
+                    <div class="footer-hint">
+                        <span class="hint-key">Enter</span>
+                        <span class="hint-action">Pause Play</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

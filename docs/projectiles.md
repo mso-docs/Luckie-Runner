@@ -123,13 +123,25 @@ Placement notes:
 - For enemy shots, set `ownerType: 'enemy'` so they damage the player.
 
 ## How Collisions Are Handled
-- `Projectile.checkCollisions` (base) checks:
-  - If `ownerType === 'player'`: hits `game.enemies`.
+- `CollisionSystem.updateProjectilePhysics` handles all projectile collisions (called every frame in `GameSystems.update`).
+- Collision checks include:
+  - If `ownerType === 'player'`: hits `game.enemies` **and `game.npcs`** (NPCs react with knockback and sound).
   - If `ownerType === 'enemy'`: hits `game.player`.
   - Solid platforms (`game.platforms`) as obstacles.
+  - Hazards (if they implement `checkProjectileCollision`).
 - On hit: `hitTarget` → apply damage, call `onHitTarget`, optionally fade.
 - On obstacle: `hitObstacle` → call `onHitObstacle`, optionally fade.
 - If `piercing` is false, it tracks `hitTargets` to avoid multiple hits on the same entity.
+
+### NPC Collisions
+- Player projectiles automatically hit NPCs in **all contexts** (levels, towns, and interior rooms).
+- When an NPC is hit:
+  - Plays "ow" sound effect.
+  - Applies exaggerated knockback (horizontal + vertical velocity).
+  - NPCs pause briefly to recover before resuming patrol.
+  - If NPC has `onProjectileHit` method, that's called instead of default behavior.
+- NPCs must have `active = true` to be hittable (default for all Entity-based NPCs).
+- Works identically for interior room NPCs (like Alicia, DJ Cidic) and outdoor town NPCs.
 
 ## Visuals and Trails
 - Override `render` to customize drawing; base draws sprite and a trail (skips trail for Rock/Coconut).

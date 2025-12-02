@@ -3,6 +3,7 @@ window.LevelDefinitions = window.LevelDefinitions || {};
 window.LevelDefinitions.testRoom = {
     testRoom: true,
     allowMissingSpawn: true,
+    spawn: { x: 5, y: 400 }, // Custom spawn position - change these values to spawn wherever you want
     parkour: [
         { x: 220, width: 120, y: null, yOffset: 0 },   // base
         { x: 420, width: 90, y: null, yOffset: 50 },

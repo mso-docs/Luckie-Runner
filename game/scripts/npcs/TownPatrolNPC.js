@@ -1,14 +1,21 @@
 /**
  * TownPatrolNPC - modular town NPC with patrol loop and talk animation.
  */
-class TownPatrolNPC extends Entity {
+class TownPatrolNPC extends BaseNPC {
     constructor(game, config = {}) {
         const width = config.width ?? 38;
         const height = config.height ?? 63;
         const patrolPath = Array.isArray(config.patrol) && config.patrol.length ? config.patrol : [{ x: config.x ?? 0, y: config.y ?? 0 }];
         const startX = (config.x !== undefined ? config.x : patrolPath[0]?.x) ?? 0;
         const startY = config.y ?? patrolPath[0]?.y ?? 0;
-        super(startX, startY, width, height);
+        super(startX, startY, width, height, {
+            id: config.id,
+            name: config.name || 'NPC',
+            dialogueId: config.dialogueId || 'npc.default',
+            interactRadius: config.interactRadius ?? 110,
+            canTalk: true,
+            spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? false  // Default to right-facing
+        });
         this.game = game;
 
         const sprite = config.sprite || 'art/sprites/mike.png';
@@ -28,11 +35,6 @@ class TownPatrolNPC extends Entity {
         this.speed = config.speed ?? 40;
         this.pauseMs = config.pauseMs ?? 30; // brief pause when turning
         this.pauseTimer = 0;
-        this.isTalking = false;
-
-        this.dialogueId = config.dialogueId || 'npc.default';
-        this.interactRadius = config.interactRadius ?? 110;
-        this.canTalk = true;
 
         // Keep feet on ground
         const groundY = this.game?.townManager?.getGroundY();
@@ -76,13 +78,6 @@ class TownPatrolNPC extends Entity {
         this.setTalking(false);
     }
 
-    isPlayerNearby(player, radius) {
-        const r = radius || this.interactRadius;
-        const dx = (player.x + player.width / 2) - (this.x + this.width / 2);
-        const dy = (player.y + player.height / 2) - (this.y + this.height / 2);
-        return Math.hypot(dx, dy) <= r;
-    }
-
     update(deltaTime) {
         if (!this.active) return;
         // Brief pause after hit knockback
@@ -100,7 +95,15 @@ class TownPatrolNPC extends Entity {
                 const nextX = this.x + move;
                 const reached = (dir >= 0 && nextX >= target.x) || (dir < 0 && nextX <= target.x);
                 this.x = reached ? target.x : nextX;
-                this.flipX = dir < 0;
+                // Only update facing direction when not talking
+                if (!this.isTalking) {
+                    // Use same logic as BaseNPC.faceToward for consistency
+                    if (this.spriteDefaultFacesLeft) {
+                        this.flipX = dir < 0;  // Flip when moving left
+                    } else {
+                        this.flipX = dir > 0;  // Flip when moving right
+                    }
+                }
 
                 if (reached) {
                     this.patrolIndex = (this.patrolIndex + 1) % this.patrol.length;

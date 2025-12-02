@@ -159,6 +159,9 @@ class UIManager {
         if (this.game.badgeUI) {
             this.game.badgeUI.cacheInventoryRefs();
         }
+        if (this.game.journalUI) {
+            this.game.journalUI.cacheInventoryRefs();
+        }
     }
 
     /**
@@ -335,6 +338,69 @@ class UIManager {
         if (this.game.badgeUI) {
             this.game.badgeUI.renderInventory();
         }
+        if (this.game.journalUI) {
+            this.game.journalUI.renderInventory();
+        }
+        
+        // Update profile UI with current player stats
+        this.updateProfileUI();
+    }
+
+    /**
+     * Update player profile UI with current stats (call periodically during gameplay)
+     */
+    updateProfileUI() {
+        const player = this.game?.player;
+        if (!player) return;
+
+        // Update level
+        const levelEl = document.getElementById('profileLevel');
+        if (levelEl) {
+            levelEl.textContent = `Lvl. ${player.level || 1}`;
+        }
+
+        // Update rank
+        const rankEl = document.getElementById('profileRank');
+        if (rankEl) {
+            rankEl.textContent = player.rank || 'Barista Pup';
+        }
+
+        // Update abilities
+        const abilitiesEl = document.getElementById('profileAbilities');
+        if (abilitiesEl && player.abilities) {
+            abilitiesEl.innerHTML = '';
+            player.abilities.filter(a => a.unlocked).slice(0, 3).forEach(ability => {
+                const abilityDiv = document.createElement('div');
+                abilityDiv.className = 'profile-action';
+                abilityDiv.title = ability.description;
+                abilityDiv.innerHTML = `
+                    <span class="action-icon" aria-hidden="true"></span>
+                    <span class="action-label">${ability.name}</span>
+                `;
+                abilitiesEl.appendChild(abilityDiv);
+            });
+        }
+
+        // Update HP
+        const hpEl = document.getElementById('profileHP');
+        if (hpEl) {
+            hpEl.textContent = `${Math.round(player.health)}/${Math.round(player.maxHealth)}`;
+        }
+
+        // Update Stamina (current velocity / max speed)
+        const staminaEl = document.getElementById('profileStamina');
+        if (staminaEl) {
+            const currentStamina = player.getStamina?.() || Math.round(Math.abs(player.velocity.x));
+            const maxStamina = player.getMaxStamina?.() || Math.round(player.moveSpeed);
+            staminaEl.textContent = `${currentStamina}/${maxStamina}`;
+        }
+
+        // Update Total Badges
+        const badgesEl = document.getElementById('profileBadges');
+        if (badgesEl) {
+            const badgeCount = this.game.badgeUI?.getEarnedBadges?.()?.length || 0;
+            badgesEl.textContent = badgeCount.toString();
+        }
     }
 
     /**
@@ -503,9 +569,13 @@ class UIManager {
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         this.inventoryUI.isOpen = true;
-            if (this.game.playMenuEnterSound) {
-                this.game.playMenuEnterSound();
-            }
+        
+        // Update profile UI with current stats
+        this.updateProfileUI();
+        
+        if (this.game.playMenuEnterSound) {
+            this.game.playMenuEnterSound();
+        }
     }
 
     /**
@@ -823,7 +893,32 @@ class UIManager {
         this.inputController?.update?.();
         this.handleSpeechBubbleInput();
         this.handleChestInput();
+        this.handleSoundGalleryInput();
         this.handleInteractionInput();
+    }
+
+    /**
+     * Handle Z key for DJ Cidic Sound Gallery
+     */
+    handleSoundGalleryInput() {
+        const input = this.game.input;
+        if (!input || !this.game.soundGallery) return;
+        
+        // Consume Z key press once
+        const zPressed = input.consumeActionPress?.();
+        if (!zPressed) return;
+        
+        // If Sound Gallery is open, close it
+        if (this.game.soundGallery.isOpen) {
+            this.game.soundGallery.close();
+            return;
+        }
+        
+        // Check if near DJ Cidic to open it
+        const talker = this.getNearbyTalkableNpc();
+        if (talker && talker.id === 'dj_cidic') {
+            this.game.soundGallery.open();
+        }
     }
 
     /**
@@ -874,7 +969,12 @@ class UIManager {
 
             const talker = this.getNearbyTalkableNpc();
             if (talker) {
-                this.startNpcDialogue(talker);
+                // DJ Cidic: E opens dialogue, Z opens Sound Gallery
+                if (talker.id === 'dj_cidic' && this.game.soundGallery) {
+                    this.startNpcDialogue(talker);
+                } else {
+                    this.startNpcDialogue(talker);
+                }
                 return;
             }
 
@@ -937,7 +1037,30 @@ class UIManager {
     }
 
     getNearbyTalkableNpc() {
-        if (!this.game.player || !Array.isArray(this.game.npcs)) return null;
+        if (!this.game.player) return null;
+        
+        // Check shop ghost first (stored separately from npcs array)
+        if (this.game.shopGhost && 
+            this.game.shopGhost.canTalk && 
+            typeof this.game.shopGhost.isPlayerNearby === 'function' &&
+            this.game.shopGhost.isPlayerNearby(this.game.player, this.game.shopGhost.interactRadius || 120)) {
+            return this.game.shopGhost;
+        }
+        
+        // Check town NPCs first (managed by TownManager)
+        if (Array.isArray(this.game.townNpcs)) {
+            const townNpc = this.game.townNpcs.find(npc =>
+                npc &&
+                npc.canTalk &&
+                typeof npc.isPlayerNearby === 'function' &&
+                npc.isPlayerNearby(this.game.player, npc.interactRadius || 120)
+            );
+            if (townNpc) return townNpc;
+        }
+        
+        // Check level/room npcs array
+        if (!Array.isArray(this.game.npcs)) return null;
+        
         return this.game.npcs.find(npc =>
             npc &&
             npc.canTalk &&
@@ -966,6 +1089,11 @@ class UIManager {
      * Keep dialogue bubble anchored to the speaking entity.
      */
     updateDialoguePosition() {
+        // Update profile stats if inventory is open (for real-time stamina updates)
+        if (this.inventoryUI?.isOpen) {
+            this.updateProfileUI();
+        }
+        
         if (this.game.dialogueManager?.isActive()) {
             this.game.dialogueManager.updatePosition();
         }
@@ -1128,16 +1256,64 @@ class UIManager {
      */
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk) return;
-        const id = npc.dialogueId || null;
+        
+        let id = npc.dialogueId || null;
+        
+        // Special handling for Hailey - give journal on first interaction
+        if (npc.id === 'hailey' && this.game.journalUI) {
+            if (this.game.journalUI.hasJournal('hailey_welcome')) {
+                // Use repeat dialogue if journal already given
+                id = 'npc.hailey_repeat';
+            }
+        }
+        
+        // Make NPC face the player
+        if (typeof npc.faceToward === 'function' && this.game.player) {
+            npc.faceToward(this.game.player);
+        }
+        
+        const onClose = () => {
+            npc.onDialogueClosed?.();
+            npc.setTalking?.(false);
+            
+            // Give Hailey's journal after first conversation
+            if (npc.id === 'hailey' && this.game.journalUI && !this.game.journalUI.hasJournal('hailey_welcome')) {
+                this.game.journalUI.addJournal({
+                    id: 'hailey_welcome',
+                    title: 'Work Schedule & Opening Routine',
+                    author: 'Hailey (Manager)',
+                    content: `<strong>Welcome to the Team, Luckie!</strong>
+
+We're so excited to have you join us at Beachside Boba! This journal contains everything you need to know for your first day.
+
+<strong>Your Work Schedule:</strong>
+• Monday - Friday: 6:00 AM - 2:00 PM
+• Saturday: 7:00 AM - 3:00 PM
+• Sunday: Off (enjoy the beach!)
+
+<strong>Opening Routine:</strong>
+1. Unlock front door at 5:45 AM
+2. Turn on all lights and music
+3. Check inventory (boba pearls, cups, syrups)
+4. Brew fresh tea (oolong, jasmine, green)
+5. Prepare toppings station
+6. Count register and set up POS
+7. Wipe down all tables and counters
+8. Flip sign to "OPEN" at 6:00 AM sharp!
+
+<strong>A Note from Me:</strong>
+You've got this, Luckie! Don't worry if the first few shifts feel overwhelming. Everyone starts somewhere, and I know you'll do great. The most important thing is to be kind to our customers and have fun!
+
+If you ever need help or have questions, I'm always here for you. Welcome to the Beachside Boba family! 🧋
+
+- Hailey`
+                });
+            }
+        };
+        
         const start = id
-            ? this.game.dialogueManager.startById(id, npc, () => {
-                npc.onDialogueClosed?.();
-                npc.setTalking?.(false);
-            })
-            : this.game.dialogueManager.startDialog(npc.dialogueLines || [], npc, () => {
-                npc.onDialogueClosed?.();
-                npc.setTalking?.(false);
-            });
+            ? this.game.dialogueManager.startById(id, npc, onClose)
+            : this.game.dialogueManager.startDialog(npc.dialogueLines || [], npc, onClose);
         if (start && typeof npc.setTalking === 'function') {
             npc.setTalking(true);
         }
