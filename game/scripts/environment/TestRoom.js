@@ -79,11 +79,18 @@ class TestRoom {
      * Get player spawn position (on the center platform)
      */
     getPlayerSpawnPosition() {
-        const platform = this.platforms[0]; // Main center platform
+        // Change these x and y values to spawn the player wherever you want
         return {
-            x: platform.x + platform.width / 2 - 22.5, // Center on platform (player is 45px wide)
-            y: platform.y - 66 // Just above platform (player is 66px tall)
+            x: 5,  // Horizontal position (0 = left edge, 800 = right edge)
+            y: 400   // Vertical position (0 = top, 600 = bottom)
         };
+        
+        // Or use the center platform (original logic):
+        // const platform = this.platforms[0];
+        // return {
+        //     x: platform.x + platform.width / 2 - 22.5,
+        //     y: platform.y - 66
+        // };
     }
     
     /**

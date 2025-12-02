@@ -41,6 +41,15 @@ class WorldBuilder {
 
         const defaultSpawn = (levelDef && levelDef.spawn) || this.config.level?.spawn || { x: 100, y: g.canvas.height - 150 };
         const getTestSpawn = () => {
+            // First priority: use spawn from level definition if provided
+            if (levelDef && levelDef.spawn) {
+                return { x: levelDef.spawn.x, y: levelDef.spawn.y };
+            }
+            // Second priority: use TestRoom's spawn position if available
+            if (g.testRoom && typeof g.testRoom.getPlayerSpawnPosition === 'function') {
+                return g.testRoom.getPlayerSpawnPosition();
+            }
+            // Fallback to default test spawn logic
             const groundY = (typeof g.testGroundY === 'number') ? g.testGroundY : (g.canvas.height - 50);
             const playerWidth = 45;
             const playerHeight = 66;
