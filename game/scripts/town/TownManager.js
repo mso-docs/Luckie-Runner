@@ -1504,6 +1504,7 @@ class TownManager {
                 collider.invisible = true;
                 collider.hidden = true;
                 collider.render = false;
+                // oneWay defaults to true for invisible platforms (set in DecorPlatform)
                 g.platforms.push(collider);
                 this.activeTownColliders.push(collider);
             }

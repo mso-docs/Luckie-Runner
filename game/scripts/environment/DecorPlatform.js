@@ -18,6 +18,11 @@ class DecorPlatform extends Entity {
             offsetX: config.hitboxOffsetX ?? 0,
             offsetY: config.hitboxOffsetY ?? 0
         };
+        
+        // One-way collision: allow passing through from below/sides, only land from above
+        // Defaults to true for invisible platforms, can be overridden with config.oneWay
+        this.invisible = config.invisible ?? false;
+        this.oneWay = config.oneWay ?? this.invisible;
 
         // Visuals
         this.spritePath = config.sprite || null;
