@@ -289,6 +289,65 @@ platforms: [
 
 ---
 
+## Player Spawn System Architecture
+
+### System Overview
+
+The player spawn system works through three main files that interact in a priority-based flow:
+
+**File Hierarchy:**
+```
+LevelDefinitions (TestRoomLevel.js)
+    ↓ [highest priority]
+WorldBuilder.js (spawn logic)
+    ↓ [checks priorities]
+TestRoom.js (optional class method)
+    ↓ [fallback calculation]
+Game.js (initializes WorldBuilder)
+```
+
+### Files and Their Roles
+
+1. **TestRoomLevel.js** (`game/scripts/levels/TestRoomLevel.js`)
+   - **Purpose**: Defines test room data including spawn position
+   - **Controls**: Spawn coordinates, parkour platforms, entities
+   - **Edit to**: Change where player spawns in test room
+   - **Example**:
+     ```javascript
+     window.LevelDefinitions.testRoom = {
+         spawn: { x: 50, y: 400 }  // Player spawns here
+     }
+     ```
+
+2. **WorldBuilder.js** (`game/scripts/core/WorldBuilder.js`)
+   - **Purpose**: Manages spawn priority logic and level construction
+   - **Controls**: Which spawn source takes precedence
+   - **Edit to**: Change spawn priority system or fallback calculations
+   - **Key function**: `getTestSpawn()` - implements priority checking
+
+3. **TestRoom.js** (`game/scripts/environment/TestRoom.js`)
+   - **Purpose**: Legacy test room class (optional)
+   - **Controls**: Alternative spawn method via `getPlayerSpawnPosition()`
+   - **Edit to**: Use class-based spawn logic (rarely needed)
+   - **Note**: Currently not instantiated by default
+
+4. **Game.js** (`game/scripts/Game.js`)
+   - **Purpose**: Game initialization and state management
+   - **Controls**: Creates WorldBuilder instance
+   - **Edit to**: Change game-wide initialization logic
+   - **Note**: Don't edit for spawn changes
+
+### Quick Reference: Where to Edit
+
+| Goal | File to Edit | What to Change |
+|------|-------------|----------------|
+| Change test room spawn | `TestRoomLevel.js` | Update `spawn: { x, y }` property |
+| Add spawn fallback logic | `WorldBuilder.js` | Modify `getTestSpawn()` function |
+| Change level spawn | Level definition file | Update `spawn` property in level data |
+| Change room spawn | `TownsConfig.js` | Update `interior.spawn` in building config |
+
+---
+
 ## Player Dimensions
 
 ```javascript
@@ -522,19 +581,72 @@ For overworld/level spawning (main game areas), spawn is handled in `WorldBuilde
 ```
 
 ### Test Room Spawn
-Test room has special spawn logic that positions player near signboards:
+
+The test room uses a priority-based spawn system controlled by `WorldBuilder.js`:
+
+#### Priority Order (Highest to Lowest)
+
+1. **Level Definition Spawn** (Recommended)
+   ```javascript
+   // File: game/scripts/levels/TestRoomLevel.js
+   window.LevelDefinitions.testRoom = {
+       testRoom: true,
+       spawn: { x: 5, y: 400 },  // Custom spawn position
+       // ... other level properties
+   }
+   ```
+
+2. **TestRoom Class Method** (Optional)
+   ```javascript
+   // File: game/scripts/environment/TestRoom.js
+   getPlayerSpawnPosition() {
+       return { x: 100, y: 400 };
+   }
+   ```
+
+3. **Calculated Position** (Fallback)
+   ```javascript
+   // From WorldBuilder.js - positions player near signboard
+   const getTestSpawn = () => {
+       const groundY = g.testGroundY || (g.canvas.height - 50);
+       const playerHeight = 66;
+       const signX = g.signBoard?.x ?? 140;
+       return {
+           x: signX - 20 - 45,  // Left of sign, accounting for player width
+           y: groundY - playerHeight  // Standing on ground
+       };
+   };
+   ```
+
+#### How to Change Test Room Spawn Position
+
+**Method 1: Level Definition (Recommended)**
+Edit `game/scripts/levels/TestRoomLevel.js`:
 ```javascript
-// From WorldBuilder.js
-const getTestSpawn = () => {
-    const groundY = g.testGroundY || (g.canvas.height - 50);
-    const playerHeight = 66;
-    const signX = g.signBoard?.x ?? 140;
-    return {
-        x: signX - 20 - 45,  // Left of sign, accounting for player width
-        y: groundY - playerHeight  // Standing on ground
-    };
-};
+window.LevelDefinitions.testRoom = {
+    testRoom: true,
+    allowMissingSpawn: true,
+    spawn: { x: 50, y: 400 },  // ← Change these values
+    parkour: [ /* ... */ ]
+}
 ```
+
+**Method 2: TestRoom Class**
+Edit `game/scripts/environment/TestRoom.js`:
+```javascript
+getPlayerSpawnPosition() {
+    return {
+        x: 50,   // Horizontal position (0 = left edge)
+        y: 400   // Vertical position (0 = top, higher = lower on screen)
+    };
+}
+```
+
+**What Controls What:**
+- **TestRoomLevel.js**: Level data, spawn position, parkour platforms, entities
+- **WorldBuilder.js**: Spawn priority logic, level construction, entity factory calls
+- **TestRoom.js**: Legacy test room class (not actively used, but supported)
+- **Game.js**: Initializes WorldBuilder and manages game state
 
 ### Fallback Spawn
 If no spawn is defined:
