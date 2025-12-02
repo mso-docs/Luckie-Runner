@@ -39,6 +39,12 @@ window.NPCDialogues = {
     ],
     'npc.hailey': [
         'Welcome to Beachside Boba! I\'m Hailey, the owner.',
+        'I heard you just started working here. *Congratulations!*',
+        'Here\'s a %journal% I put together for you—it has your work schedule, opening routine, and a note from the manager.',
+        'Check your inventory to read it! And if you collect more journals, you\'ll learn about the world around us.'
+    ],
+    'npc.hailey_repeat': [
+        'Hey Luckie! How\'s the shift going?',
         'We have a variety of delicious boba drinks and snacks. Let me know if you need any recommendations!',
         'Feel free to take a seat and enjoy the sea breeze while sipping on your drink.'
     ]

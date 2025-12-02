@@ -24,6 +24,7 @@ class Game {
         this.stateManager = new GameStateManager(this);
         this.palmTreeManager = new PalmTreeManager(this);
         this.badgeUI = null;
+        this.journalUI = null;
         this.smallPalms = [];
         this.testRoomMaxX = 0;
         this.softLandingTolerance = 20; // px window to allow top-only landings
@@ -284,6 +285,7 @@ class Game {
         this.signUI.setupSignDialogueUI();
         this.setupInventoryUI();
         this.badgeUI = new BadgeUI(this);
+        this.journalUI = new JournalUI(this);
         this.setupChestUI();
         this.setupShopUI();
         this.audioController.applyConfigDefaults();
@@ -1325,6 +1327,9 @@ class Game {
         this.signBoards = [];
         if (this.badgeUI?.reset) {
             this.badgeUI.reset(true);
+        }
+        if (this.journalUI?.reset) {
+            this.journalUI.reset(true);
         }
         
         this.npcs = [];

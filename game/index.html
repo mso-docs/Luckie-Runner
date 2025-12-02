@@ -223,9 +223,27 @@
                                 </div>
 
                                 <div class="inventory-panel" data-tab-panel="journal">
-                                    <div class="inventory-placeholder">
-                                        <h3>Journal</h3>
-                                        <p>Quest notes, collectibles, and lore snippets will appear here.</p>
+                                    <div class="specials-card">
+                                        <div class="specials-header">
+                                            <span class="star-icon" aria-hidden="true"></span>
+                                            <div class="specials-title">
+                                                <span>Journal Entries</span>
+                                                <div class="specials-dots" aria-hidden="true">
+                                                    <span class="dot dot-gold"></span>
+                                                    <span class="dot dot-red"></span>
+                                                    <span class="dot dot-pink"></span>
+                                                    <span class="dot dot-purple"></span>
+                                                    <span class="dot dot-navy"></span>
+                                                    <span class="dot dot-teal"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="journal-list" id="inventoryJournals"></div>
+                                        <div class="journal-empty-state hidden" id="journalEmptyState">
+                                            <p>📖</p>
+                                            <p>No journal entries yet.</p>
+                                            <p class="journal-empty-hint">Collect journals from NPCs and events to learn more about the world.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -514,6 +532,7 @@
     <!-- Manager Classes -->
     <script src="scripts/core/GameStateManager.js"></script>
     <script src="scripts/ui/BadgeUI.js"></script>
+    <script src="scripts/ui/JournalUI.js"></script>
     <script src="scripts/ui/DialogueManager.js"></script>
     <script src="scripts/ui/SignUI.js"></script>
     <script src="scripts/ui/UIConfig.js"></script>

@@ -159,6 +159,9 @@ class UIManager {
         if (this.game.badgeUI) {
             this.game.badgeUI.cacheInventoryRefs();
         }
+        if (this.game.journalUI) {
+            this.game.journalUI.cacheInventoryRefs();
+        }
     }
 
     /**
@@ -334,6 +337,9 @@ class UIManager {
         }
         if (this.game.badgeUI) {
             this.game.badgeUI.renderInventory();
+        }
+        if (this.game.journalUI) {
+            this.game.journalUI.renderInventory();
         }
     }
 
@@ -1182,22 +1188,64 @@ class UIManager {
     startNpcDialogue(npc) {
         if (!npc || !npc.canTalk) return;
         
-        const id = npc.dialogueId || null;
+        let id = npc.dialogueId || null;
+        
+        // Special handling for Hailey - give journal on first interaction
+        if (npc.id === 'hailey' && this.game.journalUI) {
+            if (this.game.journalUI.hasJournal('hailey_welcome')) {
+                // Use repeat dialogue if journal already given
+                id = 'npc.hailey_repeat';
+            }
+        }
         
         // Make NPC face the player
         if (typeof npc.faceToward === 'function' && this.game.player) {
             npc.faceToward(this.game.player);
         }
         
+        const onClose = () => {
+            npc.onDialogueClosed?.();
+            npc.setTalking?.(false);
+            
+            // Give Hailey's journal after first conversation
+            if (npc.id === 'hailey' && this.game.journalUI && !this.game.journalUI.hasJournal('hailey_welcome')) {
+                console.log('[UIManager] Giving Hailey journal to player');
+                this.game.journalUI.addJournal({
+                    id: 'hailey_welcome',
+                    title: 'Work Schedule & Opening Routine',
+                    author: 'Hailey (Manager)',
+                    content: `<strong>Welcome to the Team, Luckie!</strong>
+
+We're so excited to have you join us at Beachside Boba! This journal contains everything you need to know for your first day.
+
+<strong>Your Work Schedule:</strong>
+• Monday - Friday: 6:00 AM - 2:00 PM
+• Saturday: 7:00 AM - 3:00 PM
+• Sunday: Off (enjoy the beach!)
+
+<strong>Opening Routine:</strong>
+1. Unlock front door at 5:45 AM
+2. Turn on all lights and music
+3. Check inventory (boba pearls, cups, syrups)
+4. Brew fresh tea (oolong, jasmine, green)
+5. Prepare toppings station
+6. Count register and set up POS
+7. Wipe down all tables and counters
+8. Flip sign to "OPEN" at 6:00 AM sharp!
+
+<strong>A Note from Me:</strong>
+You've got this, Luckie! Don't worry if the first few shifts feel overwhelming. Everyone starts somewhere, and I know you'll do great. The most important thing is to be kind to our customers and have fun!
+
+If you ever need help or have questions, I'm always here for you. Welcome to the Beachside Boba family! 🧋
+
+- Hailey`
+                });
+            }
+        };
+        
         const start = id
-            ? this.game.dialogueManager.startById(id, npc, () => {
-                npc.onDialogueClosed?.();
-                npc.setTalking?.(false);
-            })
-            : this.game.dialogueManager.startDialog(npc.dialogueLines || [], npc, () => {
-                npc.onDialogueClosed?.();
-                npc.setTalking?.(false);
-            });
+            ? this.game.dialogueManager.startById(id, npc, onClose)
+            : this.game.dialogueManager.startDialog(npc.dialogueLines || [], npc, onClose);
         if (start && typeof npc.setTalking === 'function') {
             npc.setTalking(true);
         }
