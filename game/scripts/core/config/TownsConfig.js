@@ -83,10 +83,10 @@ const TownsConfig = {
                 textColor: '#5c3a1a'
             },
             assetKit: 'shore',
-            houseCount: { min: 3, max: 3 },
-            houseSlots: [7200, 8800, 9600],
-            lampSlots: [6900, 8200, 9500],
-            streetLampCount: 3,
+            houseCount: { min: 4, max: 4 },
+            houseSlots: [6600, 7200, 8800, 9600],
+            lampSlots: [6900, 7500, 7940, 9800, 10200, 10800],
+            streetLampCount: 6,
             itemPlan: { count: 3, spacing: 420 },
             music: {
                 id: 'shoreTownTheme',
@@ -193,9 +193,9 @@ const TownsConfig = {
                         },
                         music: { id: 'beachside_boba_theme', src: 'music/beachside-boba.mp3', volume: 0.9 },
                         platforms: [
-                            { x: 0, y: 994, width: 1536, height: 30, type: 'ground' },
+                            { x: 0, y: 1024, width: 1536, height: 30, type: 'ground' },
                             { x: 0, y: 0, width: 32, height: 1024, type: 'wall' },
-                            { x: 992, y: 0, width: 32, height: 1024, type: 'wall' },
+                            { x: 1536, y: 0, width: 32, height: 1024, type: 'wall' },
                             { x: 0, y: 0, width: 1536, height: 32, type: 'wall' }
                         ],
                         enemies: [],
@@ -210,14 +210,34 @@ const TownsConfig = {
                                 height: 64,
                                 frames: 2,
                                 idleFrame: 0,
-                                walkFrames: [0, 1],
+                                walkFrames: [0, 0],
                                 talkFrames: [0, 1],
                                 dialogueId: 'npc.alicia',
-                                x: 750,
-                                y: 626,
+                                x: 1050,
+                                y: 994,
                                 speed: 0,
                                 pauseMs: 60,
-                                solid: true
+                                solid: true,
+                                spriteDefaultFacesLeft: false
+                            },
+                            {
+                                id: 'hailey',
+                                type: 'townNpc',
+                                name: 'Hailey',
+                                sprite: 'art/sprites/hailey.png',
+                                width: 37,
+                                height: 64,
+                                frames: 2,
+                                idleFrame: 0,
+                                walkFrames: [0, 0],
+                                talkFrames: [0, 1],
+                                dialogueId: 'npc.hailey',
+                                x: 650,
+                                y: 994,
+                                speed: 0,
+                                pauseMs: 60,
+                                solid: true,
+                                spriteDefaultFacesLeft: false
                             }
                         ],
                         theme: 'interior'
@@ -291,6 +311,7 @@ const TownsConfig = {
                                     speed: 15,
                                     pauseMs: 60,
                                     solid: true,
+                                    spriteDefaultFacesLeft: true,
                                     patrol: [
                                         { x: 300 },
                                         { x: 800 }
@@ -309,7 +330,10 @@ const TownsConfig = {
                 { id: 'fountain_center', name: 'Fountain', x: 8200, y: 0, width: 517, height: 507, frames: 12, frameWidth: 517, frameHeight: 507, frameDirection: 'horizontal', frameTimeMs: 120, scale: 0.4, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/fountain.png', collider: { width: 200, height: 24, offsetX: 80, offsetY: 180 } },
 
                 // Fixed bench
-                { id: 'bench_center', name: 'Bench', x: 8000, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png', collider: { width: 120, height: 12, offsetX: 0, offsetY: 32 } }
+                { id: 'bench_center', name: 'Bench', x: 8000, y: 0, width: 120, height: 64, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/bench.png', collider: { width: 120, height: 12, offsetX: 0, offsetY: 32 } },
+
+                //Fixed slime statue
+                { id: 'slime_statue', name: 'Slime Statue', x: 10340, y: 0, width: 55, height: 88, layer: 'foreground', autoAlignToGround: true, sprite: 'art/bg/exterior-decor/slime-statue.png', collider: { width: 55, height: 80, offsetX: 0, offsetY: 0 } }
             ],
             interiors: [],
             npcs: [
@@ -328,6 +352,7 @@ const TownsConfig = {
                     speed: 40,
                     pauseMs: 30,
                     x: 8200,
+                    spriteDefaultFacesLeft: true,
                     patrol: [
                         { x: 8000 },
                         { x: 8800 }
@@ -348,6 +373,7 @@ const TownsConfig = {
                     speed: 30,
                     pauseMs: 40,
                     x: 9000,
+                    spriteDefaultFacesLeft: true,
                     patrol: [
                         { x: 9000 },
                         { x: 9800 }

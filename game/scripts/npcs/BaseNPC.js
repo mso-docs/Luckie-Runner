@@ -41,13 +41,14 @@ class BaseNPC extends Entity {
         if (!target) return;
         const targetCenterX = target.x + (target.width || 0) / 2;
         const npcCenterX = this.x + this.width / 2;
-        const playerIsOnRight = targetCenterX > npcCenterX;
+        const playerIsOnLeft = targetCenterX < npcCenterX;
         
-        // If sprite defaults to facing left, flip logic is reversed
+        // If sprite defaults to facing left, flip when player is on left
+        // If sprite defaults to facing right, flip when player is on right
         if (this.spriteDefaultFacesLeft) {
-            this.flipX = !playerIsOnRight; // Flip when player is on LEFT
+            this.flipX = playerIsOnLeft;  // Flip when player is on left
         } else {
-            this.flipX = playerIsOnRight;  // Flip when player is on RIGHT
+            this.flipX = !playerIsOnLeft; // Flip when player is on right
         }
     }
 

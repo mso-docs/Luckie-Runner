@@ -16,7 +16,7 @@ class GenericNPC extends BaseNPC {
             dialogueLines: config.dialogueLines,
             interactRadius: config.interactRadius ?? 120,
             canTalk: config.canTalk !== false,
-            spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? true
+            spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? false  // Most sprites face right by default
         });
 
         // Load sprite (tile sheet or single sprite)

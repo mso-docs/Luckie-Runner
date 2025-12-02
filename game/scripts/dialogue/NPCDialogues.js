@@ -31,5 +31,15 @@ window.NPCDialogues = {
         '^Boo!^ Welcome to my shop, mortal.',
         'Feel free to browse my %spooky% wares. I promise they\'re to _die_ for!',
         'If you need any help, just ask—I\'m here to !haunt!... I mean, ~help~ you.'
-    ]   
+    ],
+    'npc.alicia': [
+        'Hey Luckie! It\'s nice to see you today. Did you pick up someone\'s shift?',
+        'Ah, I see. Well, feel free to go behind the counter and help yourself to some snacks!',
+        'If you need anything, just let me know. Enjoy your time at the cafe!'
+    ],
+    'npc.hailey': [
+        'Welcome to Beachside Boba! I\'m Hailey, the owner.',
+        'We have a variety of delicious boba drinks and snacks. Let me know if you need any recommendations!',
+        'Feel free to take a seat and enjoy the sea breeze while sipping on your drink.'
+    ]
 };

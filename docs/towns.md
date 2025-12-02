@@ -1691,3 +1691,360 @@ Troubleshooting tips (based on fronds experience):
 - [ ] Interiors load with proper spawn/exit
 - [ ] NPCs patrol and dialogue works
 - [ ] Items spawn in town region
+
+---
+
+## Adding and Editing Town Sprites
+
+This section explains how town assets are spawned, how to edit their positions, and how to add new decorative sprites.
+
+### How Town Assets Are Spawned
+
+**Configuration File:** All town asset definitions live in `game/scripts/core/config/TownsConfig.js`
+
+**Spawning Process:**
+1. **Preloading** - Assets are created and cached before player enters town region
+2. **Rendering** - TownManager converts data into renderable objects via `buildDecorRenderable()`
+3. **Viewport Culling** - Only renders assets within 2000px of viewport (reduces lag)
+4. **Ground Alignment** - Auto-positions assets on ground platforms when `autoAlignToGround: true`
+
+**Asset Types:**
+
+#### Setpieces (Decorative Objects)
+Static or animated decorations like fountains, benches, trees, lamps.
+
+**Example:**
+```js
+setpieces: [
+    {
+        id: 'fountain_center',
+        name: 'Fountain',
+        x: 8200,              // X coordinate in world space
+        y: 0,                 // Y coordinate (0 = auto-align to ground)
+        width: 517,           // Display width
+        height: 507,          // Display height
+        frames: 12,           // Number of animation frames (1 = static)
+        frameWidth: 517,      // Source image frame width
+        frameHeight: 507,     // Source image frame height
+        frameDirection: 'horizontal',  // 'horizontal' or 'vertical'
+        frameTimeMs: 120,     // Animation speed (ms per frame)
+        scale: 0.4,           // Size multiplier (0.4 = 40% of original)
+        layer: 'foreground',  // Render layer (see below)
+        autoAlignToGround: true,
+        sprite: 'art/bg/exterior-decor/fountain.png',
+        collider: {           // Optional collision box
+            width: 200,
+            height: 24,
+            offsetX: 80,      // Offset from item's x position
+            offsetY: 180      // Offset from item's y position
+        }
+    }
+]
+```
+
+**Key Properties:**
+- `x`, `y` - World position (x increases right, y increases down)
+- `autoAlignToGround: true` - Positions asset on ground automatically (y value ignored)
+- `layer` - Controls render order:
+  - `background` (0) - Behind everything
+  - `backdrop` (0.5) - Decorative backdrop
+  - `midground` (1) - Between background and foreground
+  - `ground` (2) - Ground tiles
+  - `foreground` (3) - Most decorations
+  - `overlay` (4) - In front of everything
+- `scale` - Resizes sprite (0.4 = 40%, 1.0 = 100%, 2.0 = 200%)
+- `tileX: true` - Repeats sprite horizontally across width
+- `tileWidth` - Tile step size (defaults to frameWidth * scale)
+- `collider` - Makes asset solid (player can't walk through)
+
+#### Buildings
+Structures with doors and interiors.
+
+**Example:**
+```js
+buildings: [
+    {
+        id: 'shore_house',
+        name: 'House',
+        exterior: {
+            x: 7200,          // Building X position in world
+            y: 0,             // Auto-aligned to ground
+            width: 689,       // Source sprite width
+            height: 768,      // Source sprite height
+            frames: 2,        // Number of frames (closed/open door)
+            frameWidth: 689,
+            frameHeight: 768,
+            frameDirection: 'horizontal',
+            scale: 0.4,       // Display size multiplier
+            autoAlignToGround: true,
+            sprite: 'art/bg/buildings/exterior/house.png'
+        },
+        door: {
+            width: 180,
+            height: 210,
+            spriteOffsetX: 118,  // Door position relative to building sprite
+            spriteOffsetY: 498,
+            interactRadius: 160   // How close player must be to interact
+        },
+        collider: {              // Collision box for building base
+            width: 280,
+            height: 18,
+            offsetX: 6,
+            offsetY: 60
+        }
+    }
+]
+```
+
+#### NPCs (Town Characters)
+NPCs that patrol and interact within the town.
+
+**Example:**
+```js
+npcs: [
+    {
+        id: 'mike',
+        type: 'townNpc',
+        name: 'Mike',
+        sprite: 'art/sprites/mike.png',
+        width: 38,
+        height: 63,
+        x: 8200,              // Starting X position
+        spriteDefaultFacesLeft: true,  // Sprite orientation
+        patrol: [
+            { x: 8000 },      // Patrol waypoints
+            { x: 8800 }
+        ]
+    }
+]
+```
+
+---
+
+### Editing Existing Asset Coordinates
+
+To move an existing asset, find it in `TownsConfig.js` and change its `x` value:
+
+**Before:**
+```js
+{ id: 'fountain_center', x: 8200, y: 0, ... }
+```
+
+**After (moved 800px right):**
+```js
+{ id: 'fountain_center', x: 9000, y: 0, ... }
+```
+
+**Coordinate System:**
+- X increases **right** (e.g., shoreTown region: 6500 → 11500)
+- Y increases **down** (but `autoAlignToGround: true` ignores y and snaps to ground)
+- Region bounds define town area: `region: { startX: 6500, endX: 11500 }`
+
+**Tips:**
+- Use the town's `region` values as reference for valid X coordinates
+- Keep assets within `startX` to `endX` to ensure they appear in town
+- Buildings typically need 200-400px spacing to avoid overlap
+- Setpieces can be placed anywhere in the region
+
+---
+
+### Adding New Sprites
+
+**Step 1: Add sprite file to project**
+
+Place your image in the appropriate folder:
+- Buildings: `game/art/bg/buildings/exterior/`
+- Decorations: `game/art/bg/exterior-decor/`
+- Ground tiles: `game/art/bg/tiles/`
+- Backdrops: `game/art/bg/town backdrop/`
+- NPCs: `game/art/sprites/`
+
+**Step 2: Add to TownsConfig.js**
+
+Find the town's `setpieces` array and add your new object:
+
+```js
+setpieces: [
+    // ... existing setpieces
+    {
+        id: 'my_palm_tree',           // Unique identifier
+        name: 'Palm Tree',            // Display name
+        x: 7500,                      // X position in world
+        y: 0,                         // 0 = auto-align to ground
+        width: 100,                   // Display width
+        height: 150,                  // Display height
+        frameWidth: 100,              // Source image frame width
+        frameHeight: 150,             // Source image frame height
+        frames: 1,                    // 1 = static, >1 = animated
+        scale: 1.0,                   // Size multiplier (1.0 = original size)
+        layer: 'foreground',          // Render layer
+        autoAlignToGround: true,
+        sprite: 'art/bg/exterior-decor/palm-tree.png',
+        collider: {                   // Optional collision
+            width: 30,
+            height: 20,
+            offsetX: 35,              // Center collision under tree
+            offsetY: 130              // At tree base
+        }
+    }
+]
+```
+
+**Step 3: Reload the game**
+
+Changes take effect when you reload the level. No need to restart the server.
+
+---
+
+### Configuration Options Reference
+
+#### Required Fields
+- `id` - Unique identifier for this asset
+- `sprite` - Path to image file
+- `x` - X position in world coordinates
+
+#### Display Properties
+- `width` - Display width (defaults to frameWidth * scale)
+- `height` - Display height (defaults to frameHeight * scale)
+- `scale` - Size multiplier (default: 1.0)
+- `y` - Y position (default: 0, auto-aligned if `autoAlignToGround: true`)
+
+#### Animation (for multi-frame sprites)
+- `frames` - Number of frames (default: 1)
+- `frameWidth` - Width of each frame in sprite sheet
+- `frameHeight` - Height of each frame in sprite sheet
+- `frameDirection` - `'horizontal'` or `'vertical'` (default: 'vertical')
+- `frameTimeMs` - Milliseconds per frame (default: 200)
+
+#### Rendering
+- `layer` - Render layer (default: 'foreground')
+  - Use `'background'` for far backdrop
+  - Use `'midground'` for middle layer decorations
+  - Use `'foreground'` for most objects
+  - Use `'overlay'` for effects in front of player
+- `autoAlignToGround` - Auto-position on ground (default: false for setpieces, true for buildings)
+
+#### Tiling (for repeating patterns)
+- `tileX` - Repeat sprite horizontally (default: false)
+- `tileWidth` - Width of each tile (default: frameWidth * scale)
+
+#### Collision
+- `collider` - Collision box definition
+  - `width` - Collision width
+  - `height` - Collision height (default: 16)
+  - `offsetX` - Horizontal offset from asset's x (default: 0)
+  - `offsetY` - Vertical offset from asset's y (default: 0)
+  - Creates invisible one-way platform (land from above only)
+
+---
+
+### Common Patterns
+
+**Static Decoration (No Animation):**
+```js
+{
+    id: 'bench',
+    x: 8000,
+    y: 0,
+    width: 120,
+    height: 64,
+    layer: 'foreground',
+    autoAlignToGround: true,
+    sprite: 'art/bg/exterior-decor/bench.png'
+}
+```
+
+**Animated Decoration:**
+```js
+{
+    id: 'flag',
+    x: 9500,
+    y: 0,
+    width: 80,
+    height: 120,
+    frames: 8,
+    frameWidth: 80,
+    frameHeight: 120,
+    frameDirection: 'horizontal',
+    frameTimeMs: 100,
+    layer: 'foreground',
+    autoAlignToGround: true,
+    sprite: 'art/bg/exterior-decor/flag-animation.png'
+}
+```
+
+**Tiling Ground Tile:**
+```js
+{
+    id: 'cobblestone',
+    x: 6500,              // Start of town region
+    y: 0,
+    width: 5000,          // Entire town width
+    height: 40,
+    frameWidth: 1024,
+    frameHeight: 1024,
+    tileX: true,          // Repeat across width
+    layer: 'ground',
+    scale: 0.04,
+    autoAlignToGround: true,
+    sprite: 'art/bg/tiles/cobblestone.png'
+}
+```
+
+**Decoration with Collision:**
+```js
+{
+    id: 'crate',
+    x: 8500,
+    y: 0,
+    width: 60,
+    height: 60,
+    layer: 'foreground',
+    autoAlignToGround: true,
+    sprite: 'art/bg/exterior-decor/crate.png',
+    collider: {
+        width: 60,
+        height: 20,
+        offsetX: 0,
+        offsetY: 40        // Top of crate for standing
+    }
+}
+```
+
+---
+
+### Troubleshooting
+
+**Sprite Not Appearing:**
+- Verify sprite path is correct (check `game/art/...` folders)
+- Ensure `x` coordinate is within town's `region: { startX, endX }`
+- Check browser console for image loading errors
+- Verify `layer` is set (defaults to 'foreground' if omitted)
+
+**Sprite Position Wrong:**
+- Remember: `autoAlignToGround: true` ignores `y` value and snaps to ground
+- For precise Y positioning, set `autoAlignToGround: false` and specify exact `y`
+- Use town region bounds as reference for valid X coordinates
+
+**Sprite Size Wrong:**
+- Check `scale` value (0.5 = 50%, 1.0 = 100%, 2.0 = 200%)
+- Verify `frameWidth` and `frameHeight` match source image dimensions
+- For animated sprites, ensure frame dimensions are correct
+
+**Animation Not Playing:**
+- Verify `frames > 1`
+- Check `frameDirection` matches sprite sheet layout
+- Ensure `frameTimeMs` is reasonable (50-200ms typical)
+- Verify `frameWidth` and `frameHeight` are set correctly
+
+**Collision Not Working:**
+- Colliders are **one-way platforms** (land from above only)
+- Verify `collider.offsetY` positions box at top of asset
+- Check `collider.width` and `collider.height` are appropriate
+- Player must be descending to land on one-way platforms
+
+**Sprite Rendering Behind/In Front of Other Assets:**
+- Adjust `layer` property:
+  - Lower layers render first (background)
+  - Higher layers render last (overlay)
+- Common order: background < midground < ground < foreground < overlay

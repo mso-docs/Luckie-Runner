@@ -14,7 +14,7 @@ class TownPatrolNPC extends BaseNPC {
             dialogueId: config.dialogueId || 'npc.default',
             interactRadius: config.interactRadius ?? 110,
             canTalk: true,
-            spriteDefaultFacesLeft: true  // Town NPC sprites face left by default
+            spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? false  // Default to right-facing
         });
         this.game = game;
 
@@ -97,7 +97,12 @@ class TownPatrolNPC extends BaseNPC {
                 this.x = reached ? target.x : nextX;
                 // Only update facing direction when not talking
                 if (!this.isTalking) {
-                    this.flipX = dir < 0;
+                    // Use same logic as BaseNPC.faceToward for consistency
+                    if (this.spriteDefaultFacesLeft) {
+                        this.flipX = dir < 0;  // Flip when moving left
+                    } else {
+                        this.flipX = dir > 0;  // Flip when moving right
+                    }
                 }
 
                 if (reached) {

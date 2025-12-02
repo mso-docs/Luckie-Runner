@@ -35,6 +35,7 @@ npcs: [
         y: 0,  // auto-aligned to ground
         speed: 35,
         pauseMs: 40,
+        spriteDefaultFacesLeft: true,  // Mike sprite faces left by default
         patrol: [{ x: 8700 }, { x: 9100 }]
     }
 ]
@@ -1087,34 +1088,184 @@ if (typeof window !== 'undefined') {
 
 ### NPC Facing Wrong Direction
 
-**Symptom:** NPC sprite flipped incorrectly or faces wrong way.
+**Symptom:** NPC sprite flipped incorrectly or faces wrong way during dialogue or patrol.
 
-**Cause:** NPC direction is determined by patrol movement.
+**Common Causes:**
+1. Patrol movement determines facing direction
+2. Incorrect `spriteDefaultFacesLeft` configuration
+3. Sprite assets facing unexpected direction
+
+---
+
+#### Patrol-Based Facing (Patrolling NPCs)
 
 **Behavior:**
+TownPatrolNPC uses the same sprite-orientation-aware logic as dialogue facing:
+
 ```javascript
-// NPC automatically faces movement direction
-// Moving right: facing = 1
-// Moving left: facing = -1
+// In TownPatrolNPC update loop
+if (this.spriteDefaultFacesLeft) {
+    this.flipX = dir > 0;  // Flip when moving right
+} else {
+    this.flipX = dir < 0;  // Flip when moving left
+}
 ```
+
+This ensures patrol facing matches the sprite's default orientation, so the NPC appears to face the direction they're walking.
 
 **To control initial facing:**
 ```javascript
 // Set first patrol point to desired direction
-// Want NPC to face left initially? Put left waypoint first:
+// NPC walks to nearest waypoint first
 patrol: [
-    { x: 8700 },  // Left waypoint first
-    { x: 8900 }   // Right waypoint second
+    { x: 8700 },  // If NPC starts at 8800, will walk left initially
+    { x: 8900 }   // Then walk right
 ]
-// NPC starts at x config position, walks to nearest waypoint
+// Set x position and patrol to control starting direction
 ```
 
-**For stationary NPC with specific facing:**
+---
+
+#### Dialogue Facing Logic (All NPCs)
+
+**How It Works:**
+All NPCs use `BaseNPC.faceToward()` during dialogue interactions:
+
+```javascript
+// In BaseNPC.js
+faceToward(targetCenterX) {
+    const npcCenterX = this.bounds.x + this.bounds.width / 2;
+    const playerIsOnLeft = targetCenterX < npcCenterX;
+    
+    // Flip sprite based on default orientation
+    if (this.spriteDefaultFacesLeft) {
+        this.flipX = !playerIsOnLeft;  // Invert for left-facing sprites
+    } else {
+        this.flipX = playerIsOnLeft;   // Normal for right-facing sprites
+    }
+}
+```
+
+**Key Configuration:**
+- `spriteDefaultFacesLeft`: Tells the system which direction your sprite asset faces in its default (non-flipped) state
+- Most sprites face RIGHT by default (`spriteDefaultFacesLeft: false`)
+- Some sprites face LEFT by default (`spriteDefaultFacesLeft: true`)
+
+---
+
+#### Fixing Facing Issues
+
+**Problem:** NPC faces away from player during dialogue
+
+**Solution:** Check and set correct sprite orientation
+
+```javascript
+// In GenericNPC config
+const npc = new GenericNPC({
+    sprite: 'art/sprites/my-npc.png',
+    spriteDefaultFacesLeft: false,  // ← Set based on YOUR sprite's default
+    // ... other config
+});
+```
+
+**How to determine your sprite's default facing:**
+1. Look at the sprite image file directly
+2. If character faces RIGHT in the image → `spriteDefaultFacesLeft: false`
+3. If character faces LEFT in the image → `spriteDefaultFacesLeft: true`
+
+**Common Configurations:**
+```javascript
+// Most sprites (Princess, Shop Ghost, etc.)
+spriteDefaultFacesLeft: false  // Sprite faces right by default
+
+// Mike sprite (specific example)
+spriteDefaultFacesLeft: true   // This sprite faces left by default
+```
+
+---
+
+#### Default Values by NPC Type
+
+**GenericNPC:**
+```javascript
+// Default changed from true to false (most sprites face right)
+spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? false
+```
+
+**TownPatrolNPC:**
+```javascript
+// Inherits from BaseNPC, defaults to false but can be overridden in config
+spriteDefaultFacesLeft: config.spriteDefaultFacesLeft ?? false
+```
+
+**Static NPCs (EntityFactory):**
+```javascript
+// Princess
+princess(x, y, dialogueId = null) {
+    const princess = new GenericNPC({
+        spriteDefaultFacesLeft: false,  // Princess sprite faces right
+        // ...
+    });
+}
+
+// Shop Ghost
+shopGhost(x, y, dialogueId = null) {
+    const ghost = new GenericNPC({
+        spriteDefaultFacesLeft: false,  // Ghost sprite faces right
+        // ...
+    });
+}
+```
+
+---
+
+#### Debugging Facing Issues
+
+**Step 1: Verify sprite orientation**
+Open your sprite image file and note which direction it faces.
+
+**Step 2: Check NPC configuration**
+```javascript
+// In TownsConfig.js or EntityFactory.js
+console.log('NPC sprite:', npc.sprite);
+console.log('spriteDefaultFacesLeft:', npc.spriteDefaultFacesLeft);
+console.log('flipX:', npc.flipX);
+```
+
+**Step 3: Test interaction**
+Talk to the NPC and verify facing direction matches player position.
+
+**Step 4: Adjust if needed**
+Toggle `spriteDefaultFacesLeft` if NPC faces wrong direction during dialogue.
+
+---
+
+#### Town NPCs vs Regular NPCs
+
+**Town NPCs** (spawned by TownManager):
+- Stored in `game.townNpcs` array
+- UIManager checks this array first for nearby talkable NPCs
+- Uses same `BaseNPC.faceToward()` logic
+
+**Regular NPCs** (spawned by EntityFactory/WorldBuilder):
+- Stored in `game.npcs` array
+- UIManager checks this array second
+- Uses same `BaseNPC.faceToward()` logic
+
+Both use identical facing logic, so configuration should be consistent across all NPC types.
+
+---
+
+#### For Stationary NPCs with Specific Facing
+
 ```javascript
 // In custom NPC class
 constructor(game, def) {
     super(game, def);
-    this.flipX = def.facing === 'left';  // true = face left
+    // Set initial facing if needed (overrides default)
+    if (def.initialFacing) {
+        this.flipX = def.initialFacing === 'left';
+    }
 }
 ```
 

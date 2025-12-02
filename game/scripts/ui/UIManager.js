@@ -977,7 +977,18 @@ class UIManager {
             return this.game.shopGhost;
         }
         
-        // Check npcs array
+        // Check town NPCs first (managed by TownManager)
+        if (Array.isArray(this.game.townNpcs)) {
+            const townNpc = this.game.townNpcs.find(npc =>
+                npc &&
+                npc.canTalk &&
+                typeof npc.isPlayerNearby === 'function' &&
+                npc.isPlayerNearby(this.game.player, npc.interactRadius || 120)
+            );
+            if (townNpc) return townNpc;
+        }
+        
+        // Check level/room npcs array
         if (!Array.isArray(this.game.npcs)) return null;
         
         return this.game.npcs.find(npc =>
