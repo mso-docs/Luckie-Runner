@@ -914,8 +914,9 @@ class TownManager {
             const startX = town.region?.startX ?? Infinity;
             const endX = town.region?.endX ?? -Infinity;
             if (cameraRight > endX) return false; // already passed this town
-            if (startX > cameraRight + lookahead) return false; // still too far away
-            if (this.preloadedTownId === town.id) return false; // already loaded
+            // Load town when its start is approaching (within lookahead distance from current camera position)
+            if (startX > (camera.x || 0) + lookahead) return false; // still too far away
+            if (this.loadedTownId === town.id && this.game.townDecor?.length) return false; // already loaded with content
             if (this.currentTownId && this.currentTownId !== town.id) return false; // don't replace an active town
             return true;
         });
@@ -931,8 +932,8 @@ class TownManager {
     }
 
     getTownPreloadDistance(viewportWidth = 0) {
-        const base = viewportWidth ? viewportWidth * 1.1 : 1200;
-        const minimum = 900;
+        const base = viewportWidth ? viewportWidth * 2.5 : 2400;
+        const minimum = 3000;
         return Math.max(minimum, this.preloadDistance || base);
     }
 
@@ -958,7 +959,10 @@ class TownManager {
             this.pendingTownToLoad = town;
             return;
         }
-        this.loadTownContent(town);
+        // Only load if not already preloaded (avoid clearing preloaded content)
+        if (this.loadedTownId !== town.id || !this.game.townDecor?.length) {
+            this.loadTownContent(town);
+        }
         this.handleTownMusic(town);
     }
 
@@ -1556,11 +1560,22 @@ class TownManager {
             sprite: spritePath,
             render: (ctx, camera) => {
                 if (!ctx || !img.complete) return;
+                
+                // Viewport culling with large buffer to render ahead of player
+                const renderBuffer = 2000; // Render 2000px beyond viewport edges
+                const destX = (def.x || 0) - (camera?.x || 0);
+                const destY = (def.y || 0) - (camera?.y || 0);
+                
+                if (destX + width < -renderBuffer ||
+                    destX > ctx.canvas.width + renderBuffer ||
+                    destY + height < -renderBuffer ||
+                    destY > ctx.canvas.height + renderBuffer) {
+                    return; // Skip rendering if too far off-screen
+                }
+                
                 const frameIdx = ref?.frameIndex ?? def.frameIndex ?? 0;
                 const sx = frameDirection === 'horizontal' ? frameIdx * frameWidth : 0;
                 const sy = frameDirection === 'vertical' ? frameIdx * frameHeight : 0;
-                const destX = (def.x || 0) - (camera?.x || 0);
-                const destY = (def.y || 0) - (camera?.y || 0);
                 const srcW = frameDirection === 'horizontal' ? frameWidth : img.width;
                 const srcH = frameDirection === 'vertical' ? frameHeight : img.height;
 

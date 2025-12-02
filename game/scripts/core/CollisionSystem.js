@@ -163,6 +163,9 @@ class CollisionSystem {
         const g = this.game;
         enemy.onGround = false;
         g.platforms.forEach(platform => {
+            // Skip one-way platforms - only players can use them
+            if (platform.oneWay || platform.topOnly) return;
+            
             if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(enemy),
                 platform

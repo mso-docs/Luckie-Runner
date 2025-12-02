@@ -8,8 +8,8 @@ class RoomRegistry {
         this.rooms = {};
         this.defaults = {
             id: 'room',
-            width: 1024,
-            height: 720,
+            width: 1536,
+            height: 1024,
             theme: 'interior',
             music: { src: 'music/beach-house.mp3', volume: 0.8 },
             autoFloor: true,

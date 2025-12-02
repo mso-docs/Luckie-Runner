@@ -42,7 +42,43 @@ if (this.game.townManager?.handleDoorInteract?.()) {
 3) Ensure the room is registered in `RoomDescriptors`/RoomRegistry.
 
 ---
+## Town Preloading & Viewport Culling
+
+### Preventing Pop-in
+To avoid town elements popping in suddenly when they enter the viewport:
+
+**1. Preload Distance** (`TownsConfig.js`):
+```js
+preloadDistance: 7000, // px ahead of camera to start loading town assets
+```
+
+**2. Lookahead Calculation** (`TownManager.getTownPreloadDistance`):
+```js
+getTownPreloadDistance(viewportWidth = 0) {
+    const base = viewportWidth ? viewportWidth * 2.5 : 2400;
+    const minimum = 3000;
+    return Math.max(minimum, this.preloadDistance || base);
+}
+```
+- `2.5` = viewport width multiplier (2.5x viewport width ahead)
+- `2400` = fallback when viewport width unknown
+- `3000` = minimum lookahead distance in pixels
+
+**3. Render Buffer** (`TownManager.buildDecorRenderable`):
+```js
+const renderBuffer = 2000; // Render 2000px beyond viewport edges
+```
+This controls how far beyond the visible viewport town elements start rendering.
+
+**Best Practices:**
+- Set `preloadDistance` to at least 5000-7000px for smooth loading
+- Use 2.5-3x viewport width multiplier for the base calculation
+- Keep render buffer at 1500-2000px to render ahead of player
+- Test at different scroll speeds to ensure no pop-in
+
+---
 ## Troubleshooting
 - Door does nothing: check `handleDoorInteract` is called before other interactables; verify door radius and player position.
 - Town not loading: confirm player.x enters `region.startX..endX`; ensure level id matches current level.
+- **Town popping in late**: Increase `preloadDistance` in TownsConfig or the multiplier/minimum in `getTownPreloadDistance`. Verify `ensureUpcomingTownPrepared` is being called every frame.
 - Music mismatch: verify `town.music.id/src/volume`; ensure AudioManager has the track.

@@ -2,7 +2,7 @@
  * TownsConfig - data-only definitions for towns and their regions/assets.
  */
 const TownsConfig = {
-    preloadDistance: 3600, // lookahead in px for loading town assets
+    preloadDistance: 7000, // lookahead in px for loading town assets
     defaults: {
         houseCount: { min: 2, max: 3 },
         streetLampCount: 1,
