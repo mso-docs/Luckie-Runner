@@ -53,10 +53,39 @@ class SpeechBubble {
             facingDir = anchor.facing || 1;
         }
 
-        this.container.style.left = `${targetX}px`;
+        // Temporarily disable transitions for instant positioning
+        const originalTransition = this.container.style.transition;
+        this.container.style.transition = 'none';
+        
+        // Get actual rendered dimensions
+        const bubbleWidth = this.container.offsetWidth > 0 ? this.container.offsetWidth : Math.min(460, canvas.width * 0.78);
+        const bubbleHeight = this.container.offsetHeight > 0 ? this.container.offsetHeight : 120;
+        
+        // Clamp horizontal position (bubble uses left as center via transform: translate(-50%, 0))
+        const padding = 60;
+        const halfWidth = bubbleWidth / 2;
+        const minX = halfWidth + padding;
+        const maxX = canvas.width - halfWidth - padding;
+        const clampedX = Math.max(minX, Math.min(maxX, targetX));
+
+        this.container.style.left = `${clampedX}px`;
+        
         const aboveHeadOffset = 20;
-        const bottomFromCanvas = canvas.height - headY + aboveHeadOffset;
-        this.container.style.bottom = `${bottomFromCanvas}px`;
+        let bottomFromCanvas = canvas.height - headY + aboveHeadOffset;
+        
+        // Clamp vertical position to keep bubble within viewport
+        const minBottom = padding + 20;
+        const maxBottom = canvas.height - bubbleHeight - padding;
+        const clampedBottom = Math.max(minBottom, Math.min(maxBottom, bottomFromCanvas));
+        
+        this.container.style.bottom = `${clampedBottom}px`;
+        
+        // Restore transitions after a frame
+        requestAnimationFrame(() => {
+            if (this.container) {
+                this.container.style.transition = originalTransition;
+            }
+        });
         const mouthOffset = anchorWidth ? (anchorWidth * 0.22 * facingDir) + tailOffsetPx : tailOffsetPx + 10;
         this.container.style.setProperty('--tail-offset', `${mouthOffset}px`);
     }

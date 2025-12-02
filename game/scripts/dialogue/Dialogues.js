@@ -5,9 +5,5 @@ window.Dialogues = {
         'You _may_ find me scattered throughout the land, offering guidance, tips, and <<maybe>> even a joke or two to ^lighten^ your journey.',
         'You also may find me in places where you %least% expect it, so keep your eyes #peeled#. Safe travels, ^adventurer^!',
         'Also, you may want to #throw# some rocks at those ^slimes^. Just saying.'
-    ],
-    test_room_intro: [
-        "Hey, I'm Luckie Puppie. !Welcome! #to# the %test% ^room^.",
-        "#Click# the ~mouse~ button to ~throw~ !a! #rock#. `Try` hitting that slime!"
     ]
 };

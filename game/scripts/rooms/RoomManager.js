@@ -280,6 +280,15 @@ class RoomManager {
 
     exitRoom() {
         if (!this.active || !this.returnInfo) return;
+        
+        // Close any open dialogue/speech bubbles
+        if (this.game?.dialogueManager?.isActive()) {
+            this.game.dialogueManager.close();
+        }
+        if (this.game?.hideSpeechBubble) {
+            this.game.hideSpeechBubble(true);
+        }
+        
         this.restoreReturnState();
         this.active = false;
         this.room = null;
@@ -325,7 +334,29 @@ class RoomManager {
             levelId: g.currentLevelId || 'testRoom',
             level: this.clonePlain(g.level),
             theme: g.currentTheme,
-            platforms: (g.platforms || []).map(p => ({ x: p.x, y: p.y, width: p.width, height: p.height, type: p.type })),
+            platforms: (g.platforms || []).map(p => {
+                const base = { x: p.x, y: p.y, width: p.width, height: p.height, type: p.type };
+                // For DecorPlatforms, capture full config to preserve invisible/oneWay properties
+                if (p.type === 'decor_platform') {
+                    base.config = {
+                        width: p.width,
+                        height: p.height,
+                        invisible: p.invisible,
+                        oneWay: p.oneWay,
+                        sprite: p.spritePath,
+                        frameWidth: p.frameWidth,
+                        frameHeight: p.frameHeight,
+                        frames: p.frames,
+                        frameDirection: p.frameDirection,
+                        fallbackColor: p.fallbackColor,
+                        hitboxWidth: p.hitbox?.width,
+                        hitboxHeight: p.hitbox?.height,
+                        hitboxOffsetX: p.hitbox?.offsetX,
+                        hitboxOffsetY: p.hitbox?.offsetY
+                    };
+                }
+                return base;
+            }),
             enemies: (g.enemies || []).slice(),
             items: (g.items || []).slice(),
             hazards: (g.hazards || []).slice(),
@@ -353,7 +384,13 @@ class RoomManager {
         g.currentRoomId = null;
         g.currentLevelId = snap.levelId;
         g.level = this.clonePlain(snap.level);
-        g.platforms = (snap.platforms || []).map(p => (g.entityFactory?.platform ? g.entityFactory.platform(p.x, p.y, p.width, p.height, p.type) : { ...p, type: p.type || 'platform' }));
+        g.platforms = (snap.platforms || []).map(p => {
+            if (p.type === 'decor_platform' && g.entityFactory?.decor_platform) {
+                // Restore DecorPlatform with all its config properties
+                return g.entityFactory.decor_platform(p.x, p.y, p.config || {});
+            }
+            return g.entityFactory?.platform ? g.entityFactory.platform(p.x, p.y, p.width, p.height, p.type) : { ...p, type: p.type || 'platform' };
+        });
         g.enemies = snap.enemies || [];
         g.items = snap.items || [];
         g.hazards = snap.hazards || [];
