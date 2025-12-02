@@ -223,12 +223,13 @@ class Game {
         const overlapX = playerBounds.x < targetRect.x + targetRect.width &&
             playerBounds.x + playerBounds.width > targetRect.x;
 
-        // Must be coming from above within tolerance
-        const descending = this.player.velocity?.y >= 0;
+        // Must be coming from above within tolerance (falling down, not jumping up)
+        const descending = this.player.velocity?.y > 0; // Changed >= to > so standing still doesn't count
+        const comingFromAbove = playerBounds.y < targetTop; // Player's top must be above platform top
         const withinTolerance = playerBottom >= targetTop &&
             playerBottom <= targetTop + (this.softLandingTolerance || 20);
 
-        if (overlapX && descending && withinTolerance) {
+        if (overlapX && descending && comingFromAbove && withinTolerance) {
             // Land on top
             this.player.y = targetTop - playerBounds.height;
             this.player.velocity.y = Math.min(0, this.player.velocity.y);

@@ -177,26 +177,26 @@ const TownsConfig = {
                     collider: { width: 200, height: 18, offsetX: 10, offsetY: 50 },
                     interior: {
                         id: 'beachside_boba_interior',
-                        spawn: { x: 240, y: 656 },
-                        exit: { x: 240, y: 690, radius: 80 },
+                        spawn: { x: 240, y: 994 },
+                        exit: { x: 240, y: 994, radius: 80 },
                         room: {
-                            width: 1024,
-                            height: 720,
+                            width: 1536,
+                            height: 1024,
                             autoFloor: false,
                             autoWalls: false,
-                            spawn: { x: 240, y: 656 },
-                            exit: { x: 240, y: 690, radius: 80 },
+                            spawn: { x: 240, y: 994 },
+                            exit: { x: 240, y: 994, radius: 80 },
                         backgroundImage: {
                             src: 'art/bg/buildings/interior/beachside-boba-inside.png',
-                            width: 1024,
-                            height: 720
+                            width: 1536,
+                            height: 1024
                         },
                         music: { id: 'beachside_boba_theme', src: 'music/beachside-boba.mp3', volume: 0.9 },
                         platforms: [
-                            { x: 0, y: 690, width: 1024, height: 30, type: 'ground' },
-                            { x: 0, y: 0, width: 32, height: 720, type: 'wall' },
-                            { x: 992, y: 0, width: 32, height: 720, type: 'wall' },
-                            { x: 0, y: 0, width: 1024, height: 32, type: 'wall' }
+                            { x: 0, y: 994, width: 1536, height: 30, type: 'ground' },
+                            { x: 0, y: 0, width: 32, height: 1024, type: 'wall' },
+                            { x: 992, y: 0, width: 32, height: 1024, type: 'wall' },
+                            { x: 0, y: 0, width: 1536, height: 32, type: 'wall' }
                         ],
                         enemies: [],
                         items: [],

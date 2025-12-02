@@ -1499,16 +1499,16 @@ class TownManager {
                 hitboxHeight: col.hitboxHeight,
                 hitboxOffsetX: col.hitboxOffsetX,
                 hitboxOffsetY: col.hitboxOffsetY,
-                sprite: null
+                sprite: null,
+                invisible: true,  // Must be set in config for DecorPlatform constructor
+                oneWay: true      // Explicitly set one-way collision
             };
             const collider = factory.create(colliderDef);
             if (collider) {
                 collider.game = g;
                 collider.type = 'decor_platform';
-                collider.invisible = true;
                 collider.hidden = true;
                 collider.render = false;
-                // oneWay defaults to true for invisible platforms (set in DecorPlatform)
                 g.platforms.push(collider);
                 this.activeTownColliders.push(collider);
             }

@@ -18,18 +18,16 @@ class CollisionSystem {
         }
 
         g.platforms.forEach(platform => {
-            if (CollisionDetection.rectangleCollision(
+            // If platform is marked as one-way/top-only, use soft landing logic only
+            if (platform.oneWay || platform.topOnly) {
+                const platformBounds = CollisionDetection.getCollisionBounds(platform);
+                const landed = g.topOnlyLanding(platformBounds);
+                // Don't need to do anything with the result - topOnlyLanding sets player state
+            } else if (CollisionDetection.rectangleCollision(
                 CollisionDetection.getCollisionBounds(player),
                 platform
             )) {
-                // If platform is marked as one-way/top-only, use soft landing logic
-                if (platform.oneWay || platform.topOnly) {
-                    const platformBounds = CollisionDetection.getCollisionBounds(platform);
-                    const landed = g.topOnlyLanding(platformBounds);
-                    // Don't need to do anything with the result - topOnlyLanding sets player state
-                } else {
-                    this.resolvePlayerPlatformCollision(platform);
-                }
+                this.resolvePlayerPlatformCollision(platform);
             }
         });
 
