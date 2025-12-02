@@ -69,7 +69,7 @@ class Player extends Entity {
             },
             {
                 id: 'espressionist',
-                name: 'Espressionist',
+                name: 'Coffee Maniac',
                 description: 'Run faster with coffee',
                 unlocked: true,
                 icon: 'art/items/coffee.png'

@@ -1309,10 +1309,10 @@ body, button, input, select, textarea,
 .action-label {
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: wrap;
     flex: 1;
     min-width: 0;
-    font-size: 14px;
+    font-size: 10px;
 }
 
 .action-icon {
