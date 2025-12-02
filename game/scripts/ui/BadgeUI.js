@@ -13,12 +13,22 @@ class BadgeUI {
                 icon: 'art/badges/slime-badge.png',
                 requirement: { type: 'defeat', enemyType: 'slime', count: 1 },
                 modifiers: { slimeAttack: 5, slimeDefense: 5 }
+            },
+            bully_badge: {
+                id: 'bully_badge',
+                name: 'Bully Badge',
+                shortTitle: 'Bully Badge',
+                description: '25% chance to get 1-5 coins each time you hit an NPC with a projectile!',
+                icon: 'art/badges/bully-badge.png',
+                requirement: { type: 'npcHits', count: 'all' },
+                modifiers: { bullyBadge: true }
             }
         };
 
         this.earnedBadges = new Map();
         this.progress = {
-            defeats: {}
+            defeats: {},
+            npcHits: new Set()
         };
 
         this.calloutQueue = [];
@@ -86,6 +96,56 @@ class BadgeUI {
     }
 
     /**
+     * Track an NPC hit for badge progress
+     * @param {BaseNPC} npc - NPC that was hit
+     */
+    handleNpcHit(npc) {
+        if (!npc || !npc.id) return;
+        this.progress.npcHits.add(npc.id);
+        this.evaluateBadge('bully_badge');
+    }
+
+    /**
+     * Get total unique NPC count in the level (including towns and rooms)
+     * @returns {number}
+     */
+    getTotalNpcCount() {
+        const g = this.game;
+        if (!Array.isArray(g.npcs)) return 0;
+        
+        // Count unique NPCs by ID
+        const uniqueNpcs = new Set();
+        g.npcs.forEach(npc => {
+            if (npc && npc.id) {
+                uniqueNpcs.add(npc.id);
+            }
+        });
+        
+        // Also check town NPCs if town manager exists
+        if (g.townManager && Array.isArray(g.townManager.townNpcs)) {
+            g.townManager.townNpcs.forEach(npc => {
+                if (npc && npc.id) {
+                    uniqueNpcs.add(npc.id);
+                }
+            });
+        }
+        
+        // Also check room NPCs if room manager exists
+        if (g.roomManager && g.roomManager.currentRoom) {
+            const room = g.roomManager.currentRoom;
+            if (Array.isArray(room.npcs)) {
+                room.npcs.forEach(npc => {
+                    if (npc && npc.id) {
+                        uniqueNpcs.add(npc.id);
+                    }
+                });
+            }
+        }
+        
+        return uniqueNpcs.size;
+    }
+
+    /**
      * Check if a badge should be granted
      * @param {string} badgeId
      */
@@ -96,6 +156,13 @@ class BadgeUI {
         if (def.requirement?.type === 'defeat') {
             const kills = this.progress.defeats[def.requirement.enemyType] || 0;
             if (kills >= def.requirement.count) {
+                this.awardBadge(def);
+            }
+        } else if (def.requirement?.type === 'npcHits') {
+            const totalNpcs = this.getTotalNpcCount();
+            const hitCount = this.progress.npcHits.size;
+            // Check if we hit all NPCs (or at least 1 if there are no NPCs)
+            if (totalNpcs > 0 && hitCount >= totalNpcs) {
                 this.awardBadge(def);
             }
         }
@@ -127,9 +194,10 @@ class BadgeUI {
      */
     reapplyAllModifiers(player = this.game?.player) {
         if (!player) return;
-        player.combatModifiers = player.combatModifiers || { slimeAttack: 0, slimeDefense: 0 };
+        player.combatModifiers = player.combatModifiers || { slimeAttack: 0, slimeDefense: 0, bullyBadge: false };
         player.combatModifiers.slimeAttack = 0;
         player.combatModifiers.slimeDefense = 0;
+        player.combatModifiers.bullyBadge = false;
 
         this.earnedBadges.forEach(badge => {
             this.applyBadgeModifiers(badge.modifiers, player, true);
@@ -145,7 +213,7 @@ class BadgeUI {
     applyBadgeModifiers(modifiers = {}, targetPlayer = this.game?.player, skipReset = false) {
         if (!targetPlayer || !modifiers) return;
 
-        targetPlayer.combatModifiers = targetPlayer.combatModifiers || { slimeAttack: 0, slimeDefense: 0 };
+        targetPlayer.combatModifiers = targetPlayer.combatModifiers || { slimeAttack: 0, slimeDefense: 0, bullyBadge: false };
 
         if (!skipReset) {
             targetPlayer.combatModifiers.slimeAttack = (targetPlayer.combatModifiers.slimeAttack || 0);
@@ -157,6 +225,9 @@ class BadgeUI {
         }
         if (modifiers.slimeDefense) {
             targetPlayer.combatModifiers.slimeDefense += modifiers.slimeDefense;
+        }
+        if (modifiers.bullyBadge) {
+            targetPlayer.combatModifiers.bullyBadge = true;
         }
     }
 
@@ -273,6 +344,7 @@ class BadgeUI {
         this.earnedBadges.clear();
         if (clearProgress) {
             this.progress.defeats = {};
+            this.progress.npcHits = new Set();
         }
         this.calloutQueue = [];
         this.calloutActive = false;

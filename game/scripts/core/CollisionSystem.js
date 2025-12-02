@@ -271,6 +271,20 @@ class CollisionSystem {
         const audio = this.game?.services?.audio?.managerRef || this.game?.audioManager;
         audio?.playSound?.('ow', 0.95);
 
+        // Track NPC hit for badge progress (Bully Badge)
+        if (this.game?.badgeUI?.handleNpcHit) {
+            this.game.badgeUI.handleNpcHit(npc);
+        }
+
+        // Check for Bully Badge coin drops (25% chance for 1-5 coins)
+        const player = this.game?.player;
+        if (player && player.combatModifiers?.bullyBadge) {
+            if (Math.random() < 0.25) { // 25% chance
+                const coinAmount = Math.floor(Math.random() * 5) + 1; // 1-5 coins
+                player.collectCoin(coinAmount);
+            }
+        }
+
         if (typeof npc.onProjectileHit === 'function') {
             npc.onProjectileHit(projectile);
             return;
