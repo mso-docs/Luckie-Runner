@@ -5,8 +5,6 @@ class JournalUI {
     constructor(game) {
         this.game = game;
         
-        console.log('[JournalUI] Initializing...');
-        
         // Journal entries storage
         this.journals = new Map(); // key: journalId, value: journal object
         
@@ -22,8 +20,6 @@ class JournalUI {
         this.cacheInventoryRefs();
         this.buildJournalModal();
         this.setupEventListeners();
-        
-        console.log('[JournalUI] Initialized. List element:', this.journalList ? 'found' : 'NOT FOUND');
     }
 
     /**
@@ -119,7 +115,6 @@ class JournalUI {
             read: false
         };
 
-        console.log('[JournalUI] Adding journal:', journal.id, journal.title);
         this.journals.set(journal.id, journal);
         this.renderInventory();
 
@@ -201,7 +196,6 @@ class JournalUI {
         }
 
         const journals = this.getJournals();
-        console.log('[JournalUI] Rendering', journals.length, 'journals');
         list.innerHTML = '';
 
         if (!journals.length) {

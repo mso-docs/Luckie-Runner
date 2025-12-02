@@ -1278,7 +1278,6 @@ class UIManager {
             
             // Give Hailey's journal after first conversation
             if (npc.id === 'hailey' && this.game.journalUI && !this.game.journalUI.hasJournal('hailey_welcome')) {
-                console.log('[UIManager] Giving Hailey journal to player');
                 this.game.journalUI.addJournal({
                     id: 'hailey_welcome',
                     title: 'Work Schedule & Opening Routine',
