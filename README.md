@@ -1,5 +1,5 @@
 # Luckie Runner!
-## After a brief hiatus, I'll be working on this again soon
+## After a brief hiatus, I'll be working on this again soon.
 
 Play the game [here](https://mso-docs.github.io/Luckie-Runner/)!
 
