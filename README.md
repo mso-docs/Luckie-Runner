@@ -1,7 +1,7 @@
 # Luckie Runner!
 ## After a brief hiatus, I'll be working on this again soon.
 
-Play the game! [here](https://mso-docs.github.io/Luckie-Runner/)!
+Play the game! [here](https://mso-docs.github.io/Luckie-Runner/)
 
 This is a simple JavaScript runner game, based off an idea I had in 2019. I was going through some tough times then, so I wasn't able to finish the project. Now, I am striving to create the game I envisioned so long ago with my recent programming experience. Let's see how this goes!
 
